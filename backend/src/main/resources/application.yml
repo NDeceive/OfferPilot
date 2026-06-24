@@ -1,0 +1,41 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: zhimian-backend
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/zhimian?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    # 在这里填你的 MySQL root 密码，或设置环境变量 DB_PASSWORD
+    password: ${DB_PASSWORD:123456}
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+# JWT 配置
+jwt:
+  secret: zhimian-huanjing-secret-key-for-jwt-token-2026-tjut-software
+  # token 有效期（毫秒），默认 7 天
+  expiration: 604800000
+
+# AI 大模型配置（DeepSeek，OpenAI 兼容接口）
+ai:
+  provider: deepseek
+  base-url: https://api.deepseek.com
+  api-key: ${AI_API_KEY:在这里填你的DeepSeek_API_Key}
+  model: deepseek-chat
+  # 是否启用真实 AI 调用；false 时使用内置规则/模拟（无 key 也能演示）
+  enabled: false
+
+logging:
+  level:
+    com.zhimian: debug

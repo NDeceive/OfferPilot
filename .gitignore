@@ -1,0 +1,28 @@
+# ===== Java / Maven (backend) =====
+backend/target/
+*.class
+*.jar
+!backend/.mvn/wrapper/maven-wrapper.jar
+*.log
+backend/run.log
+backend/run.err.log
+
+# ===== Node / Vite (frontend) =====
+node_modules/
+frontend/dist/
+frontend/dev.log
+frontend/dev.err.log
+frontend/qa-dev.log
+
+# npm 缓存（.npmrc 把缓存指向了项目内目录，避免提交进仓库）
+.npm-cache/
+
+# ===== 本地配置 / IDE =====
+.claude/settings.local.json
+.idea/
+.vscode/
+*.iml
+
+# ===== 系统文件 =====
+.DS_Store
+Thumbs.db
