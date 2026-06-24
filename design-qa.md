@@ -7,10 +7,10 @@
 - Interview-prep reference: `C:\Users\practititioner\Downloads\ChatGPT Image 2026年6月23日 19_33_37 (3).png`
 
 **Implementation Evidence**
-- Login screenshot: `D:\大创\frontend\qa-screenshots\login-1920x1080.png`
-- Dashboard screenshot: `D:\大创\frontend\qa-screenshots\dashboard-1920x1200.png`
-- Interview-prep screenshot: `D:\大创\frontend\qa-screenshots\jobs-1920x1200.png`
-- Zoom/scale sanity screenshots: `D:\大创\frontend\qa-screenshots\dashboard-1536x960.png`, `D:\大创\frontend\qa-screenshots\jobs-2200x1300.png`
+- Login screenshot: `D:\大创\前端\qa-screenshots\login-1920x1080.png`
+- Dashboard screenshot: `D:\大创\前端\qa-screenshots\dashboard-1920x1200.png`
+- Interview-prep screenshot: `D:\大创\前端\qa-screenshots\jobs-1920x1200.png`
+- Zoom/scale sanity screenshots: `D:\大创\前端\qa-screenshots\dashboard-1536x960.png`, `D:\大创\前端\qa-screenshots\jobs-2200x1300.png`
 
 **Viewport**
 - Login: 1920x1080, logged-out state.
@@ -34,7 +34,7 @@
 - Replaced the old login layout with the reference split-screen login experience.
 - Reworked the shared app shell to match the reference sidebar/topbar structure.
 - Rebuilt the dashboard and interview-prep pages to match the provided desktop references.
-- Generated and optimized required raster assets into `frontend/src/assets/generated`.
+- Generated and optimized required raster assets into `前端/src/assets/generated`.
 - Fixed prep target-card truncation and verified wider/narrower viewport captures.
 
 **Follow-up Polish**

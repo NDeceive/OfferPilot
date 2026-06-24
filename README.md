@@ -20,8 +20,8 @@
 
 ```
 大创/
-├── backend/          后端 Spring Boot 工程
-├── frontend/         前端 Vue 3 工程
+├── 后端/             后端 Spring Boot 工程
+├── 前端/             前端 Vue 3 工程
 ├── docs/             项目文档（需求/设计/测试/接口）
 └── README.md
 ```
@@ -33,13 +33,13 @@
 确保本地 MySQL 8 已启动，然后执行建表脚本：
 
 ```bash
-mysql -u root -p < backend/src/main/resources/db/schema.sql
+mysql -u root -p < 后端/src/main/resources/db/schema.sql
 ```
 
 ### 2. 后端
 
 ```bash
-cd backend
+cd 后端
 # 在 application.yml 中填写你的数据库密码（或设置环境变量 DB_PASSWORD）
 ./mvnw spring-boot:run
 ```
@@ -49,7 +49,7 @@ cd backend
 ### 3. 前端
 
 ```bash
-cd frontend
+cd 前端
 npm install
 npm run dev
 ```

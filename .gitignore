@@ -1,18 +1,18 @@
-# ===== Java / Maven (backend) =====
-backend/target/
+# ===== Java / Maven (后端) =====
+后端/target/
 *.class
 *.jar
-!backend/.mvn/wrapper/maven-wrapper.jar
+!后端/.mvn/wrapper/maven-wrapper.jar
 *.log
-backend/run.log
-backend/run.err.log
+后端/run.log
+后端/run.err.log
 
-# ===== Node / Vite (frontend) =====
+# ===== Node / Vite (前端) =====
 node_modules/
-frontend/dist/
-frontend/dev.log
-frontend/dev.err.log
-frontend/qa-dev.log
+前端/dist/
+前端/dev.log
+前端/dev.err.log
+前端/qa-dev.log
 
 # npm 缓存（.npmrc 把缓存指向了项目内目录，避免提交进仓库）
 .npm-cache/
