@@ -6,7 +6,7 @@
         账户管理
       </span>
       <h2>个人中心</h2>
-      <p>管理个人信息、查看训练统计、修改密码和系统偏好设置。</p>
+      <p>管理个人信息、查看训练统计、修改昵称和密码。</p>
     </div>
 
     <div class="profile-grid">
@@ -31,21 +31,36 @@
             <span class="info-value">{{ roleLabel }}</span>
           </div>
         </div>
+        <el-divider />
+        <div class="profile-info">
+          <div class="info-item">
+            <span class="info-label">完成面试</span>
+            <span class="info-value">{{ stats.finishedInterviews }} 场</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">平均得分</span>
+            <span class="info-value">{{ stats.averageScore || '—' }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">画像技能</span>
+            <span class="info-value">{{ stats.skillCount }} 个</span>
+          </div>
+        </div>
       </div>
 
       <div class="settings-card glass-panel">
         <h3>账户设置</h3>
-        <el-form label-position="top" size="large">
+        <el-form label-position="top" size="large" :model="form">
           <el-form-item label="昵称">
-            <el-input placeholder="设置昵称" />
+            <el-input v-model="form.nickname" placeholder="设置昵称" />
           </el-form-item>
           <el-form-item label="新密码">
-            <el-input type="password" placeholder="留空则不修改" show-password />
+            <el-input v-model="form.newPassword" type="password" placeholder="留空则不修改（6-20 位）" show-password />
           </el-form-item>
           <el-form-item label="确认密码">
-            <el-input type="password" placeholder="再次输入新密码" show-password />
+            <el-input v-model="form.confirmPassword" type="password" placeholder="再次输入新密码" show-password />
           </el-form-item>
-          <el-button type="primary">保存修改</el-button>
+          <el-button type="primary" :loading="saving" @click="handleSave">保存修改</el-button>
         </el-form>
       </div>
     </div>
@@ -53,14 +68,63 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, reactive, ref, onMounted } from 'vue'
+import { ElMessage } from 'element-plus'
 import { User, Avatar } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
+import { getMyStats, updateProfile } from '@/api'
 
 const userStore = useUserStore()
 
 const roleLabel = computed(() => {
   return { STUDENT: '学生', TEACHER: '教师', ADMIN: '企业' }[userStore.role] || '用户'
+})
+
+const stats = ref({ finishedInterviews: 0, averageScore: 0, skillCount: 0 })
+
+const form = reactive({
+  nickname: '',
+  newPassword: '',
+  confirmPassword: ''
+})
+
+const saving = ref(false)
+
+const handleSave = async () => {
+  if (!form.nickname.trim() && !form.newPassword) {
+    ElMessage.warning('请填写要修改的昵称或密码')
+    return
+  }
+  if (form.newPassword && form.newPassword !== form.confirmPassword) {
+    ElMessage.warning('两次输入的密码不一致')
+    return
+  }
+  saving.value = true
+  try {
+    const updated = await updateProfile({
+      nickname: form.nickname.trim() || undefined,
+      newPassword: form.newPassword || undefined
+    })
+    // 同步更新本地状态（昵称变化立即反映到顶栏）
+    if (updated && updated.nickname) {
+      userStore.nickname = updated.nickname
+      localStorage.setItem('nickname', updated.nickname)
+    }
+    ElMessage.success('修改成功')
+    form.nickname = ''
+    form.newPassword = ''
+    form.confirmPassword = ''
+  } finally {
+    saving.value = false
+  }
+}
+
+onMounted(async () => {
+  try {
+    stats.value = await getMyStats()
+  } catch {
+    /* 保持默认 */
+  }
 })
 </script>
 

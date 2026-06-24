@@ -129,7 +129,7 @@
 
 <script setup>
 import { computed, ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
   ArrowLeft,
@@ -144,6 +144,7 @@ import {
 import { saveResume, getMyResume } from '@/api'
 
 const route = useRoute()
+const router = useRouter()
 
 const rawText = ref('')
 const skills = ref([])
@@ -158,6 +159,8 @@ const resumePlaceholder =
   '例如：\n熟悉 Java 核心、JVM、并发编程，掌握 Spring Boot、MyBatis、Redis。\n\n项目经历：基于 Spring Boot + Redis 的高并发秒杀系统，使用消息队列削峰，解决高并发下的超卖问题。'
 
 const difficultyLabel = computed(() => {
+  // difficulty 可能是中文字符串（来自 JobSelect）或数字
+  if (['简单', '中等', '困难'].includes(difficulty)) return difficulty
   return { 1: '简单', 2: '中等', 3: '困难' }[Number(difficulty)] || '未指定'
 })
 
@@ -199,8 +202,16 @@ const fillSample = () => {
     '项目经历：校园二手交易平台。Vue3 + Element Plus 前端，Spring Boot 后端，实现商品发布、即时聊天与订单管理。'
 }
 
+const difficultyMap = { 简单: 1, 中等: 2, 困难: 3 }
+
 const goInterview = () => {
-  ElMessage.info(`简历已就绪，岗位 ID：${jobId || '未指定'}，模拟面试房间开发中。`)
+  if (!jobId) {
+    ElMessage.warning('请先从「面试准备」选择岗位')
+    return
+  }
+  // JobSelect 传来的 difficulty 是中文字符串，这里统一归一为 1/2/3
+  const d = difficultyMap[difficulty] || Number(difficulty) || 2
+  router.push({ path: '/interview', query: { jobId, difficulty: d, resumeReady: 1 } })
 }
 
 onMounted(async () => {

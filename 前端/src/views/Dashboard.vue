@@ -36,115 +36,109 @@
       <div class="dashboard-main">
         <section class="panel jobs-panel">
           <header class="panel-header">
-            <h2>推荐岗位</h2>
+            <h2>可选岗位</h2>
             <router-link to="/jobs">查看全部 <el-icon><ArrowRight /></el-icon></router-link>
           </header>
 
-          <div class="job-cards">
+          <div v-loading="jobsLoading" class="job-cards">
             <article
-              v-for="job in recommendedJobs"
+              v-for="job in jobs"
               :key="job.id"
               class="job-card"
               @click="router.push({ path: '/jobs', query: { select: job.id } })"
             >
-              <div class="job-brand" :class="job.theme">
-                <el-icon><component :is="job.icon" /></el-icon>
+              <div class="job-brand">
+                <el-icon><CollectionTag /></el-icon>
               </div>
               <h3>{{ job.name }}</h3>
-              <p>{{ job.meta }}</p>
+              <p>{{ job.category || '岗位训练' }}</p>
               <div class="tag-row">
-                <span v-for="tag in job.tags" :key="tag">{{ tag }}</span>
+                <span v-for="tag in parseTags(job.keywords)" :key="tag">{{ tag }}</span>
               </div>
-              <footer>
-                <span><el-icon><User /></el-icon>{{ job.learners }} 人在练习</span>
-                <el-icon><CollectionTag /></el-icon>
-              </footer>
             </article>
+            <el-empty v-if="!jobsLoading && jobs.length === 0" description="暂无岗位" :image-size="60" />
           </div>
         </section>
 
         <section class="panel records-panel">
           <header class="panel-header">
             <h2>最近面试记录</h2>
+            <router-link v-if="records.length" to="/history">全部 <el-icon><ArrowRight /></el-icon></router-link>
           </header>
 
-          <div class="record-table">
+          <div v-if="records.length" class="record-table">
             <div class="record-row record-head">
               <span>日期</span>
               <span>岗位</span>
               <span>得分</span>
-              <span>表现</span>
-              <span>操作</span>
+              <span>状态</span>
             </div>
-            <div v-for="record in records" :key="record.date + record.time" class="record-row">
-              <span>{{ record.date }} <small>{{ record.time }}</small></span>
-              <span>{{ record.job }}</span>
-              <span>{{ record.score }} 分</span>
-              <span>
-                <em :class="record.level">{{ record.label }}</em>
-              </span>
-              <span class="record-actions">
-                <button type="button">查看报告</button>
-                <el-icon><MoreFilled /></el-icon>
-              </span>
+            <div v-for="record in records" :key="record.sessionId" class="record-row">
+              <span>{{ formatDate(record.startTime) }}</span>
+              <span>{{ record.jobName }}</span>
+              <span>{{ record.totalScore != null ? record.totalScore + ' 分' : '—' }}</span>
+              <span><em :class="statusClass(record.status)">{{ statusLabel(record.status) }}</em></span>
             </div>
           </div>
 
-          <router-link class="all-records" to="/history">
-            查看全部记录 <el-icon><ArrowRight /></el-icon>
-          </router-link>
+          <el-empty
+            v-else
+            description="还没有面试记录，去完成第一次模拟面试吧"
+            :image-size="90"
+          >
+            <el-button type="primary" @click="router.push('/jobs')">开始第一次面试</el-button>
+          </el-empty>
         </section>
       </div>
 
       <aside class="dashboard-side">
-        <section class="panel progress-panel">
+        <section class="panel stats-panel">
           <header class="panel-header">
-            <h2>今日训练进度</h2>
-            <router-link to="/report">更多数据 <el-icon><ArrowRight /></el-icon></router-link>
+            <h2>我的训练数据</h2>
+            <router-link to="/report">能力报告 <el-icon><ArrowRight /></el-icon></router-link>
           </header>
 
-          <div class="progress-body">
-            <div class="progress-ring" :style="progressStyle">
+          <div class="stat-list">
+            <div class="stat-item">
+              <span class="stat-icon blue"><el-icon><VideoCamera /></el-icon></span>
               <div>
-                <strong>75%</strong>
-                <span>每日目标 60 分钟</span>
+                <strong>{{ stats.finishedInterviews }}</strong>
+                <span>完成面试（场）</span>
               </div>
             </div>
-            <div class="progress-list">
-              <p><el-icon><Clock /></el-icon><span>训练时长</span><strong>45 / 60 分钟</strong></p>
-              <p><el-icon><VideoCamera /></el-icon><span>完成面试</span><strong>2 / 3 场</strong></p>
-              <p><el-icon><Aim /></el-icon><span>掌握知识点</span><strong>18 / 25 个</strong></p>
+            <div class="stat-item">
+              <span class="stat-icon green"><el-icon><DataAnalysis /></el-icon></span>
+              <div>
+                <strong>{{ stats.averageScore || '—' }}</strong>
+                <span>平均得分</span>
+              </div>
+            </div>
+            <div class="stat-item">
+              <span class="stat-icon orange"><el-icon><Aim /></el-icon></span>
+              <div>
+                <strong>{{ stats.highestScore || '—' }}</strong>
+                <span>最高得分</span>
+              </div>
+            </div>
+            <div class="stat-item">
+              <span class="stat-icon purple"><el-icon><Reading /></el-icon></span>
+              <div>
+                <strong>{{ stats.skillCount }}</strong>
+                <span>画像技能（个）</span>
+              </div>
             </div>
           </div>
         </section>
 
-        <section class="panel streak-panel">
-          <div>
-            <span class="flame"><el-icon><Lightning /></el-icon></span>
-            <strong>连续训练天数</strong>
-            <b>7 天</b>
-            <small>继续加油，保持状态！</small>
-          </div>
-          <div class="bars">
-            <span v-for="day in streakDays" :key="day.label" :style="{ height: day.height + 'px' }"></span>
-          </div>
-        </section>
-
-        <section class="panel knowledge-panel">
+        <section class="panel profile-panel">
           <header class="panel-header">
-            <h2>今日知识点推荐</h2>
-            <button type="button">换一换</button>
+            <h2>个人画像</h2>
+            <router-link to="/resume">去完善 <el-icon><ArrowRight /></el-icon></router-link>
           </header>
-          <div class="knowledge-card">
-            <span><el-icon><Reading /></el-icon></span>
-            <div>
-              <h3>Spring Boot 核心注解原理</h3>
-              <p>@SpringBootApplication 注解包含了哪些注解？它的自动配置原理是什么？</p>
-              <button type="button">
-                去学习 <el-icon><ArrowRight /></el-icon>
-              </button>
-            </div>
+          <div v-if="skills.length" class="skill-tags">
+            <span v-for="s in skills" :key="s">{{ s }}</span>
           </div>
+          <el-empty v-else description="还没有简历画像，填写简历后自动生成" :image-size="70" />
         </section>
       </aside>
     </div>
@@ -152,95 +146,98 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   Aim,
   ArrowRight,
-  Clock,
-  Collection,
   CollectionTag,
-  Cpu,
   DataAnalysis,
   Document,
-  Lightning,
-  MoreFilled,
-  Platform,
   Reading,
-  User,
   VideoCamera
 } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
+import { getJobList, getMyStats, getInterviewRecords, getMyResume } from '@/api'
 import dashboardDeco from '@/assets/generated/dashboard-deco-ui.jpg'
 
 const router = useRouter()
 const userStore = useUserStore()
 
-const now = new Date()
-const hour = now.getHours()
+const hour = new Date().getHours()
 const greeting = computed(() => {
   if (hour < 12) return '上午好'
   if (hour < 14) return '中午好'
   if (hour < 18) return '下午好'
   return '晚上好'
 })
-
 const displayName = computed(() => userStore.nickname || userStore.username || '同学')
 
 const quickActions = [
   { title: '开始面试', desc: '选择岗位，开启 AI 模拟面试', cta: '立即开始', path: '/jobs', icon: VideoCamera, theme: 'purple' },
-  { title: '面试准备', desc: '刷题练习，掌握面试知识点', cta: '去准备', path: '/jobs', icon: Document, theme: 'blue' },
-  { title: '能力测评', desc: '全面评估，定位能力短板', cta: '去测评', path: '/report', icon: DataAnalysis, theme: 'green' }
+  { title: '面试准备', desc: '查看岗位，填写简历画像', cta: '去准备', path: '/jobs', icon: Document, theme: 'blue' },
+  { title: '能力报告', desc: '查看历次面试评估结果', cta: '去查看', path: '/report', icon: DataAnalysis, theme: 'green' }
 ]
 
-const recommendedJobs = [
-  {
-    id: 1,
-    name: 'Java后端开发工程师',
-    meta: '互联网 · 中级',
-    learners: '12456',
-    tags: ['Java', 'Spring Boot', 'MySQL'],
-    icon: Collection,
-    theme: 'java'
-  },
-  {
-    id: 2,
-    name: 'Web前端开发工程师',
-    meta: '互联网 · 中级',
-    learners: '9821',
-    tags: ['HTML/CSS/JS', 'Vue', 'TypeScript'],
-    icon: Platform,
-    theme: 'web'
-  },
-  {
-    id: 3,
-    name: 'AI算法工程师',
-    meta: '人工智能 · 高级',
-    learners: '7563',
-    tags: ['Python', '机器学习', '深度学习'],
-    icon: Cpu,
-    theme: 'ai'
+// 真实数据
+const jobs = ref([])
+const jobsLoading = ref(false)
+const records = ref([])
+const stats = ref({
+  finishedInterviews: 0,
+  ongoingInterviews: 0,
+  averageScore: 0,
+  highestScore: 0,
+  reportCount: 0,
+  skillCount: 0
+})
+const skills = ref([])
+
+const parseTags = (keywords) => {
+  try {
+    return JSON.parse(keywords || '[]').slice(0, 3)
+  } catch {
+    return []
   }
-]
+}
 
-const records = [
-  { date: '2024-05-18', time: '14:30', job: 'Java后端开发工程师', score: 86, label: '优秀', level: 'good' },
-  { date: '2024-05-17', time: '10:15', job: 'Web前端开发工程师', score: 78, label: '良好', level: 'ok' },
-  { date: '2024-05-16', time: '16:45', job: 'AI算法工程师', score: 92, label: '优秀', level: 'good' }
-]
+const formatDate = (dt) => {
+  if (!dt) return '—'
+  return String(dt).replace('T', ' ').slice(0, 16)
+}
 
-const streakDays = [
-  { label: '一', height: 32 },
-  { label: '三', height: 43 },
-  { label: '四', height: 41 },
-  { label: '五', height: 42 },
-  { label: '六', height: 30 },
-  { label: '日', height: 58 }
-]
+const statusLabel = (s) => ({ FINISHED: '已完成', ONGOING: '进行中', ABORTED: '已中断' }[s] || s)
+const statusClass = (s) => ({ FINISHED: 'good', ONGOING: 'ok', ABORTED: 'bad' }[s] || 'ok')
 
-const progressStyle = computed(() => ({
-  background: 'conic-gradient(#4f7cff 0 75%, #edf3ff 75% 100%)'
-}))
+onMounted(async () => {
+  jobsLoading.value = true
+  try {
+    jobs.value = (await getJobList()).slice(0, 3)
+  } finally {
+    jobsLoading.value = false
+  }
+
+  try {
+    records.value = (await getInterviewRecords()).slice(0, 5)
+  } catch {
+    records.value = []
+  }
+
+  try {
+    stats.value = await getMyStats()
+  } catch {
+    /* 保持默认 0 */
+  }
+
+  try {
+    const resume = await getMyResume()
+    if (resume && resume.skills) {
+      skills.value = JSON.parse(resume.skills).slice(0, 12)
+    }
+  } catch {
+    skills.value = []
+  }
+})
 </script>
 
 <style scoped>
@@ -447,15 +444,11 @@ const progressStyle = computed(() => ({
   font-weight: 900;
 }
 
-.panel-header a,
-.panel-header button {
+.panel-header a {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   color: #6c7a92;
-  background: transparent;
-  border: 0;
-  cursor: pointer;
   font-size: 14px;
   font-weight: 700;
 }
@@ -464,6 +457,7 @@ const progressStyle = computed(() => ({
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
+  min-height: 120px;
 }
 
 .job-card {
@@ -487,19 +481,8 @@ const progressStyle = computed(() => ({
   height: 50px;
   margin-bottom: 14px;
   place-items: center;
-  font-size: 31px;
-}
-
-.job-brand.java {
-  color: #ed4d42;
-}
-
-.job-brand.web {
-  color: #16a76a;
-}
-
-.job-brand.ai {
   color: #3477c8;
+  font-size: 31px;
 }
 
 .job-card h3 {
@@ -532,29 +515,6 @@ const progressStyle = computed(() => ({
   font-weight: 700;
 }
 
-.job-card:nth-child(3) .tag-row span {
-  color: #078e6a;
-  background: #e9fbf4;
-}
-
-.job-card footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-top: 15px;
-  margin-top: 16px;
-  color: #5b6a86;
-  border-top: 1px solid #e2e9f3;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.job-card footer span {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
 .record-table {
   overflow: hidden;
   border: 1px solid #e0e7f1;
@@ -563,10 +523,10 @@ const progressStyle = computed(() => ({
 
 .record-row {
   display: grid;
-  grid-template-columns: 1.1fr 1.7fr 0.7fr 0.8fr 1.1fr;
+  grid-template-columns: 1.4fr 1.7fr 0.8fr 0.9fr;
   align-items: center;
-  min-height: 74px;
-  padding: 0 28px;
+  min-height: 64px;
+  padding: 0 24px;
   color: #263a5a;
   border-top: 1px solid #e8eef6;
   font-size: 15px;
@@ -577,23 +537,19 @@ const progressStyle = computed(() => ({
 }
 
 .record-head {
-  min-height: 54px;
+  min-height: 50px;
   color: #63728e;
   background: #f8faff;
   font-weight: 800;
 }
 
-.record-row small {
-  margin-left: 14px;
-  color: #2f4364;
-}
-
 .record-row em {
   display: inline-flex;
-  padding: 8px 13px;
+  padding: 6px 12px;
   border-radius: 8px;
   font-style: normal;
   font-weight: 800;
+  font-size: 13px;
 }
 
 .record-row em.good {
@@ -606,211 +562,68 @@ const progressStyle = computed(() => ({
   background: #e7f1ff;
 }
 
-.record-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 18px;
+.record-row em.bad {
+  color: #e8743b;
+  background: #fdeee4;
 }
 
-.record-actions button {
-  height: 38px;
-  padding: 0 18px;
-  color: #2674ff;
-  background: #fff;
-  border: 1px solid #d8e4f4;
+.stat-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.stat-item {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+  background: #f8faff;
   border-radius: 8px;
-  cursor: pointer;
-  font-weight: 800;
 }
 
-.all-records {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  width: 100%;
-  margin-top: 20px;
-  color: #2674ff;
-  font-weight: 800;
-}
-
-.progress-body {
+.stat-icon {
   display: grid;
-  grid-template-columns: 142px minmax(0, 1fr);
-  gap: 20px;
-  align-items: center;
-}
-
-.progress-ring {
-  display: grid;
-  width: 132px;
-  height: 132px;
+  width: 44px;
+  height: 44px;
+  color: #fff;
   place-items: center;
-  border-radius: 50%;
+  border-radius: 12px;
+  font-size: 22px;
 }
 
-.progress-ring > div {
-  display: grid;
-  width: 102px;
-  height: 102px;
-  color: #122747;
-  place-items: center;
-  background: #fff;
-  border-radius: 50%;
-  text-align: center;
-}
+.stat-icon.blue { background: linear-gradient(135deg, #4a93ff, #196eff); }
+.stat-icon.green { background: linear-gradient(135deg, #46dc95, #09bd76); }
+.stat-icon.orange { background: linear-gradient(135deg, #ffb347, #ff9a24); }
+.stat-icon.purple { background: linear-gradient(135deg, #8c57ff, #5a34ec); }
 
-.progress-ring strong,
-.progress-ring span {
+.stat-item strong {
   display: block;
-}
-
-.progress-ring strong {
-  font-size: 28px;
+  color: #122747;
+  font-size: 24px;
   font-weight: 900;
 }
 
-.progress-ring span {
+.stat-item span {
   color: #66758e;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
 }
 
-.progress-list {
-  display: grid;
-  gap: 16px;
+.skill-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
-.progress-list p {
-  display: grid;
-  grid-template-columns: 34px 1fr;
-  column-gap: 12px;
-  margin: 0;
-  color: #70809b;
-}
-
-.progress-list .el-icon {
-  grid-row: span 2;
-  display: grid;
-  width: 34px;
-  height: 34px;
-  color: #4f7cff;
-  place-items: center;
+.skill-tags span {
+  padding: 7px 12px;
+  color: #3b6ef5;
   background: #eef4ff;
-  border-radius: 50%;
-}
-
-.progress-list strong {
-  color: #243756;
-  font-size: 20px;
-}
-
-.streak-panel {
-  display: grid;
-  grid-template-columns: 1fr 178px;
-  align-items: center;
-}
-
-.streak-panel strong,
-.streak-panel b,
-.streak-panel small {
-  display: block;
-}
-
-.flame {
-  display: inline-grid;
-  width: 32px;
-  height: 32px;
-  margin-right: 12px;
-  color: #ff9a24;
-  place-items: center;
-  background: #fff3e4;
-  border-radius: 50%;
-  vertical-align: middle;
-}
-
-.streak-panel strong {
-  display: inline-block;
-  color: #50617d;
-  font-size: 16px;
-  font-weight: 900;
-}
-
-.streak-panel b {
-  margin: 8px 0 5px 45px;
-  color: #101f39;
-  font-size: 24px;
-  font-weight: 950;
-}
-
-.streak-panel small {
-  margin-left: 45px;
-  color: #7a889f;
+  border-radius: 6px;
   font-size: 13px;
   font-weight: 700;
-}
-
-.bars {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  height: 70px;
-}
-
-.bars span {
-  width: 14px;
-  background: linear-gradient(180deg, #557fff, #b3c3ff);
-  border-radius: 4px 4px 0 0;
-}
-
-.knowledge-panel {
-  background: linear-gradient(135deg, #fff 0%, #fbf7ff 100%);
-  border-color: #eadfff;
-}
-
-.knowledge-card {
-  display: grid;
-  grid-template-columns: 70px 1fr;
-  gap: 18px;
-}
-
-.knowledge-card > span {
-  display: grid;
-  width: 70px;
-  height: 70px;
-  color: #8c5eff;
-  place-items: center;
-  background: #f1eaff;
-  border-radius: 16px;
-  font-size: 34px;
-}
-
-.knowledge-card h3 {
-  color: #162843;
-  font-size: 17px;
-  font-weight: 900;
-}
-
-.knowledge-card p {
-  margin-top: 10px;
-  color: #5e6d85;
-  font-size: 14px;
-  line-height: 1.7;
-}
-
-.knowledge-card button {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 38px;
-  margin-top: 18px;
-  padding: 0 24px;
-  color: #6d45f7;
-  background: #fff;
-  border: 1px solid #d9dff1;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 900;
 }
 
 @media (max-width: 1060px) {
@@ -832,8 +645,7 @@ const progressStyle = computed(() => ({
 @media (max-width: 760px) {
   .quick-actions,
   .job-cards,
-  .progress-body,
-  .streak-panel {
+  .stat-list {
     grid-template-columns: 1fr;
   }
 
@@ -844,17 +656,12 @@ const progressStyle = computed(() => ({
     padding: 22px;
   }
 
-  .action-icon {
-    width: 64px;
-    height: 64px;
-  }
-
   .record-table {
     overflow-x: auto;
   }
 
   .record-row {
-    min-width: 760px;
+    min-width: 600px;
   }
 }
 </style>
