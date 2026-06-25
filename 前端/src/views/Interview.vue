@@ -266,11 +266,16 @@ const handleNext = async () => {
 const handleFinish = async () => {
   finishing.value = true
   try {
-    await finishInterview(sessionId.value)
+    const reportId = await finishInterview(sessionId.value)
     stopTimer()
     stage.value = 'finished'
-    ElMessage.success('面试已结束，正在前往面试记录')
-    router.push('/history')
+    if (reportId) {
+      ElMessage.success('面试已结束，正在生成能力报告')
+      router.push({ path: '/report', query: { reportId } })
+    } else {
+      ElMessage.success('面试已结束，正在前往面试记录')
+      router.push('/history')
+    }
   } finally {
     finishing.value = false
   }

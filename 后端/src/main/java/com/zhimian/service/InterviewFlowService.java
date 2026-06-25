@@ -45,6 +45,7 @@ public class InterviewFlowService {
     private final QuestionMapper questionMapper;
     private final JobPositionMapper jobMapper;
     private final ResumeService resumeService;
+    private final ReportService reportService;
 
     /** 一次面试最多主问题数 */
     private static final int MAX_QUESTIONS = 5;
@@ -189,6 +190,13 @@ public class InterviewFlowService {
 
     // ============================ 4. 结束面试 ============================
 
+    /**
+     * 结束面试并生成报告（Phase 2）。幂等：
+     *  - 已 FINISHED 且报告已存在 → 返回已有 reportId；
+     *  - 已 FINISHED 但无报告 → 补生成报告；
+     *  - 进行中 → 置 FINISHED、补 endTime，再生成报告。
+     * 返回 reportId（非 sessionId）。
+     */
     public Long finish(Long sessionId) {
         InterviewSession session = sessionMapper.selectById(sessionId);
         if (session == null) {
@@ -197,14 +205,15 @@ public class InterviewFlowService {
         if (!session.getUserId().equals(UserContext.getUserId())) {
             throw new BizException("无权操作该会话");
         }
-        // 幂等：已结束直接返回
-        if (STATUS_FINISHED.equals(session.getStatus())) {
-            return sessionId;
+        if (!STATUS_FINISHED.equals(session.getStatus())) {
+            session.setStatus(STATUS_FINISHED);
+            if (session.getEndTime() == null) {
+                session.setEndTime(LocalDateTime.now());
+            }
+            sessionMapper.updateById(session);
         }
-        session.setStatus(STATUS_FINISHED);
-        session.setEndTime(LocalDateTime.now());
-        sessionMapper.updateById(session);
-        return sessionId;
+        // 生成报告（内部幂等：已存在则返回原 reportId）
+        return reportService.generateForSession(session);
     }
 
     // ============================ 共享辅助逻辑 ============================

@@ -55,7 +55,7 @@ public class InterviewController {
         return Result.success(flowService.next(sessionId));
     }
 
-    /** 结束面试：会话置为 FINISHED（幂等），报告生成留待 Phase 2 */
+    /** 结束面试：会话置为 FINISHED（幂等），并生成规则化报告，返回 reportId */
     @PostMapping("/{sessionId}/finish")
     public Result<Long> finish(@PathVariable Long sessionId) {
         return Result.success(flowService.finish(sessionId));
