@@ -167,6 +167,7 @@ const stage = ref('loading')
 const submitting = ref(false)
 const loadingNext = ref(false)
 const finishing = ref(false)
+const starting = ref(false) // 防止同一次挂载内重复触发 startInterview
 
 // ------- 计时器 -------
 const elapsed = ref(0)
@@ -290,6 +291,8 @@ onMounted(async () => {
     router.replace('/jobs')
     return
   }
+  if (starting.value) return // 防重复：同一次挂载只允许开始一次
+  starting.value = true
   try {
     const data = await startInterview({
       jobId: Number(jobId),

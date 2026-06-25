@@ -119,7 +119,14 @@
     <div class="action-bar">
       <div class="action-content">
         <el-button :icon="ArrowLeft" @click="$router.back()">返回岗位选择</el-button>
-        <el-button type="primary" size="large" :disabled="!analyzed" :icon="VideoCamera" @click="goInterview">
+        <el-button
+          type="primary"
+          size="large"
+          :disabled="!analyzed || entering"
+          :loading="entering"
+          :icon="VideoCamera"
+          @click="goInterview"
+        >
           进入模拟面试
         </el-button>
       </div>
@@ -151,6 +158,7 @@ const skills = ref([])
 const projects = ref([])
 const analyzed = ref(false)
 const loading = ref(false)
+const entering = ref(false)
 
 const jobId = route.query.jobId
 const difficulty = route.query.difficulty
@@ -205,10 +213,12 @@ const fillSample = () => {
 const difficultyMap = { 简单: 1, 中等: 2, 困难: 3 }
 
 const goInterview = () => {
+  if (entering.value) return // 防重复点击：避免连点进入两次而创建多个会话
   if (!jobId) {
     ElMessage.warning('请先从「面试准备」选择岗位')
     return
   }
+  entering.value = true
   // JobSelect 传来的 difficulty 是中文字符串，这里统一归一为 1/2/3
   const d = difficultyMap[difficulty] || Number(difficulty) || 2
   router.push({ path: '/interview', query: { jobId, difficulty: d, resumeReady: 1 } })
