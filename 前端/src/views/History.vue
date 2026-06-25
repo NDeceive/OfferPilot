@@ -59,6 +59,7 @@
               >
                 查看报告
               </el-button>
+              <el-button v-else-if="row.status === 'ONGOING'" size="small" disabled>未完成</el-button>
               <el-button v-else size="small" disabled>报告生成中</el-button>
             </template>
           </el-table-column>
@@ -110,7 +111,9 @@ const durationText = (row) => {
 onMounted(async () => {
   loading.value = true
   try {
-    records.value = await getInterviewRecords()
+    const data = await getInterviewRecords()
+    // 按开始时间倒序，最新的面试排在最前
+    records.value = (data || []).sort((a, b) => new Date(b.startTime) - new Date(a.startTime))
   } catch {
     records.value = []
   } finally {

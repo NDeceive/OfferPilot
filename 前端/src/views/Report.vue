@@ -130,7 +130,7 @@ import {
   Tickets,
   WarningFilled
 } from '@element-plus/icons-vue'
-import { getReportDetail } from '@/api'
+import { getReportDetail, getInterviewRecords } from '@/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -214,13 +214,7 @@ const retrain = () => {
   router.push({ path: '/jobs', query })
 }
 
-onMounted(async () => {
-  const reportId = route.query.reportId
-  if (!reportId) {
-    error.value = '缺少报告参数，无法展示报告。'
-    loading.value = false
-    return
-  }
+const loadReport = async (reportId) => {
   try {
     report.value = await getReportDetail(reportId)
     await nextTick()
@@ -228,6 +222,27 @@ onMounted(async () => {
     window.addEventListener('resize', resizeChart)
   } catch (e) {
     error.value = '报告加载失败，可能不存在或无权访问。'
+  }
+}
+
+onMounted(async () => {
+  try {
+    let reportId = route.query.reportId
+    // 直接打开 /report（无 reportId）时，回退到最近一次「已完成且已生成报告」的记录
+    if (!reportId) {
+      const records = await getInterviewRecords()
+      const finished = (records || [])
+        .filter((r) => r.status === 'FINISHED' && r.reportId)
+        .sort((a, b) => new Date(b.startTime) - new Date(a.startTime))
+      if (finished.length) {
+        reportId = finished[0].reportId
+        router.replace({ path: '/report', query: { reportId } })
+      } else {
+        error.value = '还没有可查看的报告，先去完成一次面试吧。'
+        return
+      }
+    }
+    await loadReport(reportId)
   } finally {
     loading.value = false
   }
