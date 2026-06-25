@@ -34,7 +34,9 @@ ai:
   api-key: ${AI_API_KEY:在这里填你的DeepSeek_API_Key}
   model: deepseek-chat
   # 是否启用真实 AI 调用；false 时使用内置规则/模拟（无 key 也能演示）
-  enabled: false
+  enabled: true
+  # 调用超时（毫秒），同时作为连接与读取超时
+  timeout-ms: 20000
 
 logging:
   level:
