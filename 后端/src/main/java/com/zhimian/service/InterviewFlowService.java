@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.zhimian.common.BizException;
 import com.zhimian.config.UserContext;
 import com.zhimian.dto.AnswerRequest;
+import com.zhimian.dto.FollowUpRequest;
+import com.zhimian.dto.FollowUpResponse;
 import com.zhimian.dto.InterviewStartResponse;
 import com.zhimian.dto.InterviewStep;
 import com.zhimian.dto.QuestionView;
@@ -46,6 +48,7 @@ public class InterviewFlowService {
     private final JobPositionMapper jobMapper;
     private final ResumeService resumeService;
     private final ReportService reportService;
+    private final FollowUpService followUpService;
 
     /** 一次面试最多主问题数 */
     private static final int MAX_QUESTIONS = 5;
@@ -148,7 +151,7 @@ public class InterviewFlowService {
 
         InterviewStep step = new InterviewStep();
         if (!followupExists && shouldFollowUp(req.getAnswer(), question)) {
-            String followup = buildFollowup(question);
+            String followup = generateFollowup(session, question, req.getAnswer());
             saveMessage(sessionId, req.getQuestionId(), round, ROLE_INTERVIEWER, MSG_FOLLOWUP,
                     followup, parentMain.getAbilityTag());
             step.setNextAction(ACTION_FOLLOWUP);
@@ -357,6 +360,38 @@ public class InterviewFlowService {
         }
         String lower = text.toLowerCase();
         return keywords.stream().anyMatch(k -> lower.contains(k.toLowerCase()));
+    }
+
+    /**
+     * 生成追问文案：AI 优先（FollowUpService 内部已含规则兜底），
+     * 调用异常或返回空时再退回题库级 {@link #buildFollowup} 作为最终兜底。
+     * 触发追问与否仍由 {@link #shouldFollowUp} 决定，这里只负责“问什么”。
+     */
+    private String generateFollowup(InterviewSession session, Question question, String answer) {
+        try {
+            FollowUpRequest fr = new FollowUpRequest();
+            fr.setPosition(resolveJobName(session));
+            fr.setQuestion(question != null ? question.getContent() : null);
+            fr.setAnswer(answer);
+            FollowUpResponse resp = followUpService.generate(fr);
+            if (resp != null && resp.getFollowUpQuestion() != null && !resp.getFollowUpQuestion().isBlank()) {
+                log.info("[面试追问] sessionId={}, questionId={}, source={}",
+                        session.getId(), question != null ? question.getId() : null, resp.getSource());
+                return resp.getFollowUpQuestion().trim();
+            }
+            log.warn("[面试追问] FollowUpService 返回空，回退题库兜底 sessionId={}", session.getId());
+        } catch (Exception e) {
+            log.warn("[面试追问] FollowUpService 异常，回退题库兜底 sessionId={}, err={}",
+                    session.getId(), e.getMessage());
+        }
+        return buildFollowup(question);
+    }
+
+    /** 取会话岗位名作为追问的 position；缺省给一个安全占位，避免无状态接口校验失败 */
+    private String resolveJobName(InterviewSession session) {
+        JobPosition job = jobMapper.selectById(session.getJobId());
+        String name = (job != null) ? job.getName() : null;
+        return (name != null && !name.isBlank()) ? name : "该岗位";
     }
 
     /** 优先使用题目预设的追问提示，缺省则用能力标签拼一句通用追问 */

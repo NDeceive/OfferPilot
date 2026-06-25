@@ -2,10 +2,13 @@ package com.zhimian.controller;
 
 import com.zhimian.common.Result;
 import com.zhimian.dto.AnswerRequest;
+import com.zhimian.dto.FollowUpRequest;
+import com.zhimian.dto.FollowUpResponse;
 import com.zhimian.dto.InterviewRecord;
 import com.zhimian.dto.InterviewStartResponse;
 import com.zhimian.dto.InterviewStep;
 import com.zhimian.dto.StartInterviewRequest;
+import com.zhimian.service.FollowUpService;
 import com.zhimian.service.InterviewFlowService;
 import com.zhimian.service.InterviewRecordService;
 import jakarta.validation.Valid;
@@ -29,6 +32,7 @@ public class InterviewController {
 
     private final InterviewRecordService recordService;
     private final InterviewFlowService flowService;
+    private final FollowUpService followUpService;
 
     /** 当前用户的面试记录列表（真实数据，无记录则为空数组） */
     @GetMapping("/records")
@@ -59,5 +63,15 @@ public class InterviewController {
     @PostMapping("/{sessionId}/finish")
     public Result<Long> finish(@PathVariable Long sessionId) {
         return Result.success(flowService.finish(sessionId));
+    }
+
+    /**
+     * 动态追问（Phase 3.1）：根据岗位 / 原始问题 / 回答生成一个追问。
+     * 优先调用 DeepSeek（source=AI），失败或回答过短时回退规则化兜底（source=RULE）。
+     * 无状态接口，不依赖会话与题库。
+     */
+    @PostMapping("/follow-up")
+    public Result<FollowUpResponse> followUp(@Valid @RequestBody FollowUpRequest req) {
+        return Result.success(followUpService.generate(req));
     }
 }
