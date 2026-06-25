@@ -49,9 +49,17 @@
             </template>
           </el-table-column>
 
-          <el-table-column label="操作" width="130" align="right">
-            <template #default>
-              <el-button size="small" disabled>查看报告</el-button>
+          <el-table-column label="操作" width="140" align="right">
+            <template #default="{ row }">
+              <el-button
+                v-if="row.reportId"
+                type="primary"
+                size="small"
+                @click="viewReport(row.reportId)"
+              >
+                查看报告
+              </el-button>
+              <el-button v-else size="small" disabled>报告生成中</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -62,11 +70,17 @@
 
 <script setup>
 import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { Tickets } from '@element-plus/icons-vue'
 import { getInterviewRecords } from '@/api'
 
+const router = useRouter()
 const records = ref([])
 const loading = ref(false)
+
+const viewReport = (reportId) => {
+  router.push({ path: '/report', query: { reportId } })
+}
 
 const difficultyLabel = (d) => ({ 1: '简单', 2: '中等', 3: '困难' }[d] || '中等')
 
