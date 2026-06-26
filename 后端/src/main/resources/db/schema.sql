@@ -168,6 +168,29 @@ CREATE TABLE report_dimension (
     KEY idx_report (report_id)
 ) ENGINE=InnoDB COMMENT='报告评分维度明细表';
 
+-- ---------------------------------------------------------------------
+-- 10. 追问记录表（实验分析 / 论文写作用，不参与面试主流程）
+--   仅在真实面试流程「确实生成追问」时落库一条；区分 AI 与 RULE 来源
+-- ---------------------------------------------------------------------
+DROP TABLE IF EXISTS interview_followup_record;
+CREATE TABLE interview_followup_record (
+    id                BIGINT      PRIMARY KEY AUTO_INCREMENT COMMENT '记录ID',
+    user_id           BIGINT                                 COMMENT '用户ID',
+    session_id        BIGINT      NOT NULL                   COMMENT '会话ID',
+    job_id            BIGINT                                 COMMENT '岗位ID',
+    question_id       BIGINT                                 COMMENT '被追问的主问题目ID',
+    position          VARCHAR(100)                           COMMENT '岗位名称',
+    original_question TEXT                                   COMMENT '原始主问题题干',
+    user_answer       TEXT                                   COMMENT '考生原始回答',
+    follow_up_question TEXT                                  COMMENT '生成的追问问题',
+    source            VARCHAR(20)                            COMMENT '追问来源: AI / RULE',
+    trigger_reason    VARCHAR(255)                           COMMENT '触发追问/兜底的原因说明',
+    ability_tag       VARCHAR(100)                           COMMENT '能力标签',
+    create_time       DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_session (session_id),
+    KEY idx_source (source)
+) ENGINE=InnoDB COMMENT='追问记录表(实验分析用)';
+
 -- =====================================================================
 -- 初始化数据：默认账号 + 2个岗位（密码均为 123456 的 BCrypt 值）
 -- =====================================================================
