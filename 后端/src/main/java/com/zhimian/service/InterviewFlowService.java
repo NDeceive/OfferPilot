@@ -10,6 +10,7 @@ import com.zhimian.dto.InterviewStartResponse;
 import com.zhimian.dto.InterviewStep;
 import com.zhimian.dto.QuestionView;
 import com.zhimian.dto.StartInterviewRequest;
+import com.zhimian.entity.InterviewFollowupRecord;
 import com.zhimian.entity.InterviewMessage;
 import com.zhimian.entity.InterviewSession;
 import com.zhimian.entity.JobPosition;
@@ -49,6 +50,7 @@ public class InterviewFlowService {
     private final ResumeService resumeService;
     private final ReportService reportService;
     private final FollowUpService followUpService;
+    private final InterviewFollowupRecordService followupRecordService;
 
     /** 一次面试最多主问题数 */
     private static final int MAX_QUESTIONS = 5;
@@ -151,11 +153,17 @@ public class InterviewFlowService {
 
         InterviewStep step = new InterviewStep();
         if (!followupExists && shouldFollowUp(req.getAnswer(), question)) {
-            String followup = generateFollowup(session, question, req.getAnswer());
+            // 生成追问（内部含 source / triggerReason，仅用于落库，不回传前端）
+            FollowupResult followup = generateFollowup(session, question, req.getAnswer());
             saveMessage(sessionId, req.getQuestionId(), round, ROLE_INTERVIEWER, MSG_FOLLOWUP,
-                    followup, parentMain.getAbilityTag());
+                    followup.followUpQuestion, parentMain.getAbilityTag());
+
+            // 仅在确实生成追问时落一条追问记录（实验分析用），失败不影响面试
+            saveFollowupRecord(session, question, req, parentMain.getAbilityTag(), followup);
+
             step.setNextAction(ACTION_FOLLOWUP);
-            step.setFollowupQuestion(followup);
+            // 注意：仅回传追问文案，私有结果对象不暴露给前端，响应结构保持不变
+            step.setFollowupQuestion(followup.followUpQuestion);
             return step;
         }
 
@@ -366,8 +374,11 @@ public class InterviewFlowService {
      * 生成追问文案：AI 优先（FollowUpService 内部已含规则兜底），
      * 调用异常或返回空时再退回题库级 {@link #buildFollowup} 作为最终兜底。
      * 触发追问与否仍由 {@link #shouldFollowUp} 决定，这里只负责“问什么”。
+     * <p>
+     * 返回私有结果对象 {@link FollowupResult}（含 source / triggerReason），仅供内部落库，
+     * 不会暴露给前端，因此 /answer 的响应结构保持不变。
      */
-    private String generateFollowup(InterviewSession session, Question question, String answer) {
+    private FollowupResult generateFollowup(InterviewSession session, Question question, String answer) {
         try {
             FollowUpRequest fr = new FollowUpRequest();
             fr.setPosition(resolveJobName(session));
@@ -377,14 +388,56 @@ public class InterviewFlowService {
             if (resp != null && resp.getFollowUpQuestion() != null && !resp.getFollowUpQuestion().isBlank()) {
                 log.info("[面试追问] sessionId={}, questionId={}, source={}",
                         session.getId(), question != null ? question.getId() : null, resp.getSource());
-                return resp.getFollowUpQuestion().trim();
+                // 透传 FollowUpService 给出的 source（AI / RULE）与 triggerReason，原样落库
+                return new FollowupResult(resp.getFollowUpQuestion().trim(),
+                        resp.getSource(), resp.getTriggerReason());
             }
             log.warn("[面试追问] FollowUpService 返回空，回退题库兜底 sessionId={}", session.getId());
         } catch (Exception e) {
             log.warn("[面试追问] FollowUpService 异常，回退题库兜底 sessionId={}, err={}",
                     session.getId(), e.getMessage());
         }
-        return buildFollowup(question);
+        // 外层题库兜底：固定标记为 RULE，并记录兜底原因（规则 7）
+        return new FollowupResult(buildFollowup(question), "RULE",
+                "FollowUpService异常或返回为空，使用题库兜底追问");
+    }
+
+    /**
+     * 组装并安全保存一条追问记录（实验分析用）。
+     * 仅在确实生成追问后调用；保存失败由 {@link InterviewFollowupRecordService} 内部吞掉，不影响面试。
+     */
+    private void saveFollowupRecord(InterviewSession session, Question question, AnswerRequest req,
+                                    String abilityTag, FollowupResult followup) {
+        InterviewFollowupRecord record = new InterviewFollowupRecord();
+        record.setUserId(session.getUserId());
+        record.setSessionId(session.getId());
+        record.setJobId(session.getJobId());
+        record.setQuestionId(req.getQuestionId());
+        record.setPosition(resolveJobName(session));
+        record.setOriginalQuestion(question != null ? question.getContent() : null);
+        record.setUserAnswer(req.getAnswer());
+        record.setFollowUpQuestion(followup.followUpQuestion);
+        record.setSource(followup.source);
+        record.setTriggerReason(followup.triggerReason);
+        record.setAbilityTag(abilityTag);
+        // createTime 由数据库默认值填充
+        followupRecordService.saveSafely(record);
+    }
+
+    /**
+     * 追问生成的私有结果对象：携带追问文案及其来源/触发原因，仅供内部落库使用，
+     * 不对外暴露，避免改变 /answer 响应结构。
+     */
+    private static class FollowupResult {
+        private final String followUpQuestion;
+        private final String source;
+        private final String triggerReason;
+
+        FollowupResult(String followUpQuestion, String source, String triggerReason) {
+            this.followUpQuestion = followUpQuestion;
+            this.source = source;
+            this.triggerReason = triggerReason;
+        }
     }
 
     /** 取会话岗位名作为追问的 position；缺省给一个安全占位，避免无状态接口校验失败 */
