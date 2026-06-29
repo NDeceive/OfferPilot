@@ -6,6 +6,8 @@
 *.log
 后端/run.log
 后端/run.err.log
+# 生产滚动日志目录（logback-spring.xml prod profile 输出）
+后端/logs/
 
 # ===== Node / Vite (前端) =====
 node_modules/
