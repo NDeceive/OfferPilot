@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  日志配置（Spring Boot 自动加载 logback-spring.xml，支持 <springProfile>）。
+  设计：
+    - 开发（默认 / dev profile）：仅控制台输出，方便本地实时查看。
+    - 生产（prod profile）：滚动文件日志 + 控制台，按天和大小切分，保留 30 天。
+  日志格式包含：时间戳、级别、线程、logger、traceId(MDC)、消息。
+  安全：不在格式中输出任何请求体/响应体，业务代码也不应打印密码、JWT、AI Key 等敏感信息。
+  日志级别（com.zhimian 等）继续由 application.yml 的 logging.level.* 控制，
+  Spring 会在加载本文件后应用这些级别，二者不冲突。
+-->
+<configuration>
+
+    <!-- 统一日志格式：traceId 来自 MDC，无值时显示为空 -->
+    <property name="LOG_PATTERN"
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} [traceId=%X{traceId:-}] - %msg%n"/>
+
+    <!-- 控制台 appender（开发与生产都挂载，便于容器 stdout 采集） -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!-- 开发环境：仅控制台 -->
+    <springProfile name="dev,default">
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+    </springProfile>
+
+    <!-- 生产环境：滚动文件 + 控制台 -->
+    <springProfile name="prod">
+        <!-- 日志目录：可通过环境变量 LOG_PATH 覆盖，默认写到 后端/logs -->
+        <property name="LOG_PATH" value="${LOG_PATH:-logs}"/>
+
+        <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+            <file>${LOG_PATH}/zhimian.log</file>
+            <encoder>
+                <pattern>${LOG_PATTERN}</pattern>
+                <charset>UTF-8</charset>
+            </encoder>
+            <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+                <!-- 按天切分，单文件超过 50MB 也切分；归档压缩为 .gz -->
+                <fileNamePattern>${LOG_PATH}/zhimian.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+                <maxFileSize>50MB</maxFileSize>
+                <!-- 保留 30 天 -->
+                <maxHistory>30</maxHistory>
+                <!-- 归档总量上限，超出后删除最旧文件 -->
+                <totalSizeCap>2GB</totalSizeCap>
+            </rollingPolicy>
+        </appender>
+
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="FILE"/>
+        </root>
+    </springProfile>
+
+</configuration>
