@@ -1,6 +1,7 @@
 package com.zhimian.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.zhimian.config.UserContext;
 import com.zhimian.dto.FollowupRecordPageResponse;
 import com.zhimian.dto.FollowupRecordStats;
 import com.zhimian.entity.InterviewFollowupRecord;
@@ -63,6 +64,10 @@ public class InterviewFollowupRecordService {
         long offset = (safePageNo - 1) * safePageSize;
 
         LambdaQueryWrapper<InterviewFollowupRecord> wrapper = new LambdaQueryWrapper<>();
+        // 安全：追问记录含原始面试题与考生回答，必须按当前登录用户隔离。
+        // 强制以服务端 UserContext 的 userId 过滤，忽略任何前端传入的 userId，
+        // 每个用户只能查询本人的追问记录。
+        wrapper.eq(InterviewFollowupRecord::getUserId, UserContext.getUserId());
         if (StringUtils.hasText(source)) {
             wrapper.eq(InterviewFollowupRecord::getSource, source.trim());
         }
@@ -118,9 +123,11 @@ public class InterviewFollowupRecordService {
         return stats;
     }
 
-    /** 按来源计数；source 为 null 表示统计全部 */
+    /** 按来源计数；source 为 null 表示统计当前用户全部 */
     private long countBySource(String source) {
         LambdaQueryWrapper<InterviewFollowupRecord> wrapper = new LambdaQueryWrapper<>();
+        // 安全：统计同样按当前登录用户隔离，只统计本人的追问记录。
+        wrapper.eq(InterviewFollowupRecord::getUserId, UserContext.getUserId());
         if (source != null) {
             wrapper.eq(InterviewFollowupRecord::getSource, source);
         }

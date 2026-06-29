@@ -34,7 +34,9 @@ public class AuthService {
         user.setUsername(req.getUsername());
         user.setPassword(passwordEncoder.encode(req.getPassword()));
         user.setNickname(req.getNickname() != null ? req.getNickname() : req.getUsername());
-        user.setRole(req.getRole() != null ? req.getRole() : "STUDENT");
+        // 安全：公开注册一律创建普通学生账号，忽略任何来自请求体的 role，
+        // 防止越权注册成 ADMIN/TEACHER。特权账号仅通过种子数据/DB/管理后台创建。
+        user.setRole("STUDENT");
         user.setStatus(1);
         userMapper.insert(user);
     }

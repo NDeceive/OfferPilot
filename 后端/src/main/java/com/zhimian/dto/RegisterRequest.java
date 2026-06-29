@@ -20,6 +20,7 @@ public class RegisterRequest {
 
     private String nickname;
 
-    /** 角色，默认为 STUDENT */
-    private String role;
+    // 安全说明：公开注册接口不再接受 role 字段。
+    // 任何通过公开注册创建的账号一律为 STUDENT，管理员/教师/企业账号
+    // 只能由种子数据、数据库操作或后续的管理后台创建，杜绝越权注册。
 }
