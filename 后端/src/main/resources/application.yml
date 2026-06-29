@@ -9,7 +9,7 @@ spring:
     url: jdbc:mysql://localhost:3306/zhimian?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
     username: root
     # 在这里填你的 MySQL root 密码，或设置环境变量 DB_PASSWORD
-    password: ${DB_PASSWORD:123456}
+    password: 123456
 
 mybatis-plus:
   configuration:
