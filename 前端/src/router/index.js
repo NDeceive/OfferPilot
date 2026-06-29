@@ -49,6 +49,12 @@ const routes = [
         meta: { title: '能力报告' }
       },
       {
+        path: 'followup-records',
+        name: 'FollowupRecords',
+        component: () => import('@/views/FollowupRecords.vue'),
+        meta: { title: '追问记录' }
+      },
+      {
         path: 'profile',
         name: 'Profile',
         component: () => import('@/views/Profile.vue'),
