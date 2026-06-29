@@ -8,8 +8,9 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/zhimian?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
     username: root
-    # 在这里填你的 MySQL root 密码，或设置环境变量 DB_PASSWORD
-    password: 123456
+    # 数据库密码：优先读环境变量 DB_PASSWORD；未设置时回退到本地开发默认值 123456。
+    # 生产环境请用 prod profile（application-prod.yml），那里强制要求注入 DB_PASSWORD。
+    password: ${DB_PASSWORD:123456}
 
 mybatis-plus:
   configuration:
@@ -23,7 +24,10 @@ mybatis-plus:
 
 # JWT 配置
 jwt:
-  secret: zhimian-huanjing-secret-key-for-jwt-token-2026-tjut-software
+  # JWT 签名密钥：优先读环境变量 JWT_SECRET；未设置时回退到本地开发占位值。
+  # 注意：HS256 要求密钥至少 256 位（32 个 ASCII 字符），故此默认值需足够长。
+  # 该默认值仅供本地开发使用，生产环境必须通过 JWT_SECRET 环境变量注入随机密钥。
+  secret: ${JWT_SECRET:dev-only-change-me-dev-only-change-me-123456}
   # token 有效期（毫秒），默认 7 天
   expiration: 604800000
 
@@ -37,6 +41,11 @@ ai:
   enabled: true
   # 调用超时（毫秒），同时作为连接与读取超时
   timeout-ms: 20000
+
+# CORS 允许的前端来源（逗号分隔）。开发默认放行本地 Vite 前端，避免影响本地联调。
+# 生产环境用固定白名单（见 application-prod.yml），不再使用通配符。
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173}
 
 logging:
   level:

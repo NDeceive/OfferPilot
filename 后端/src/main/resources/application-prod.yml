@@ -1,0 +1,43 @@
+# =====================================================================
+# 生产环境配置（仅当 spring.profiles.active=prod 时生效）
+# 覆盖 application.yml 中的同名项；未列出的项继承 application.yml。
+#
+# 安全约定：
+#   1. 本文件只包含环境变量占位符，严禁写入任何真实密码 / 密钥。
+#   2. 敏感项（DB 密码、JWT 密钥、AI Key）不提供默认值——未注入则启动失败，
+#      这是“快速失败”，避免带着弱默认值上线。
+#   3. 启动前必须设置下方“生产必需环境变量”。
+# =====================================================================
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    # 生产数据库连接：URL / 用户名可给安全默认值，密码必须注入。
+    url: ${DB_URL:jdbc:mysql://localhost:3306/zhimian?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=true&allowPublicKeyRetrieval=true}
+    username: ${DB_USERNAME:root}
+    # 必需：通过环境变量 DB_PASSWORD 注入，无默认值
+    password: ${DB_PASSWORD}
+
+mybatis-plus:
+  configuration:
+    # 生产关闭 SQL 控制台打印：减少日志噪音、性能开销，并避免回答等敏感数据落入日志
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
+
+# JWT：生产签名密钥必须通过环境变量 JWT_SECRET 注入，无默认值
+jwt:
+  secret: ${JWT_SECRET}
+
+# AI 大模型：API Key 必须通过环境变量 AI_API_KEY 注入，无默认值
+ai:
+  api-key: ${AI_API_KEY}
+
+# 生产环境 CORS 固定白名单（逗号分隔），通过环境变量 CORS_ALLOWED_ORIGINS 注入。
+# 默认为空 = 不放行任何跨域来源（fail-closed）；前端与后端同域部署时无需跨域。
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:}
+
+logging:
+  level:
+    com.zhimian: info
