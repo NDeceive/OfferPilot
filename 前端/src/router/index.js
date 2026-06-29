@@ -59,6 +59,13 @@ const routes = [
         name: 'Profile',
         component: () => import('@/views/Profile.vue'),
         meta: { title: '个人中心' }
+      },
+      {
+        path: 'teacher/dashboard',
+        name: 'TeacherDashboard',
+        component: () => import('@/views/TeacherDashboard.vue'),
+        // 仅 TEACHER / ADMIN 可访问，由下方 beforeEach 守卫校验
+        meta: { title: '教师端总览', roles: ['TEACHER', 'ADMIN'] }
       }
     ]
   }
@@ -75,6 +82,15 @@ router.beforeEach((to, from, next) => {
     next()
   } else if (!token) {
     next('/login')
+  } else if (to.meta.roles) {
+    // 页面刷新后 Pinia 状态会重置，故从 localStorage 读取角色，保证守卫可靠。
+    const role = localStorage.getItem('role') || ''
+    if (to.meta.roles.includes(role)) {
+      next()
+    } else {
+      // 学生等无权限角色访问教师端 → 拦回学生端首页
+      next('/home')
+    }
   } else {
     next()
   }

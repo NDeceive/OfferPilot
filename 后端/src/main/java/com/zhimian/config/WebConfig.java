@@ -19,6 +19,7 @@ import java.util.Arrays;
 public class WebConfig implements WebMvcConfigurer {
 
     private final AuthInterceptor authInterceptor;
+    private final RoleInterceptor roleInterceptor;
 
     /**
      * CORS 允许的前端来源（逗号分隔），来自配置 cors.allowed-origins。
@@ -42,6 +43,11 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(authInterceptor)
+                .addPathPatterns("/api/**")
+                .excludePathPatterns(WHITE_LIST);
+        // 角色拦截器在登录拦截器之后执行（依赖 UserContext 已写入角色）。
+        // 仅对标注 @RequireRole 的接口生效，未标注接口不受影响。
+        registry.addInterceptor(roleInterceptor)
                 .addPathPatterns("/api/**")
                 .excludePathPatterns(WHITE_LIST);
     }

@@ -12,7 +12,7 @@
       <nav class="sidebar-nav" aria-label="主导航">
         <router-link
           v-for="item in navItems"
-          :key="item.path"
+          :key="item.label"
           :to="item.path"
           class="nav-item"
           :class="{ active: isActive(item.path) }"
@@ -86,18 +86,23 @@ import {
   ArrowDown,
   ArrowRight,
   Bell,
+  Coordinate,
   DataAnalysis,
   EditPen,
   Expand,
   Fold,
   Histogram,
   HomeFilled,
+  Notebook,
+  PieChart,
   PriceTag,
+  Promotion,
   Search,
   Setting,
   SwitchButton,
   Tickets,
   User,
+  UserFilled,
   VideoCamera
 } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
@@ -111,7 +116,8 @@ const sidebarCollapsed = ref(false)
 const keyword = ref('')
 const notificationCount = ref(0)
 
-const navItems = [
+// 学生端菜单（保持原样）
+const studentNav = [
   { path: '/home', label: '首页', icon: HomeFilled },
   { path: '/jobs', label: '面试准备', icon: EditPen },
   { path: '/interview', label: '模拟面试', icon: VideoCamera },
@@ -121,6 +127,24 @@ const navItems = [
   { path: '/profile', label: '个人中心', icon: User },
   { path: '/profile?tab=settings', label: '设置', icon: Setting }
 ]
+
+// 教师端菜单（Phase 5.1 仅总览页可用，其余为后续阶段占位）
+const teacherNav = [
+  { path: '/teacher/dashboard', label: '教师端总览', icon: HomeFilled },
+  { path: '/teacher/dashboard', label: '学生训练', icon: UserFilled },
+  { path: '/teacher/dashboard', label: '班级统计', icon: PieChart },
+  { path: '/teacher/dashboard', label: '共性短板', icon: Coordinate },
+  { path: '/teacher/dashboard', label: '任务发布', icon: Promotion },
+  { path: '/teacher/dashboard', label: '报告分析', icon: DataAnalysis },
+  { path: '/teacher/dashboard', label: '追问记录', icon: Histogram },
+  { path: '/profile', label: '个人中心', icon: User }
+]
+
+// 按角色渲染菜单：TEACHER 看教师端，ADMIN 暂时也看教师端，其余（含 STUDENT）看学生端。
+const navItems = computed(() => {
+  const role = userStore.role
+  return role === 'TEACHER' || role === 'ADMIN' ? teacherNav : studentNav
+})
 
 const displayName = computed(() => userStore.nickname || userStore.username || '用户')
 

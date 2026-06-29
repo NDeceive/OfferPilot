@@ -242,9 +242,11 @@ const handleLogin = async () => {
     if (!valid) return
     loading.value = true
     try {
-      await userStore.login(loginForm)
+      const data = await userStore.login(loginForm)
       ElMessage.success('登录成功')
-      router.push('/home')
+      // 按角色落地：教师 / 管理员进入教师端总览，其余进入学生端首页
+      const role = data.role || userStore.role
+      router.push(role === 'TEACHER' || role === 'ADMIN' ? '/teacher/dashboard' : '/home')
     } catch (e) {
       // 错误由请求拦截器统一处理
     } finally {
