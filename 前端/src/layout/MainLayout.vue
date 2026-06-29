@@ -90,6 +90,7 @@ import {
   EditPen,
   Expand,
   Fold,
+  Histogram,
   HomeFilled,
   PriceTag,
   Search,
@@ -116,6 +117,7 @@ const navItems = [
   { path: '/interview', label: '模拟面试', icon: VideoCamera },
   { path: '/history', label: '面试记录', icon: Tickets },
   { path: '/report', label: '能力报告', icon: DataAnalysis },
+  { path: '/followup-records', label: '追问记录', icon: Histogram },
   { path: '/profile', label: '个人中心', icon: User },
   { path: '/profile?tab=settings', label: '设置', icon: Setting }
 ]
