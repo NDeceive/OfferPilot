@@ -10,16 +10,21 @@
       </button>
 
       <nav class="sidebar-nav" aria-label="主导航">
-        <router-link
+        <component
           v-for="item in navItems"
           :key="item.label"
-          :to="item.path"
+          :is="item.available !== false ? 'router-link' : 'button'"
+          :to="item.available !== false ? item.path : undefined"
           class="nav-item"
-          :class="{ active: isActive(item.path) }"
+          :class="{
+            active: isActive(item.path),
+            'teacher-nav': isTeacherRole
+          }"
+          @click="item.available === false ? handleUnavailable() : null"
         >
           <el-icon class="nav-icon"><component :is="item.icon" /></el-icon>
           <span class="nav-label" v-show="!sidebarCollapsed">{{ item.label }}</span>
-        </router-link>
+        </component>
       </nav>
 
       <section class="member-card" v-show="!sidebarCollapsed">
@@ -82,6 +87,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import {
   ArrowDown,
   ArrowRight,
@@ -130,14 +136,14 @@ const studentNav = [
 
 // 教师端菜单（Phase 5.1 仅总览页可用，其余为后续阶段占位）
 const teacherNav = [
-  { path: '/teacher/dashboard', label: '教师端总览', icon: HomeFilled },
-  { path: '/teacher/dashboard', label: '学生训练', icon: UserFilled },
-  { path: '/teacher/dashboard', label: '班级统计', icon: PieChart },
-  { path: '/teacher/dashboard', label: '共性短板', icon: Coordinate },
-  { path: '/teacher/dashboard', label: '任务发布', icon: Promotion },
-  { path: '/teacher/dashboard', label: '报告分析', icon: DataAnalysis },
-  { path: '/teacher/dashboard', label: '追问记录', icon: Histogram },
-  { path: '/profile', label: '个人中心', icon: User }
+  { path: '/teacher/dashboard', label: '教师端总览', icon: HomeFilled, available: true },
+  { path: '/teacher/students', label: '学生训练', icon: UserFilled, available: false },
+  { path: '/teacher/classes', label: '班级统计', icon: PieChart, available: false },
+  { path: '/teacher/weaknesses', label: '共性短板', icon: Coordinate, available: false },
+  { path: '/teacher/tasks', label: '任务发布', icon: Promotion, available: false },
+  { path: '/teacher/reports', label: '报告分析', icon: DataAnalysis, available: false },
+  { path: '/followup-records', label: '追问记录', icon: Histogram, available: true },
+  { path: '/profile', label: '个人中心', icon: User, available: true }
 ]
 
 // 按角色渲染菜单：TEACHER 看教师端，ADMIN 暂时也看教师端，其余（含 STUDENT）看学生端。
@@ -146,12 +152,21 @@ const navItems = computed(() => {
   return role === 'TEACHER' || role === 'ADMIN' ? teacherNav : studentNav
 })
 
+const isTeacherRole = computed(() => {
+  const role = userStore.role
+  return role === 'TEACHER' || role === 'ADMIN'
+})
+
 const displayName = computed(() => userStore.nickname || userStore.username || '用户')
 
 const isActive = (path) => {
   const basePath = path.split('?')[0]
   if (basePath === '/home') return route.path === '/home'
-  return route.path.startsWith(basePath)
+  return route.path === basePath || route.path.startsWith(basePath + '/')
+}
+
+const handleUnavailable = () => {
+  ElMessage.info('该功能将在后续阶段开放')
 }
 
 const handleCommand = (cmd) => {
@@ -253,9 +268,14 @@ const handleCommand = (cmd) => {
   min-height: 50px;
   padding: 0 18px;
   color: #506282;
+  border: none;
+  background: transparent;
   border-radius: 12px;
   font-size: 16px;
   font-weight: 700;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
   transition: color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
   white-space: nowrap;
 }
@@ -274,6 +294,16 @@ const handleCommand = (cmd) => {
   color: #fff;
   background: linear-gradient(135deg, #347bff 0%, #1264ff 100%);
   box-shadow: 0 14px 28px rgba(37, 99, 235, 0.24);
+}
+
+.nav-item.teacher-nav:not(.active) {
+  background: transparent;
+  color: #4a5f7f;
+}
+
+.nav-item.teacher-nav:not(.active):hover {
+  background: rgba(108, 142, 208, 0.08);
+  color: #1769ff;
 }
 
 .nav-icon {
