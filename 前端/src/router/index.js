@@ -1,5 +1,14 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
+// 统一读取并归一化角色，避免大小写/空白导致的角色判断失效
+function currentRole() {
+  return (localStorage.getItem('role') || '').trim().toUpperCase()
+}
+
+function isTeacherLike(role) {
+  return role === 'TEACHER' || role === 'ADMIN'
+}
+
 const routes = [
   {
     path: '/login',
@@ -10,7 +19,9 @@ const routes = [
   {
     path: '/',
     component: () => import('@/layout/MainLayout.vue'),
-    redirect: '/home',
+    // 根路径按角色落地：教师/管理员 → 教师端总览，其余 → 学生端首页。
+    // 这是一道安全网：任何进入 "/" 的导航（含登录后竞态/刷新）都不会把教师塞回学生首页。
+    redirect: () => (isTeacherLike(currentRole()) ? '/teacher/dashboard' : '/home'),
     children: [
       {
         path: 'home',
@@ -84,7 +95,8 @@ router.beforeEach((to, from, next) => {
     next('/login')
   } else if (to.meta.roles) {
     // 页面刷新后 Pinia 状态会重置，故从 localStorage 读取角色，保证守卫可靠。
-    const role = localStorage.getItem('role') || ''
+    // 归一化大小写，避免后端/种子数据返回小写时角色校验失败。
+    const role = currentRole()
     if (to.meta.roles.includes(role)) {
       next()
     } else {
