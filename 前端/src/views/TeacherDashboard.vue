@@ -11,6 +11,20 @@
       </div>
     </header>
 
+    <el-alert
+      v-if="loadError"
+      class="load-error"
+      type="error"
+      :closable="false"
+      show-icon
+      title="数据加载失败"
+    >
+      <template #default>
+        <span>教师端总览数据加载失败，请检查登录状态或稍后重试。</span>
+        <el-button link type="primary" @click="loadOverview">重新加载</el-button>
+      </template>
+    </el-alert>
+
     <section class="stat-grid">
       <article v-for="card in statCards" :key="card.label" class="stat-card">
         <span class="stat-icon" :style="{ background: card.tint }">
@@ -24,20 +38,21 @@
     </section>
 
     <section class="chart-grid">
-      <article class="chart-panel">
+      <article v-loading="loading" class="chart-panel">
         <header class="panel-head">
           <h2>近7天训练趋势</h2>
           <el-tag size="small" type="info" effect="plain">训练场次</el-tag>
         </header>
-        <div ref="trendChartRef" class="chart-box"></div>
+        <div v-show="trendData.length" ref="trendChartRef" class="chart-box"></div>
+        <div v-if="!loading && !trendData.length" class="empty-box">暂无数据</div>
       </article>
 
-      <article class="chart-panel">
+      <article v-loading="loading" class="chart-panel">
         <header class="panel-head">
           <h2>能力短板分布</h2>
           <el-tag size="small" type="warning" effect="plain">高频问题</el-tag>
         </header>
-        <ul class="weakness-list">
+        <ul v-if="weaknessData.length" class="weakness-list">
           <li v-for="item in weaknessData" :key="item.label" class="weakness-item">
             <div class="weakness-icon">
               <el-icon><Warning /></el-icon>
@@ -53,6 +68,7 @@
             </div>
           </li>
         </ul>
+        <div v-else-if="!loading" class="empty-box">暂无数据</div>
       </article>
     </section>
 
@@ -62,7 +78,7 @@
           <h2>学生训练情况</h2>
           <el-tag size="small" type="info" effect="plain">最近更新</el-tag>
         </header>
-        <el-table :data="studentTable" stripe style="width: 100%">
+        <el-table v-loading="loading" :data="studentTable" stripe style="width: 100%" empty-text="暂无数据">
           <el-table-column prop="student" label="学生" width="100" />
           <el-table-column prop="direction" label="岗位方向" width="140" />
           <el-table-column prop="sessions" label="训练次数" width="100" align="center" />
@@ -82,12 +98,12 @@
         </el-table>
       </article>
 
-      <article class="content-panel">
+      <article v-loading="loading" class="content-panel">
         <header class="panel-head">
           <h2>共性问题分析</h2>
           <el-tag size="small" type="danger" effect="plain">需关注</el-tag>
         </header>
-        <ul class="problem-list">
+        <ul v-if="commonProblems.length" class="problem-list">
           <li v-for="(problem, idx) in commonProblems" :key="idx" class="problem-card">
             <div class="problem-icon" :style="{ background: problem.color }">
               <el-icon><component :is="problem.icon" /></el-icon>
@@ -95,10 +111,11 @@
             <div class="problem-body">
               <strong>{{ problem.title }}</strong>
               <p>{{ problem.desc }}</p>
-              <span class="problem-rate">{{ problem.rate }}% 学生出现</span>
+              <span class="problem-rate">{{ problem.rate }}% 学生出现 · {{ problem.level }}</span>
             </div>
           </li>
         </ul>
+        <div v-else-if="!loading" class="empty-box">暂无数据</div>
       </article>
 
       <article class="content-panel">
@@ -141,7 +158,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import * as echarts from 'echarts'
 import {
@@ -156,39 +173,14 @@ import {
   DataLine,
   Warning
 } from '@element-plus/icons-vue'
+import { getTeacherDashboardOverview } from '@/api/teacher'
 
-const statCards = [
-  { label: '学生总数', value: 128, icon: UserFilled, tint: 'rgba(39, 117, 255, 0.12)' },
-  { label: '已训练人数', value: 96, icon: Checked, tint: 'rgba(9, 186, 107, 0.12)' },
-  { label: '训练完成率', value: '75%', icon: TrendCharts, tint: 'rgba(16, 195, 185, 0.12)' },
-  { label: '平均面试分', value: '78.5', icon: Medal, tint: 'rgba(255, 159, 24, 0.14)' },
-  { label: 'AI追问次数', value: 1247, icon: ChatDotRound, tint: 'rgba(124, 88, 255, 0.12)' },
-  { label: 'RULE追问次数', value: 583, icon: Flag, tint: 'rgba(255, 77, 109, 0.12)' }
-]
+/* ---------- 页面状态 ---------- */
+const loading = ref(false)
+const loadError = ref(false)
+const overview = ref(null)
 
-const studentTable = [
-  { student: '张明', direction: 'Java 后端', sessions: 12, avgScore: 86, lastTrain: '2026-06-28 14:30', status: '活跃', statusType: 'success' },
-  { student: '李婷', direction: '前端开发', sessions: 9, avgScore: 72, lastTrain: '2026-06-27 09:15', status: '活跃', statusType: 'success' },
-  { student: '王浩', direction: 'Java 后端', sessions: 7, avgScore: 64, lastTrain: '2026-06-26 16:45', status: '正常', statusType: '' },
-  { student: '赵雪', direction: '算法岗', sessions: 5, avgScore: 53, lastTrain: '2026-06-24 11:20', status: '待提升', statusType: 'warning' },
-  { student: '陈刚', direction: 'Java 后端', sessions: 11, avgScore: 81, lastTrain: '2026-06-28 10:05', status: '活跃', statusType: 'success' },
-  { student: '刘芳', direction: '前端开发', sessions: 6, avgScore: 69, lastTrain: '2026-06-25 15:30', status: '正常', statusType: '' }
-]
-
-const commonProblems = [
-  { title: '项目表达笼统', desc: '项目描述缺乏具体数据和技术细节', rate: 68, icon: DocumentCopy, color: 'rgba(255, 77, 109, 0.15)' },
-  { title: '追问应对不足', desc: '面对深度追问时逻辑断层明显', rate: 54, icon: Connection, color: 'rgba(255, 159, 24, 0.15)' },
-  { title: '技术细节不清', desc: '无法清晰解释技术选型与实现', rate: 47, icon: DataLine, color: 'rgba(124, 88, 255, 0.15)' },
-  { title: '逻辑结构不完整', desc: 'STAR 结构缺失，表达跳跃', rate: 39, icon: Warning, color: 'rgba(16, 195, 185, 0.15)' }
-]
-
-const weaknessData = [
-  { label: '项目表达笼统', value: 68, color: 'linear-gradient(90deg, #ff6b6b, #ff9f18)' },
-  { label: '追问应对不足', value: 54, color: 'linear-gradient(90deg, #ff9f18, #ffd93d)' },
-  { label: '技术细节不清', value: 47, color: 'linear-gradient(90deg, #7c58ff, #a78bfa)' },
-  { label: '逻辑结构不完整', value: 39, color: 'linear-gradient(90deg, #10c3b9, #06b6d4)' }
-]
-
+/* ---------- 训练任务发布（模拟，非本期联调范围，保持原有静态行为） ---------- */
 const taskForm = ref({
   name: '',
   direction: '',
@@ -196,54 +188,6 @@ const taskForm = ref({
   target: '',
   description: ''
 })
-
-const trendChartRef = ref(null)
-let trendChart = null
-
-onMounted(() => {
-  initTrendChart()
-})
-
-onBeforeUnmount(() => {
-  if (trendChart) trendChart.dispose()
-})
-
-function initTrendChart() {
-  trendChart = echarts.init(trendChartRef.value)
-  const option = {
-    tooltip: { trigger: 'axis' },
-    grid: { left: 50, right: 30, top: 30, bottom: 30 },
-    xAxis: {
-      type: 'category',
-      data: ['06-23', '06-24', '06-25', '06-26', '06-27', '06-28', '06-29'],
-      axisLine: { lineStyle: { color: '#e0e6ed' } },
-      axisLabel: { color: '#6b7a93' }
-    },
-    yAxis: {
-      type: 'value',
-      axisLine: { show: false },
-      splitLine: { lineStyle: { color: '#f0f3f8', type: 'dashed' } },
-      axisLabel: { color: '#6b7a93' }
-    },
-    series: [
-      {
-        name: '训练场次',
-        type: 'line',
-        smooth: true,
-        data: [42, 56, 48, 67, 72, 81, 65],
-        lineStyle: { width: 3, color: '#1769ff' },
-        itemStyle: { color: '#1769ff' },
-        areaStyle: {
-          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: 'rgba(23, 105, 255, 0.3)' },
-            { offset: 1, color: 'rgba(23, 105, 255, 0.05)' }
-          ])
-        }
-      }
-    ]
-  }
-  trendChart.setOption(option)
-}
 
 function clearTask() {
   taskForm.value = {
@@ -264,6 +208,190 @@ function publishTask() {
   ElMessage.success('训练任务已生成模拟发布记录')
   clearTask()
 }
+
+/* ---------- 展示用静态配置（图标/配色，与数据无关） ---------- */
+const statCardMeta = [
+  { key: 'studentTotal', label: '学生总数', icon: UserFilled, tint: 'rgba(39, 117, 255, 0.12)', format: 'int' },
+  { key: 'trainedStudentCount', label: '已训练人数', icon: Checked, tint: 'rgba(9, 186, 107, 0.12)', format: 'int' },
+  { key: 'completionRate', label: '训练完成率', icon: TrendCharts, tint: 'rgba(16, 195, 185, 0.12)', format: 'percent' },
+  { key: 'averageScore', label: '平均面试分', icon: Medal, tint: 'rgba(255, 159, 24, 0.14)', format: 'score' },
+  { key: 'aiFollowupCount', label: 'AI追问次数', icon: ChatDotRound, tint: 'rgba(124, 88, 255, 0.12)', format: 'int' },
+  { key: 'ruleFollowupCount', label: 'RULE追问次数', icon: Flag, tint: 'rgba(255, 77, 109, 0.12)', format: 'int' }
+]
+
+const weaknessColors = [
+  'linear-gradient(90deg, #ff6b6b, #ff9f18)',
+  'linear-gradient(90deg, #ff9f18, #ffd93d)',
+  'linear-gradient(90deg, #7c58ff, #a78bfa)',
+  'linear-gradient(90deg, #10c3b9, #06b6d4)'
+]
+
+const problemIcons = [DocumentCopy, Connection, DataLine, Warning]
+const problemColors = [
+  'rgba(255, 77, 109, 0.15)',
+  'rgba(255, 159, 24, 0.15)',
+  'rgba(124, 88, 255, 0.15)',
+  'rgba(16, 195, 185, 0.15)'
+]
+
+/* ---------- 工具函数 ---------- */
+const num = (v) => (typeof v === 'number' && !Number.isNaN(v) ? v : 0)
+
+// 后端占比为 0~1（保留 2 位小数）；做兼容：若已是 >1 的百分数则原样取整
+const ratioToPercent = (v) => {
+  const n = num(v)
+  return Math.round(n <= 1 ? n * 100 : n)
+}
+
+const statusTypeOf = (status) => {
+  switch (status) {
+    case '已完成':
+      return 'success'
+    case '进行中':
+      return 'warning'
+    case '未开始':
+      return 'info'
+    default:
+      return ''
+  }
+}
+
+/* ---------- 计算属性：由接口数据派生 ---------- */
+const summary = computed(() => overview.value?.summary || {})
+
+const statCards = computed(() =>
+  statCardMeta.map((meta) => {
+    const s = summary.value
+    let value = 0
+    if (meta.format === 'percent') {
+      // 兼容 trainingCompletionRate / completionRate 两种字段名
+      const rate = s.trainingCompletionRate ?? s.completionRate
+      value = `${ratioToPercent(rate)}%`
+    } else if (meta.format === 'score') {
+      value = num(s.averageScore)
+    } else {
+      value = num(s[meta.key])
+    }
+    return { label: meta.label, value, icon: meta.icon, tint: meta.tint }
+  })
+)
+
+const trendData = computed(() => overview.value?.trainingTrend || [])
+
+const weaknessData = computed(() =>
+  (overview.value?.weaknessDistribution || []).map((item, i) => ({
+    label: item.name,
+    value: ratioToPercent(item.percent),
+    color: weaknessColors[i % weaknessColors.length]
+  }))
+)
+
+const studentTable = computed(() =>
+  (overview.value?.studentTrainingList || []).map((row) => ({
+    student: row.studentName,
+    direction: row.position || '-',
+    sessions: num(row.trainingCount),
+    avgScore: num(row.averageScore),
+    lastTrain: row.lastTrainingTime || '-',
+    status: row.status || '-',
+    statusType: statusTypeOf(row.status)
+  }))
+)
+
+const commonProblems = computed(() =>
+  (overview.value?.commonProblems || []).map((p, i) => ({
+    title: p.title,
+    desc: p.description,
+    rate: ratioToPercent(p.percent),
+    level: p.level || '',
+    icon: problemIcons[i % problemIcons.length],
+    color: problemColors[i % problemColors.length]
+  }))
+)
+
+/* ---------- 训练趋势图 ---------- */
+const trendChartRef = ref(null)
+let trendChart = null
+
+function renderTrendChart() {
+  const data = trendData.value
+  if (!data.length) return
+  if (!trendChartRef.value) return
+  if (!trendChart) {
+    trendChart = echarts.init(trendChartRef.value)
+  }
+  const option = {
+    tooltip: { trigger: 'axis' },
+    grid: { left: 50, right: 30, top: 30, bottom: 30 },
+    xAxis: {
+      type: 'category',
+      // date 形如 2026-06-23，展示取 MM-DD
+      data: data.map((d) => (d.date ? String(d.date).slice(5) : '')),
+      axisLine: { lineStyle: { color: '#e0e6ed' } },
+      axisLabel: { color: '#6b7a93' }
+    },
+    yAxis: {
+      type: 'value',
+      minInterval: 1,
+      axisLine: { show: false },
+      splitLine: { lineStyle: { color: '#f0f3f8', type: 'dashed' } },
+      axisLabel: { color: '#6b7a93' }
+    },
+    series: [
+      {
+        name: '训练场次',
+        type: 'line',
+        smooth: true,
+        data: data.map((d) => num(d.count)),
+        lineStyle: { width: 3, color: '#1769ff' },
+        itemStyle: { color: '#1769ff' },
+        areaStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: 'rgba(23, 105, 255, 0.3)' },
+            { offset: 1, color: 'rgba(23, 105, 255, 0.05)' }
+          ])
+        }
+      }
+    ]
+  }
+  trendChart.setOption(option)
+}
+
+function handleResize() {
+  if (trendChart) trendChart.resize()
+}
+
+/* ---------- 数据加载 ---------- */
+async function loadOverview() {
+  loading.value = true
+  loadError.value = false
+  try {
+    const data = await getTeacherDashboardOverview()
+    overview.value = data || {}
+    await nextTick()
+    renderTrendChart()
+  } catch (e) {
+    // 401 已由 request 拦截器处理并跳登录；此处兜底防止页面崩溃
+    loadError.value = true
+    overview.value = null
+    ElMessage.error('教师端数据加载失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('resize', handleResize)
+  loadOverview()
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', handleResize)
+  if (trendChart) {
+    trendChart.dispose()
+    trendChart = null
+  }
+})
 </script>
 
 <style scoped>
@@ -295,6 +423,18 @@ function publishTask() {
 .head-actions {
   display: flex;
   gap: 12px;
+}
+
+.load-error {
+  border-radius: 12px;
+}
+
+.empty-box {
+  display: grid;
+  place-items: center;
+  min-height: 160px;
+  color: #94a1b8;
+  font-size: 14px;
 }
 
 .stat-grid {
