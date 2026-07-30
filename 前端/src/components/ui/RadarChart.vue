@@ -21,6 +21,31 @@
         stroke="rgba(16,185,129,0.08)"
         stroke-width="1"
       />
+
+      <!-- 🆕 Target polygon (dashed, only in dual-layer mode) -->
+      <polygon
+        v-if="showDualLayer && targetDataPoints.length"
+        :points="targetPolygonPoints"
+        fill="rgba(245,158,11,0.06)"
+        stroke="#f59e0b"
+        stroke-width="2"
+        stroke-dasharray="6,4"
+        class="radar-target"
+      />
+      <!-- 🆕 Target dots -->
+      <circle
+        v-for="(point, i) in targetDataPoints"
+        v-if="showDualLayer"
+        :key="'tdot-' + i"
+        :cx="point.x"
+        :cy="point.y"
+        r="3"
+        fill="#f59e0b"
+        opacity="0.6"
+        class="radar-target-dot"
+        :style="{ animationDelay: i * 0.1 + 's' }"
+      />
+
       <!-- Data polygon -->
       <polygon
         :points="dataPolygonPoints"
@@ -51,6 +76,15 @@
         font-size="12"
         font-family="var(--font-body)"
       >{{ labels[i] }}</text>
+
+      <!-- 🆕 Legend for dual-layer mode -->
+      <g v-if="showDualLayer && targetDataPoints.length" transform="translate(10, 10)">
+        <line x1="0" y1="0" x2="20" y2="0" stroke="#f59e0b" stroke-width="2" stroke-dasharray="4,3" />
+        <text x="25" y="4" fill="#71717a" font-size="10" font-family="var(--font-body)">目标线</text>
+        <line x1="70" y1="0" x2="90" y2="0" stroke="#059669" stroke-width="2" />
+        <text x="95" y="4" fill="#71717a" font-size="10" font-family="var(--font-body)">实际</text>
+      </g>
+
       <!-- Gradient defs -->
       <defs>
         <linearGradient id="radarGradient" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -72,6 +106,10 @@ import { computed } from 'vue'
 const props = defineProps({
   labels: { type: Array, default: () => ['专业知识', '逻辑思维', '沟通表达', '问题解决', '抗压能力', '学习能力'] },
   values: { type: Array, default: () => [85, 72, 90, 78, 65, 88] },
+  /** 🆕 目标线数值（双层模式） */
+  targetValues: { type: Array, default: () => [] },
+  /** 🆕 是否显示双层（目标+实际） */
+  showDualLayer: { type: Boolean, default: false },
   size: { type: Number, default: 300 },
 })
 
@@ -115,6 +153,25 @@ const dataPolygonPoints = computed(() =>
   dataPoints.value.map(p => `${p.x},${p.y}`).join(' ')
 )
 
+/** 🆕 目标线数据点 */
+const targetDataPoints = computed(() => {
+  if (!props.showDualLayer || !props.targetValues.length) return []
+  const count = props.labels.length
+  return props.targetValues.map((val, i) => {
+    const angle = (Math.PI * 2 * i) / count - Math.PI / 2
+    const r = radius.value * (val / 100)
+    return {
+      x: center.value + r * Math.cos(angle),
+      y: center.value + r * Math.sin(angle),
+    }
+  })
+})
+
+/** 🆕 目标线多边形 */
+const targetPolygonPoints = computed(() =>
+  targetDataPoints.value.map(p => `${p.x},${p.y}`).join(' ')
+)
+
 const labelPositions = computed(() => {
   const count = props.labels.length
   return props.labels.map((_, i) => {
@@ -152,5 +209,16 @@ const labelPositions = computed(() => {
 .radar-dot {
   opacity: 0;
   animation: fade-in 0.4s var(--ease-out) forwards;
+}
+
+/* 🆕 target layer animations */
+.radar-target {
+  opacity: 0;
+  animation: fade-in 0.6s var(--ease-out) 0.1s forwards;
+}
+
+.radar-target-dot {
+  opacity: 0;
+  animation: fade-in 0.3s var(--ease-out) forwards;
 }
 </style>
