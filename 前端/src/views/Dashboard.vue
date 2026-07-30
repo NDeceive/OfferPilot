@@ -133,15 +133,22 @@
 
           <section class="card radar-section">
             <h2 class="card-title" style="margin-bottom: var(--space-5);">能力雷达</h2>
-            <div class="radar-full-wrap" @mouseenter="radarHover = true" @mouseleave="radarHover = false">
-              <svg :viewBox="`0 0 ${radarSize} ${radarSize}`" class="radar-full-svg">
-                <polygon v-for="scale in [0.25, 0.5, 0.75]" :key="scale" :points="radarGrid(scale)" fill="none" stroke="var(--neutral-200)" stroke-width="1"/>
-                <polygon :points="radarGrid(1)" fill="none" stroke="var(--neutral-300)" stroke-width="1.5"/>
-                <line v-for="(lbl, idx) in radarLabels" :key="'axis'+idx" :x1="radarCenter" :y1="radarCenter" :x2="radarPoints[idx].x" :y2="radarPoints[idx].y" stroke="var(--neutral-200)" stroke-width="1"/>
-                <polygon :points="radarData" :fill="radarHover ? 'rgba(16,185,129,0.18)' : 'rgba(16,185,129,0.10)'" stroke="var(--accent-500)" stroke-width="2" class="radar-poly"/>
-                <circle v-for="(p, i) in radarPoints" :key="i" :cx="p.x" :cy="p.y" r="4" :fill="radarHover ? 'var(--accent-500)' : 'var(--accent-400)'" class="radar-dot" :style="{ transitionDelay: i * 40 + 'ms' }"/>
-              </svg>
-              <div class="radar-legend">
+            <div class="radar-full-wrap">
+              <!-- Empty state -->
+              <div v-if="radarProfile.empty" class="radar-empty">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--neutral-300)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                <p>完成首次面试后解锁能力雷达</p>
+              </div>
+              <!-- Radar chart -->
+              <RadarChart
+                v-else
+                :labels="radarLabels"
+                :values="radarValues"
+                :size="260"
+              />
+              <div v-if="!radarProfile.empty" class="radar-legend">
                 <span v-for="(lbl, i) in radarLabels" :key="i" class="radar-legend-item">{{ lbl }}</span>
               </div>
             </div>
@@ -156,7 +163,8 @@
 import { computed, ref, reactive, onMounted, onUnmounted, nextTick } from 'vue'
 import AppLayout from '../components/layout/AppLayout.vue'
 import { useUserStore } from '../store/user'
-import { getMe, getMyStats, getInterviewRecords } from '../api'
+import { getMe, getMyStats, getInterviewRecords, getDashboardProfile } from '../api'
+import RadarChart from '../components/ui/RadarChart.vue'
 
 const userStore = useUserStore()
 const loading = ref(true)
@@ -184,29 +192,10 @@ const quoteIdx = ref(0)
 const currentQuote = computed(() => quotes[quoteIdx.value])
 function cycleQuote() { quoteIdx.value = (quoteIdx.value + 1) % quotes.length }
 
-// Mini Radar
-const radarSize = 120
-const radarCenter = radarSize / 2
-const radarR = 42
-const radarValues = ref([88, 72, 85, 78, 65])
-const radarLabels = ['表达', '逻辑', '技术', '匹配', '抗压']
-const radarHover = ref(false)
-
-function radarGrid(scale) {
-  return radarValues.value.map((_, i) => {
-    const a = (Math.PI * 2 * i) / radarValues.value.length - Math.PI / 2
-    const r = radarR * scale
-    return `${radarCenter + r * Math.cos(a)},${radarCenter + r * Math.sin(a)}`
-  }).join(' ')
-}
-
-const radarPoints = computed(() => radarValues.value.map((v, i) => {
-  const a = (Math.PI * 2 * i) / radarValues.value.length - Math.PI / 2
-  const r = radarR * (v / 100)
-  return { x: radarCenter + r * Math.cos(a), y: radarCenter + r * Math.sin(a) }
-}))
-
-const radarData = computed(() => radarPoints.value.map(p => `${p.x},${p.y}`).join(' '))
+// Radar data from API
+const radarProfile = ref({ labels: [], values: [], empty: true })
+const radarLabels = computed(() => radarProfile.value.labels || [])
+const radarValues = computed(() => radarProfile.value.values || [])
 
 // Todos
 const todos = reactive([
@@ -324,10 +313,11 @@ let observer = null
 async function fetchDashboardData() {
   loading.value = true
   try {
-    const [meRes, statsRes, recordsRes] = await Promise.allSettled([
+    const [meRes, statsRes, recordsRes, radarRes] = await Promise.allSettled([
       getMe(),
       getMyStats(),
       getInterviewRecords(),
+      getDashboardProfile(),
     ])
 
     // Update user info
@@ -405,6 +395,11 @@ async function fetchDashboardData() {
         status: r.status === 'FINISHED' ? 'completed' : r.status === 'IN_PROGRESS' ? 'in_progress' : 'interrupted',
         avatarBg: avatarColors[i % avatarColors.length],
       }))
+    }
+
+    // Update radar profile
+    if (radarRes.status === 'fulfilled' && radarRes.value) {
+      radarProfile.value = radarRes.value
     }
   } catch (err) {
     console.warn('Dashboard: failed to fetch data', err)
@@ -618,6 +613,17 @@ onUnmounted(() => { observer?.disconnect() })
   width: 100%;
   max-width: 260px;
   height: auto;
+}
+
+.radar-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-8) var(--space-4);
+  color: var(--neutral-400);
+  font-size: var(--text-sm);
+  text-align: center;
 }
 
 .radar-legend {
