@@ -59,6 +59,7 @@ public class InterviewFlowService {
     private final FollowUpService followUpService;
     private final InterviewFollowupRecordService followupRecordService;
     private final ExperienceQuestionService experienceQuestionService;
+    private final QuestionBootstrapper questionBootstrapper;
     private final InterviewReportMapper reportMapper;
     private final ReportDimensionMapper dimensionMapper;
 
@@ -114,13 +115,21 @@ public class InterviewFlowService {
             throw new BizException("岗位不存在");
         }
 
-        // 获取用户简历画像标签
+        // 获取用户简历画像标签 + 岗位标签
         Resume resume = resumeService.getMine();
         Long resumeId = (resume != null) ? resume.getId() : null;
         List<String> userTags = extractTagsFromResume(resume);
+        List<String> jobTags = extractTagsFromJob(job);
+        Set<String> mergedTags = new LinkedHashSet<>();
+        mergedTags.addAll(userTags);
+        mergedTags.addAll(jobTags);
+        List<String> allTags = new ArrayList<>(mergedTags);
+
+        // 确保每个标签都有对应的题库题目（缺题则 AI 自动生成）
+        questionBootstrapper.ensure(allTags, job.getFamily(), difficulty);
 
         // 标签化选题：匹配画像标签 → 对应题库随机抽取
-        List<SkillQuestion> candidates = candidateQuestionsByTags(userTags, difficulty);
+        List<SkillQuestion> candidates = candidateQuestionsByTags(allTags, difficulty);
         if (candidates.isEmpty()) {
             throw new BizException("未找到匹配的面试题目，请先完善个人简历画像或扩充题库");
         }
@@ -298,6 +307,18 @@ public class InterviewFlowService {
         List<String> tags = new ArrayList<>();
         tags.addAll(parseJsonList(resume.getSkills()));
         tags.addAll(parseJsonList(resume.getKeywords()));
+        return tags.stream().distinct().collect(Collectors.toList());
+    }
+
+    /**
+     * 从岗位的 abilities / keywords 中提取标签名列表。
+     */
+    private List<String> extractTagsFromJob(JobPosition job) {
+        if (job == null) return Collections.emptyList();
+
+        List<String> tags = new ArrayList<>();
+        tags.addAll(parseJsonList(job.getAbilities()));
+        tags.addAll(parseJsonList(job.getKeywords()));
         return tags.stream().distinct().collect(Collectors.toList());
     }
 

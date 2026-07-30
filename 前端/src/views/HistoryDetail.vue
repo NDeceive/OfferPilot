@@ -98,7 +98,8 @@
           <div v-if="expandedItems.includes(i)" class="followup-body">
             <div class="fb-section">
               <span class="fb-label">你的回答</span>
-              <p class="fb-text">{{ record.answer }}</p>
+              <p v-if="record.answer" class="fb-text">{{ record.answer }}</p>
+              <p v-else class="fb-text">{{ i === followupRecords.length - 1 ? '（此题已跳过，面试已结束）' : '（此题已跳过，直接进入下一题）' }}</p>
             </div>
             <div v-for="(fu, fi) in record.followups" :key="fi" class="fb-section fb-followup">
               <span class="fb-label">追问{{ record.followups.length > 1 ? (fi + 1) : '' }}</span>
@@ -570,9 +571,9 @@ function toggleExpand(index) {
 .fh-text {
   font-size: var(--text-sm);
   color: var(--neutral-800);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.6;
 }
 
 .fh-right {
@@ -638,6 +639,11 @@ function toggleExpand(index) {
   font-size: var(--text-sm);
   color: var(--neutral-700);
   line-height: 1.7;
+}
+
+.fb-skipped {
+  color: var(--neutral-400);
+  font-style: italic;
 }
 
 .fb-evaluation {

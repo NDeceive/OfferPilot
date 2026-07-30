@@ -379,31 +379,30 @@ async function skipQuestion() {
   scrollToBottom()
 
   try {
-    const res = await submitAnswer(sessionId.value, {
+    // 提交跳过标记（≥15字避免触发"回答过短"追问）
+    const isLastQuestion = currentQuestion.value >= MAX_QUESTIONS
+    await submitAnswer(sessionId.value, {
       questionId: currentQuestionId.value,
-      answer: '',
+      answer: isLastQuestion ? '（此题已跳过，面试已结束）' : '（此题已跳过，直接进入下一题）',
     })
-
     isAiTyping.value = false
 
-    if (res.nextAction === 'NEXT' && res.question) {
-      currentQuestion.value++
-      currentQuestionId.value = res.question.id
-      questionTypes.value.push(mapQuestionType(res.question.type))
-      questionDifficulties.value.push(difficultyLabels[res.question.difficulty] || '中等')
-      questionSkills.value.push(res.question.abilityTag || '综合能力')
-      messages.value.push({ role: 'ai', text: res.question.content, followup: false })
-    } else if (res.nextAction === 'FOLLOWUP' && res.followupQuestion) {
-      currentQuestionId.value = res.followupQuestion.id
-      messages.value.push({ role: 'ai', text: res.followupQuestion.content, followup: true })
-    } else if (res.nextAction === 'FINISHED') {
-      messages.value.push({
-        role: 'ai',
-        text: '面试结束！感谢你的精彩回答。正在生成你的能力报告...',
-        followup: false,
-      })
-      const reportId = res || 1
-      setTimeout(() => router.push(`/history/${reportId}`), 2000)
+    // 不管后端返回 FOLLOWUP 还是 NEXT，始终取下一题
+    try {
+      const nextRes = await getNextQuestion(sessionId.value)
+      if (nextRes.question) {
+        currentQuestion.value++
+        currentQuestionId.value = nextRes.question.id
+        questionTypes.value.push(mapQuestionType(nextRes.question.type))
+        questionDifficulties.value.push(difficultyLabels[nextRes.question.difficulty] || '中等')
+        questionSkills.value.push(nextRes.question.abilityTag || '综合能力')
+        messages.value.push({ role: 'ai', text: nextRes.question.content, followup: false })
+      } else if (nextRes.nextAction === 'FINISHABLE') {
+        return await autoFinishInterview()
+      }
+    } catch (nextErr) {
+      console.error('Failed to get next question after skip:', nextErr)
+      messages.value.push({ role: 'ai', text: '加载下一题失败，你可以手动结束面试。', followup: false })
     }
 
     // Auto-finish when max questions reached

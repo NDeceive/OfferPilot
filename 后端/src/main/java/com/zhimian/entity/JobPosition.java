@@ -19,6 +19,10 @@ public class JobPosition {
 
     private String name;
     private String category;
+    /** 岗位族名称（后端开发/前端与客户端开发/全栈开发/算法与人工智能/产品经理/数据分析/软件测试） */
+    private String family;
+    /** 岗位编码（如 BE-JAVA, FE-WEB 等） */
+    private String code;
     private String description;
     /** 岗位能力要求（JSON 数组字符串） */
     private String abilities;

@@ -31,9 +31,9 @@
         </div>
       </nav>
 
-      <!-- ========== Step 1: Select Job ========== -->
+      <!-- ========== Step 1: Select Family → Position ========== -->
         <section v-show="currentStep === 0" key="step0" class="step-panel">
-          <!-- Search & Filter -->
+          <!-- Search -->
           <div class="search-area reveal">
             <div class="search-box">
               <svg class="search-box__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -43,48 +43,54 @@
                 v-model="searchQuery"
                 type="text"
                 class="search-box__input"
-                placeholder="搜索岗位名称或技能标签..."
+                :placeholder="activeFamily ? '搜索' + activeFamily + '岗位...' : '搜索岗位名称或技能标签...'"
               />
-            </div>
-            <div class="filter-row">
-              <button
-                v-for="tag in filterTags"
-                :key="tag"
-                class="filter-chip"
-                :class="{ 'filter-chip--active': activeFilter === tag }"
-                @click="activeFilter = activeFilter === tag ? '全部' : tag"
-              >
-                {{ tag }}
-              </button>
             </div>
           </div>
 
-          <!-- Job Grid -->
-          <div class="job-grid">
+          <!-- Family Chips -->
+          <div class="family-row reveal">
+            <button
+              v-for="fam in familyStats"
+              :key="fam.code"
+              class="family-chip"
+              :class="{ 'family-chip--active': activeFamily === fam.code }"
+              :style="{ '--chip-accent': fam.color.accentColor }"
+              @click="selectFamily(fam.code)"
+            >
+              <span class="family-chip__icon" :style="{ background: fam.color.iconBg, color: fam.color.accentColor }">
+                {{ fam.icon }}
+              </span>
+              <span class="family-chip__name">{{ fam.name }}</span>
+              <span class="family-chip__count">{{ fam.count }}</span>
+            </button>
+          </div>
+
+          <!-- Position Grid (visible when family or search is active) -->
+          <div v-if="activeFamily || searchQuery" class="job-grid" :style="gridMinHeight ? { minHeight: gridMinHeight + 'px' } : {}">
             <article
               v-for="(job, idx) in filteredJobs"
               :key="job.id"
               class="job-card reveal"
               :class="{
                 'job-card--selected': selectedJob?.id === job.id,
-                'job-card--featured': job.pro,
-                'job-card--wide': idx === 0 || idx === 3
+                'job-card--disabled': !READY_JOBS.has(job.code)
               }"
-              :style="{ '--card-accent': job.accentColor, '--reveal-delay': idx * 0.06 + 's' }"
-              @click="selectedJob = job"
+              :style="{ '--card-accent': job.accentColor, '--reveal-delay': idx * 0.04 + 's' }"
+              @click="selectPosition(job, $event)"
               role="button"
-              tabindex="0"
-              @keydown.enter="selectedJob = job"
-              @keydown.space.prevent="selectedJob = job"
+              :tabindex="READY_JOBS.has(job.code) ? 0 : -1"
+              @keydown.enter="selectPosition(job)"
+              @keydown.space.prevent="selectPosition(job)"
             >
-              <!-- Accent bar -->
               <div class="job-card__accent" />
 
               <div class="job-card__head">
                 <div class="job-card__icon" :style="{ background: job.iconBg }">
                   {{ job.title.charAt(0) }}
                 </div>
-                <span v-if="job.pro" class="pro-badge">Pro</span>
+                <span v-if="!READY_JOBS.has(job.code)" class="job-card__soon">敬请期待</span>
+                <span v-else class="job-card__code">{{ job.code }}</span>
               </div>
 
               <h3 class="job-card__title">{{ job.title }}</h3>
@@ -93,22 +99,26 @@
                 <span v-for="tag in job.tags.slice(0, 3)" :key="tag" class="job-card__tag">{{ tag }}</span>
               </div>
 
-              <div class="job-card__match">
-                <div class="match-bar">
-                  <div class="match-bar__fill" :style="{ width: job.match + '%' }" />
-                </div>
-                <span class="match-label" :class="getMatchClass(job.match)">{{ job.match }}%</span>
+              <!-- Select indicator circle -->
+              <div class="job-card__select" :class="{ 'job-card__select--on': selectedJob?.id === job.id }">
+                <svg v-if="selectedJob?.id === job.id" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
               </div>
-
-              <!-- Selected checkmark -->
-              <Transition name="check-pop">
-                <div v-if="selectedJob?.id === job.id" class="job-card__check">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                </div>
-              </Transition>
             </article>
+          </div>
+
+          <!-- Empty prompt -->
+          <div v-else class="family-prompt reveal">
+            <div class="family-prompt__icon">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--neutral-300)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="7" height="7" rx="1" />
+                <rect x="14" y="3" width="7" height="7" rx="1" />
+                <rect x="3" y="14" width="7" height="7" rx="1" />
+                <rect x="14" y="14" width="7" height="7" rx="1" />
+              </svg>
+            </div>
+            <p class="family-prompt__text">请选择一个岗位族，查看其下具体岗位</p>
           </div>
 
           <!-- Actions -->
@@ -212,7 +222,7 @@
                 </div>
                 <div class="summary-card__body">
                   <span class="summary-card__title">{{ selectedJob.title }}</span>
-                  <span class="summary-card__match" :class="getMatchClass(selectedJob.match)">{{ selectedJob.match }}% 匹配</span>
+                  <span class="summary-card__code-label">{{ selectedJob.code }}</span>
                 </div>
               </div>
               <div class="summary-section">
@@ -322,7 +332,6 @@ import { getJobList, uploadResumeFile, startInterview } from '../api'
 const router = useRouter()
 const currentStep = ref(0)
 const searchQuery = ref('')
-const activeFilter = ref('全部')
 const selectedJob = ref(null)
 const isDragging = ref(false)
 const uploadedFile = ref(null)
@@ -335,9 +344,43 @@ const resumeUploading = ref(false)
 const resumeError = ref('')
 const startingInterview = ref(false)
 const startError = ref('')
+const activeFamily = ref('')
 
 const stepsInfo = ['选择岗位', '上传简历', '确认信息']
-const filterTags = ['全部', '技术', '产品', '设计', '运营', '市场']
+
+/* ------------------------------------------------------------------ */
+/*  Jobs ready for interview                                           */
+/* ------------------------------------------------------------------ */
+const READY_JOBS = new Set([
+  'BE-JAVA',   // Java后端开发工程师
+  'BE-PY',     // Python后端开发工程师
+  'FE-WEB',    // Web前端开发工程师
+  'FS-JAVA',   // Java Web全栈开发工程师
+  'ALG-ML',    // 机器学习算法工程师
+])
+
+/* ------------------------------------------------------------------ */
+/*  Family definitions                                                  */
+/* ------------------------------------------------------------------ */
+const families = [
+  { code: '后端开发', name: '后端开发', icon: 'B' },
+  { code: '前端与客户端开发', name: '前端与客户端', icon: 'F' },
+  { code: '全栈开发', name: '全栈开发', icon: 'S' },
+  { code: '算法与人工智能', name: '算法与AI', icon: 'A' },
+  { code: '产品经理', name: '产品经理', icon: 'P' },
+  { code: '数据分析', name: '数据分析', icon: 'D' },
+  { code: '软件测试', name: '软件测试', icon: 'Q' },
+]
+
+const familyColorMap = {
+  '后端开发':          { iconBg: 'rgba(99,102,241,0.08)',  accentColor: '#6366f1' },
+  '前端与客户端开发':  { iconBg: 'rgba(249,115,22,0.08)',  accentColor: '#f97316' },
+  '全栈开发':          { iconBg: 'rgba(16,185,129,0.08)',  accentColor: '#10b981' },
+  '算法与人工智能':    { iconBg: 'rgba(236,72,153,0.08)',  accentColor: '#ec4899' },
+  '产品经理':          { iconBg: 'rgba(6,182,212,0.08)',   accentColor: '#06b6d4' },
+  '数据分析':          { iconBg: 'rgba(168,85,247,0.08)',  accentColor: '#a855f7' },
+  '软件测试':          { iconBg: 'rgba(234,179,8,0.08)',   accentColor: '#eab308' },
+}
 
 /* ------------------------------------------------------------------ */
 /*  Job data - loaded from API                                         */
@@ -345,22 +388,15 @@ const filterTags = ['全部', '技术', '产品', '设计', '运营', '市场']
 const jobs = ref([])
 
 /* ------------------------------------------------------------------ */
-/*  Category → color mapping                                           */
+/*  Mappers                                                            */
 /* ------------------------------------------------------------------ */
-const categoryColorMap = {
-  '技术': { iconBg: 'rgba(99,102,241,0.08)', accentColor: '#6366f1' },
-  '产品': { iconBg: 'rgba(245,158,11,0.08)', accentColor: '#f59e0b' },
-  '设计': { iconBg: 'rgba(236,72,153,0.08)', accentColor: '#ec4899' },
-  '运营': { iconBg: 'rgba(6,182,212,0.08)', accentColor: '#06b6d4' },
-  '市场': { iconBg: 'rgba(168,85,247,0.08)', accentColor: '#a855f7' },
-}
-
 function mapJobFromBackend(job) {
-  const colors = categoryColorMap[job.category] || { iconBg: 'rgba(99,102,241,0.08)', accentColor: '#6366f1' }
+  const colors = familyColorMap[job.family] || familyColorMap['后端开发']
   return {
     id: job.id,
     title: job.name,
-    match: 70,
+    code: job.code || '',
+    family: job.family || '',
     tags: parseJsonField(job.keywords),
     focus: parseJsonField(job.abilities),
     iconBg: colors.iconBg,
@@ -395,29 +431,74 @@ async function fetchJobs() {
 /* ------------------------------------------------------------------ */
 /*  Computed                                                           */
 /* ------------------------------------------------------------------ */
+const jobsByFamily = computed(() => {
+  const map = {}
+  jobs.value.forEach(job => {
+    if (!map[job.family]) map[job.family] = []
+    map[job.family].push(job)
+  })
+  return map
+})
+
+const familyStats = computed(() => {
+  return families.map(f => ({
+    ...f,
+    count: (jobsByFamily.value[f.code] || []).length,
+    color: familyColorMap[f.code] || familyColorMap['后端开发'],
+  }))
+})
+
 const filteredJobs = computed(() => {
-  return jobs.value.filter(j => {
+  const pool = activeFamily.value
+    ? (jobsByFamily.value[activeFamily.value] || [])
+    : jobs.value
+  return pool.filter(j => {
     const matchSearch =
       !searchQuery.value ||
       j.title.includes(searchQuery.value) ||
       j.tags.some(t => t.includes(searchQuery.value))
-    const matchFilter =
-      activeFilter.value === '全部' ||
-      j.category === activeFilter.value ||
-      (activeFilter.value === '技术' && ['前端', '后端'].includes(j.category))
-    return matchSearch && matchFilter
+    return matchSearch
   })
 })
+
+/* Ensure grid stays as tall as the largest family's grid */
+const gridMinHeight = computed(() => {
+  if (!activeFamily.value && !searchQuery.value) return null
+  const maxCount = Math.max(...families.map(f => (jobsByFamily.value[f.code] || []).length), 0)
+  // 3 columns → rows = ceil(count/3), each row ≈ 170px
+  return Math.ceil(maxCount / 3) * 170
+})
+
+/* ------------------------------------------------------------------ */
+/*  Family selector                                                    */
+/* ------------------------------------------------------------------ */
+function selectFamily(code) {
+  activeFamily.value = activeFamily.value === code ? '' : code
+  selectedJob.value = null
+  searchQuery.value = ''
+}
+
+function selectPosition(job, event) {
+  if (!READY_JOBS.has(job.code)) {
+    // 点击未就绪岗位：卡片晃动 + 角标闪烁
+    const card = event?.currentTarget
+    if (card) {
+      card.classList.add('job-card--shake')
+      setTimeout(() => card.classList.remove('job-card--shake'), 500)
+      const badge = card.querySelector('.job-card__soon')
+      if (badge) {
+        badge.classList.add('job-card__soon--flash')
+        setTimeout(() => badge.classList.remove('job-card__soon--flash'), 600)
+      }
+    }
+    return
+  }
+  selectedJob.value = job
+}
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
-function getMatchClass(match) {
-  if (match >= 85) return 'match--high'
-  if (match >= 70) return 'match--mid'
-  return 'match--low'
-}
-
 function triggerUpload() {
   if (!uploadedFile.value) fileInput.value?.click()
 }
@@ -735,41 +816,151 @@ onUnmounted(() => { if (observer) observer.disconnect() })
   color: var(--neutral-400);
 }
 
-/* Filter chips */
-.filter-row {
+/* Family selector row */
+.family-row {
   display: flex;
-  gap: var(--space-2);
+  gap: var(--space-3);
   flex-wrap: wrap;
+  margin-bottom: var(--space-6);
 }
 
-.filter-chip {
-  padding: var(--space-2) var(--space-4);
+.family-chip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
   border: 1.5px solid var(--neutral-200);
-  border-radius: var(--radius-full);
+  border-radius: var(--radius-lg);
   background: var(--surface-elevated);
-  color: var(--neutral-600);
-  font-size: var(--text-sm);
-  font-family: var(--font-body);
-  font-weight: 500;
   cursor: pointer;
   transition:
-    background var(--duration-fast) var(--ease-out-expo),
-    border-color var(--duration-fast) var(--ease-out-expo),
-    color var(--duration-fast) var(--ease-out-expo),
-    box-shadow var(--duration-fast) var(--ease-out-expo);
+    background var(--duration-fast),
+    border-color var(--duration-fast),
+    box-shadow var(--duration-fast),
+    transform var(--duration-fast);
 }
 
-.filter-chip:hover {
+.family-chip:hover {
   border-color: var(--neutral-300);
   background: var(--neutral-50);
+  transform: translateY(-1px);
 }
 
-.filter-chip--active {
-  border-color: var(--accent-500);
-  background: var(--accent-50);
-  color: var(--accent-700);
+.family-chip--active {
+  border-color: var(--chip-accent, var(--accent-500));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--chip-accent, var(--accent-500)) 15%, transparent);
+}
+
+.family-chip__icon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+}
+
+.family-chip--active .family-chip__icon {
+  background: var(--chip-accent, var(--accent-500)) !important;
+  color: #fff !important;
+}
+
+.family-chip__name {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--neutral-700);
+  white-space: nowrap;
+}
+
+.family-chip--active .family-chip__name {
   font-weight: 600;
-  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.08);
+}
+
+.family-chip__count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--neutral-400);
+  padding: 1px 7px;
+  border-radius: var(--radius-full);
+  background: var(--neutral-100);
+}
+
+/* Job card code badge */
+.job-card__code {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  background: var(--neutral-100);
+  color: var(--neutral-500);
+  letter-spacing: 0.03em;
+}
+
+/* "敬请期待" badge */
+.job-card__soon {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  background: var(--neutral-100);
+  color: var(--neutral-400);
+  letter-spacing: 0.02em;
+  transition: all 0.15s ease;
+}
+
+.job-card__soon--flash {
+  background: var(--accent-500);
+  color: #fff;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
+}
+
+/* Disabled job card */
+.job-card--disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.6);
+}
+
+.job-card--disabled:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: var(--neutral-200);
+}
+
+.job-card--shake,
+.job-card--shake:hover {
+  animation: shake 0.5s ease;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10% { transform: translateX(-6px); }
+  30% { transform: translateX(6px); }
+  50% { transform: translateX(-4px); }
+  70% { transform: translateX(4px); }
+  90% { transform: translateX(-2px); }
+}
+
+/* Family prompt (empty state) */
+.family-prompt {
+  text-align: center;
+  padding: var(--space-12) 0;
+  margin-bottom: var(--space-6);
+}
+
+.family-prompt__icon {
+  margin-bottom: var(--space-4);
+}
+
+.family-prompt__text {
+  font-size: var(--text-base);
+  color: var(--neutral-400);
+  font-family: var(--font-body);
 }
 
 /* ===================================================================
@@ -779,6 +970,7 @@ onUnmounted(() => { if (observer) observer.disconnect() })
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: var(--space-4);
+  align-content: start;
 }
 
 /* ===================================================================
@@ -907,75 +1099,28 @@ onUnmounted(() => { if (observer) observer.disconnect() })
   letter-spacing: 0.01em;
 }
 
-/* Match bar */
-.job-card__match {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-.match-bar {
-  flex: 1;
-  height: 4px;
-  background: var(--neutral-100);
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.match-bar__fill {
-  height: 100%;
-  border-radius: 2px;
-  background: var(--accent-500);
-  transition: width 0.8s var(--ease-out-expo);
-}
-
-.match-label {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
-  min-width: 36px;
-  text-align: right;
-}
-
-.match--high {
-  color: var(--accent-600);
-}
-.match--mid {
-  color: #d97706;
-}
-.match--low {
-  color: var(--neutral-500);
-}
-
-/* Checkmark overlay */
-.job-card__check {
+/* Select indicator circle */
+.job-card__select {
   position: absolute;
-  top: var(--space-3);
-  right: var(--space-3);
+  bottom: 14px;
+  right: 14px;
   width: 28px;
   height: 28px;
   border-radius: var(--radius-full);
-  background: var(--accent-500);
+  border: 2px solid var(--neutral-300);
+  background: var(--surface-elevated);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: var(--shadow-accent);
+  color: transparent;
+  transition: all 0.25s var(--ease-out-expo);
 }
 
-.check-pop-enter-active {
-  transition: all 0.3s var(--ease-spring);
-}
-.check-pop-leave-active {
-  transition: all 0.15s ease-in;
-}
-.check-pop-enter-from {
-  opacity: 0;
-  transform: scale(0.3);
-}
-.check-pop-leave-to {
-  opacity: 0;
-  transform: scale(0.5);
+.job-card__select--on {
+  border-color: var(--accent-500);
+  background: var(--accent-500);
+  color: #fff;
+  box-shadow: var(--shadow-accent);
 }
 
 /* ===================================================================
@@ -1227,10 +1372,11 @@ onUnmounted(() => { if (observer) observer.disconnect() })
   margin-bottom: 2px;
 }
 
-.summary-card__match {
+.summary-card__code-label {
   font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 600;
+  color: var(--accent-600);
 }
 
 .summary-section {
@@ -1531,6 +1677,18 @@ onUnmounted(() => { if (observer) observer.disconnect() })
   .stepper__track {
     left: 18%;
     right: 18%;
+  }
+
+  .family-row {
+    gap: var(--space-2);
+  }
+
+  .family-chip {
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .family-chip__name {
+    font-size: 12px;
   }
 
   .job-grid {

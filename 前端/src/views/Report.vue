@@ -112,7 +112,7 @@
           <div v-loading="qaLoading">
             <div v-if="qaRounds.length" class="qa-rounds">
               <el-collapse v-model="activeRounds">
-                <el-collapse-item v-for="r in qaRounds" :key="r.roundNo" :name="String(r.roundNo)">
+                <el-collapse-item v-for="(r, i) in qaRounds" :key="r.roundNo" :name="String(r.roundNo)">
                   <template #title>
                     <div class="round-header">
                       <strong>第 {{ r.roundNo }} 题</strong>
@@ -126,9 +126,13 @@
                       <span class="round-msg-label">面试官提问</span>
                       <p>{{ r.question?.content }}</p>
                     </div>
-                    <div v-if="r.mainAnswer" class="round-msg candidate">
+                    <div v-if="r.mainAnswer?.content" class="round-msg candidate">
                       <span class="round-msg-label">你的回答</span>
                       <p>{{ r.mainAnswer.content }}</p>
+                    </div>
+                    <div v-else class="round-msg candidate skipped">
+                      <span class="round-msg-label">你的回答</span>
+                      <p>{{ i === qaRounds.length - 1 ? '（此题已跳过，面试已结束）' : '（此题已跳过，直接进入下一题）' }}</p>
                     </div>
                     <template v-if="r.followup">
                       <div class="round-msg interviewer followup">
@@ -614,8 +618,7 @@ onBeforeUnmount(() => {
 }
 
 .qa-rounds {
-  max-height: 600px;
-  overflow-y: auto;
+  /* 不设 max-height，让页面自身滚动，避免截断长内容 */
 }
 
 /* 折叠项悬浮效果 */
@@ -707,6 +710,17 @@ onBeforeUnmount(() => {
   font-size: 14px;
   line-height: 1.8;
   white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.round-msg.skipped {
+  opacity: 0.55;
+  border-style: dashed;
+}
+
+.round-msg.skipped p {
+  color: var(--text-muted);
+  font-style: italic;
 }
 
 /* 操作 */

@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl *)",
+      "Bash(./mvnw *)",
+      "Bash(npm *)",
+      "Bash(mysql *)",
+      "Bash(taskkill *)",
+      "Bash(sc *)",
+      "Bash(start *)",
+      "Bash(netstat *)"
+    ]
+  }
+}

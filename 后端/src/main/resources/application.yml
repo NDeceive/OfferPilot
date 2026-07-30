@@ -40,8 +40,9 @@ jwt:
 ai:
   provider: deepseek
   base-url: https://api.deepseek.com
-  # API Key 只从环境变量 AI_API_KEY 注入，严禁把真实 key 写进本文件提交到仓库
-  api-key: ${AI_API_KEY:在这里填你的DeepSeek_API_Key}
+  # 智能追问依赖 DeepSeek 模型，在此填入你的 API Key（或通过环境变量 AI_API_KEY 注入）
+  # 获取 Key：https://platform.deepseek.com → API Keys
+  api-key: ${AI_API_KEY:your-deepseek-api-key-here}
   model: deepseek-chat
   # 是否启用真实 AI 调用；false 时使用内置规则/模拟（无 key 也能演示）
   enabled: true

@@ -36,7 +36,9 @@ DROP TABLE IF EXISTS job_position;
 CREATE TABLE job_position (
     id           BIGINT       PRIMARY KEY AUTO_INCREMENT COMMENT '岗位ID',
     name         VARCHAR(50)  NOT NULL                    COMMENT '岗位名称',
-    category     VARCHAR(50)                              COMMENT '岗位类别(后端/前端/算法等)',
+    category     VARCHAR(50)                              COMMENT '岗位族(后端开发/前端与客户端开发等)',
+    family       VARCHAR(50)                              COMMENT '岗位族中文名',
+    code         VARCHAR(20)                              COMMENT '岗位编码(BE-JAVA/FE-WEB等)',
     description  TEXT                                     COMMENT '岗位描述',
     abilities    TEXT                                     COMMENT '岗位能力要求(JSON数组)',
     keywords     TEXT                                     COMMENT '岗位关键词(JSON数组,用于RAG匹配)',
@@ -199,15 +201,39 @@ INSERT INTO sys_user (username, password, nickname, role) VALUES
 ('teacher', '$2a$10$ZK6vA7aDfR0wYwEgu1Iv.ezL1U97zMKw/WqDjNq3.ux.0n7nUq4om', '就业指导老师', 'TEACHER'),
 ('student', '$2a$10$ZK6vA7aDfR0wYwEgu1Iv.ezL1U97zMKw/WqDjNq3.ux.0n7nUq4om', '测试学生', 'STUDENT');
 
-INSERT INTO job_position (name, category, description, abilities, keywords) VALUES
-('Java 后端开发', '后端',
- '负责后端服务开发，熟悉 Java 核心、Spring 生态、数据库与分布式基础。',
- '["Java核心","JVM","并发编程","Spring框架","MySQL","Redis","分布式"]',
- '["Java","JVM","并发","Spring","SpringBoot","MySQL","Redis","锁","事务","微服务"]'),
-('Web 前端开发', '前端',
- '负责前端页面与交互开发，熟悉 HTML/CSS/JS、主流框架与工程化。',
- '["HTML/CSS","JavaScript","Vue/React","浏览器原理","工程化","性能优化"]',
- '["HTML","CSS","JavaScript","Vue","React","浏览器","webpack","性能","ES6","HTTP"]');
+INSERT INTO job_position (name, category, family, code, description, abilities, keywords) VALUES
+('Java后端开发工程师', '后端开发', '后端开发', 'BE-JAVA', '负责 Java 后端服务开发。', '["Java核心","JVM","并发","Spring","MySQL","Redis","微服务"]', '["Java","Spring","MySQL","Redis","微服务","Docker"]'),
+('Python后端开发工程师', '后端开发', '后端开发', 'BE-PY', '负责 Python 后端服务开发。', '["Python","Django","FastAPI","数据库","异步","API"]', '["Python","Django","Flask","FastAPI","PostgreSQL","Redis","RESTful"]'),
+('Go后端开发工程师', '后端开发', '后端开发', 'BE-GO', '负责 Go 高并发后端服务。', '["Go","并发","微服务","gRPC","数据库","云原生"]', '["Go","Goroutine","gRPC","Kubernetes","Docker","Redis","Kafka"]'),
+('Node.js后端开发工程师', '后端开发', '后端开发', 'BE-NODE', '负责 Node.js 后端服务开发。', '["Node.js","Express","NestJS","数据库","API","异步"]', '["Node.js","Express","NestJS","TypeScript","MongoDB","Redis","Docker"]'),
+('C/C++高性能后端开发工程师', '后端开发', '后端开发', 'BE-CPP', '负责 C/C++ 高性能服务开发。', '["C/C++","内存管理","网络编程","多线程","系统调优"]', '["C++","STL","TCP/IP","多线程","Linux","gRPC"]'),
+('Web前端开发工程师', '前端与客户端开发', '前端与客户端开发', 'FE-WEB', '负责 Web 前端开发。', '["HTML/CSS","JS/TS","Vue/React","工程化","性能","浏览器"]', '["JavaScript","TypeScript","Vue","React","Vite","CSS","性能优化"]'),
+('Android原生开发工程师', '前端与客户端开发', '前端与客户端开发', 'FE-ANDROID', '负责 Android 原生应用开发。', '["Kotlin","Jetpack","Android架构","性能","安全"]', '["Kotlin","Java","Jetpack","Compose","Flutter","Gradle"]'),
+('iOS原生开发工程师', '前端与客户端开发', '前端与客户端开发', 'FE-IOS', '负责 iOS 原生应用开发。', '["Swift","SwiftUI","UIKit","iOS架构","内存管理"]', '["Swift","SwiftUI","UIKit","Combine","CoreData","Xcode"]'),
+('跨端开发工程师（Flutter/RN）', '前端与客户端开发', '前端与客户端开发', 'FE-CROSS', '负责跨平台移动应用开发。', '["Flutter/RN","Dart/TS","状态管理","原生桥接","多端适配"]', '["Flutter","React Native","Dart","TypeScript","热更新"]'),
+('小程序与轻应用开发工程师', '前端与客户端开发', '前端与客户端开发', 'FE-MINI', '负责小程序开发。', '["小程序框架","平台API","性能优化","多端适配"]', '["微信小程序","uni-app","Taro","云开发","WXML"]'),
+('桌面客户端开发工程师', '前端与客户端开发', '前端与客户端开发', 'FE-DESKTOP', '负责桌面客户端开发。', '["Electron/Qt","Chromium","进程模型","跨平台","安全"]', '["Electron","Qt","Chromium","Node.js","跨平台","C++"]'),
+('Java Web全栈开发工程师', '全栈开发', '全栈开发', 'FS-JAVA', '负责 Java Web 全栈开发。', '["Java后端","前端框架","数据库","DevOps","系统设计"]', '["Java","Spring","Vue","React","MySQL","Docker","CI/CD"]'),
+('Node.js全栈开发工程师', '全栈开发', '全栈开发', 'FS-NODE', '负责 Node.js 全栈开发。', '["Node.js","React","数据库","API","云服务"]', '["Node.js","React","Next.js","TypeScript","PostgreSQL","AWS"]'),
+('Python Web全栈开发工程师', '全栈开发', '全栈开发', 'FS-PY', '负责 Python Web 全栈开发。', '["Python","前端基础","数据库","异步任务","部署"]', '["Python","Django","Flask","Vue","PostgreSQL","Docker"]'),
+('AI应用全栈开发工程师', '全栈开发', '全栈开发', 'FS-AI', '负责 AI 应用全栈开发。', '["LLM集成","RAG","Prompt工程","向量数据库"]', '["LangChain","OpenAI","VectorDB","Streamlit","Python","RAG"]'),
+('机器学习算法工程师', '算法与人工智能', '算法与人工智能', 'ALG-ML', '负责机器学习模型研发。', '["数学基础","特征工程","ML框架","模型评估","部署"]', '["机器学习","XGBoost","scikit-learn","Python","特征工程"]'),
+('NLP与大模型算法工程师', '算法与人工智能', '算法与人工智能', 'ALG-NLP', '负责 NLP 与大模型算法。', '["NLP","Transformer","LLM微调","RAG","Prompt"]', '["NLP","Transformer","BERT","GPT","PyTorch","LangChain"]'),
+('计算机视觉算法工程师', '算法与人工智能', '算法与人工智能', 'ALG-CV', '负责 CV 算法研发。', '["CV基础","CNN","目标检测","分割","生成模型"]', '["OpenCV","PyTorch","YOLO","GAN","TensorRT"]'),
+('推荐搜索广告算法工程师', '算法与人工智能', '算法与人工智能', 'ALG-REC', '负责推荐系统算法。', '["推荐系统","搜索排序","召回","AB实验"]', '["推荐","协同过滤","DeepFM","CTR预估","向量检索"]'),
+('语音算法工程师', '算法与人工智能', '算法与人工智能', 'ALG-SPEECH', '负责语音识别合成算法。', '["语音识别","语音合成","信号处理","端到端模型"]', '["ASR","TTS","Kaldi","Whisper","PyTorch"]'),
+('多模态与具身智能算法工程师', '算法与人工智能', '算法与人工智能', 'ALG-MM', '负责多模态与具身智能算法。', '["多模态","VLM","生成模型","模型对齐"]', '["CLIP","GPT-4V","扩散模型","VLM","RLHF"]'),
+('算法工程化与MLOps工程师', '算法与人工智能', '算法与人工智能', 'ALG-MLOPS', '负责算法工程化与 MLOps。', '["MLOps","CI/CD","模型部署","特征平台","监控"]', '["MLflow","Kubeflow","Docker","Kubernetes","TensorRT"]'),
+('C端产品经理', '产品经理', '产品经理', 'PM-C', '负责 to C 产品规划与迭代。', '["用户研究","需求分析","数据分析","增长","项目推进"]', '["用户调研","A/B测试","MVP","PRD","用户画像","敏捷"]'),
+('B端企业产品经理', '产品经理', '产品经理', 'PM-B', '负责 to B 企业产品规划。', '["行业分析","客户需求","商业化","系统设计"]', '["B端","SaaS","企业服务","工作流","API设计","ROI"]'),
+('AI产品经理', '产品经理', '产品经理', 'PM-AI', '负责 AI 产品规划。', '["AI技术理解","LLM评估","Prompt","数据策略","伦理"]', '["LLM","RAG","Agent","AI产品","对话设计","评估体系"]'),
+('业务数据分析师', '数据分析', '数据分析', 'DA-BIZ', '负责业务数据分析。', '["SQL","指标体系","业务洞察","统计分析","可视化"]', '["SQL","Excel","Tableau","指标体系","漏斗","A/B测试"]'),
+('产品数据分析师', '数据分析', '数据分析', 'DA-PROD', '负责产品数据分析。', '["产品分析","用户行为","AB实验","埋点","可视化"]', '["埋点","AB实验","SQL","Python","留存","转化"]'),
+('BI与数据可视化工程师', '数据分析', '数据分析', 'DA-BI', '负责 BI 报表与数仓建设。', '["BI工具","数仓","ETL","SQL","数据治理"]', '["PowerBI","Tableau","Looker","SQL","数仓","ETL"]'),
+('功能测试工程师', '软件测试', '软件测试', 'QA-FUNC', '负责软件功能测试。', '["用例设计","缺陷管理","测试流程","回归测试"]', '["黑盒测试","测试用例","Bug管理","Jira","Postman"]'),
+('自动化测试工程师', '软件测试', '软件测试', 'QA-AUTO', '负责自动化测试框架开发。', '["自动化框架","脚本开发","CI/CD","接口测试"]', '["Selenium","Playwright","Appium","pytest","Jenkins"]'),
+('性能测试工程师', '软件测试', '软件测试', 'QA-PERF', '负责性能测试。', '["性能测试","压测工具","瓶颈分析","容量规划","监控"]', '["JMeter","Gatling","压测","TPS","CPU分析","Profiling"]'),
+('测试开发质量工程师', '软件测试', '软件测试', 'QA-SDET', '负责测试平台与质量保障。', '["测试平台","工具链","质量度量","安全测试"]', '["测试框架","Mock","契约测试","代码覆盖率","SonarQube"]');
 
 -- =====================================================================
 -- 题库种子数据（Phase 1 规则化面试用）
