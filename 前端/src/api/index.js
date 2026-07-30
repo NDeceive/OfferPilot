@@ -47,5 +47,9 @@ export const exportReport = (reportId, format = 'pdf') =>
     responseType: 'blob',
   })
 
+/* ==================== Modules & Dashboard ==================== */
+export const getModules = () => request.get('/modules')
+export const getDashboardProfile = () => request.get('/user/dashboard/profile')
+
 /* ==================== Teacher ==================== */
 export const getTeacherOverview = () => request.get('/teacher/dashboard/overview')

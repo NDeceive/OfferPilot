@@ -254,8 +254,120 @@
           </div>
         </section>
 
-        <!-- ========== Step 3: Confirm & Start ========== -->
+        <!-- ========== Step 3: Module Selection ========== -->
         <section v-show="currentStep === 2" key="step2" class="step-panel">
+          <div class="module-layout reveal">
+            <div class="module-select-card card">
+              <h2 class="card__title">选择训练目标</h2>
+              <p class="card__desc">选择 5 个评价维度，设定排序和期望目标。系统将在面试后评估你离目标还有多远。</p>
+
+              <!-- Module grid: 10 cards -->
+              <div v-if="modulesLoading" class="module-loading">加载中…</div>
+              <div v-else class="module-grid">
+                <label
+                  v-for="m in allModules"
+                  :key="m.code"
+                  class="module-check-card"
+                  :class="{ 'module-check-card--on': selectedModuleCodes.has(m.code) }"
+                >
+                  <input
+                    type="checkbox"
+                    :checked="selectedModuleCodes.has(m.code)"
+                    :disabled="!selectedModuleCodes.has(m.code) && selectedModuleCodes.size >= 5"
+                    @change="(e) => {
+                      if (e.target.checked) {
+                        if (selectedModuleCodes.size < 5) selectedModuleCodes.add(m.code)
+                      } else {
+                        selectedModuleCodes.delete(m.code)
+                      }
+                      selectedModuleCodes = new Set(selectedModuleCodes)
+                    }"
+                    class="module-check-input"
+                  />
+                  <span class="module-check-name">{{ m.name }}</span>
+                  <span class="module-check-desc">{{ m.description }}</span>
+                  <span class="module-check-mark" v-if="selectedModuleCodes.has(m.code)">✓</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Sort area -->
+            <div class="module-sort-card card" v-if="selectedModuleCodes.size > 0">
+              <h3 class="card__title">排序与目标</h3>
+              <p class="card__desc">设定排位（相同数字=并列）和期望等级，下方实时预览权重分配。</p>
+
+              <div class="sort-list">
+                <div
+                  v-for="m in allModules.filter(x => selectedModuleCodes.has(x.code))"
+                  :key="'sort-' + m.code"
+                  class="sort-item"
+                >
+                  <span class="sort-item__name">{{ m.name }}</span>
+                  <div class="sort-item__ctrls">
+                    <label class="sort-label">排位</label>
+                    <select
+                      :value="m._rank"
+                      @change="(e) => { m._rank = Number(e.target.value) }"
+                      class="sort-select"
+                    >
+                      <option v-for="r in [1,2,3,4,5]" :key="r" :value="r">第{{ r }}位</option>
+                    </select>
+                    <label class="sort-label">目标</label>
+                    <select
+                      :value="m._level"
+                      @change="(e) => { m._level = Number(e.target.value) }"
+                      class="sort-select"
+                    >
+                      <option v-for="opt in LEVEL_OPTIONS" :key="opt.value" :value="opt.value">
+                        {{ opt.label }} ({{ opt.target }}分)
+                      </option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Weight preview -->
+              <div class="weight-preview" v-if="selectedModuleCodes.size === 5">
+                <h4 class="weight-preview__title">权重预览</h4>
+                <div class="weight-bars">
+                  <div
+                    v-for="m in allModules.filter(x => selectedModuleCodes.has(x.code))"
+                    :key="'w-' + m.code"
+                    class="weight-bar"
+                  >
+                    <span class="weight-bar__label">{{ m.name }}</span>
+                    <div class="weight-bar__track">
+                      <div
+                        class="weight-bar__fill"
+                        :style="{ width: ((calcWeights()[m.code] || 0) * 100) + '%' }"
+                      />
+                    </div>
+                    <span class="weight-bar__num">{{ ((calcWeights()[m.code] || 0) * 100).toFixed(0) }}%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="step-actions">
+            <button class="btn btn--ghost" @click="currentStep = 1">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+              </svg>
+              上一步
+            </button>
+            <button class="btn btn--primary" :disabled="selectedModuleCodes.size !== 5" @click="currentStep = 3">
+              确认训练目标
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+        </section>
+
+        <!-- ========== Step 4: Confirm & Start ========== -->
+        <section v-show="currentStep === 3" key="step3" class="step-panel">
           <div class="confirm-wrap reveal">
             <div class="confirm-card card">
               <div class="confirm-card__header">
@@ -278,6 +390,19 @@
                   <span class="detail-row__value">{{ uploadedFile ? uploadedFile.name : '未上传' }}</span>
                 </div>
                 <div class="detail-row">
+                  <span class="detail-row__label">训练模块</span>
+                  <span class="detail-row__value">
+                    <span v-if="selectedModuleCodes.size === 5" class="module-tags-inline">
+                      <span
+                        v-for="m in allModules.filter(x => selectedModuleCodes.has(x.code))"
+                        :key="'tag-' + m.code"
+                        class="module-tag-chip"
+                      >{{ m.name }}</span>
+                    </span>
+                    <span v-else class="detail-row__value--muted">未选择</span>
+                  </span>
+                </div>
+                <div class="detail-row">
                   <span class="detail-row__label">预计时长</span>
                   <span class="detail-row__value">20-30 分钟</span>
                 </div>
@@ -298,7 +423,7 @@
 
           <!-- Actions -->
           <div class="step-actions">
-            <button class="btn btn--ghost" @click="currentStep = 1">
+            <button class="btn btn--ghost" @click="currentStep = 2">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M19 12H5M12 19l-7-7 7-7" />
               </svg>
@@ -324,7 +449,7 @@
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import AppLayout from '../components/layout/AppLayout.vue'
-import { getJobList, uploadResumeFile, startInterview } from '../api'
+import { getJobList, uploadResumeFile, startInterview, getModules } from '../api'
 
 /* ------------------------------------------------------------------ */
 /*  State                                                              */
@@ -346,7 +471,63 @@ const startingInterview = ref(false)
 const startError = ref('')
 const activeFamily = ref('')
 
-const stepsInfo = ['选择岗位', '上传简历', '确认信息']
+const stepsInfo = ['选择岗位', '上传简历', '训练目标', '确认信息']
+
+/* ------------------------------------------------------------------ */
+/*  Module selection state (Step 3)                                     */
+/* ------------------------------------------------------------------ */
+const allModules = ref([])
+const modulesLoading = ref(false)
+const selectedModuleCodes = ref(new Set())  // user-selected module codes (max 5)
+
+// Level labels and their target scores
+const LEVEL_OPTIONS = [
+  { value: 1, label: '简单关注', target: 65 },
+  { value: 2, label: '重点提升', target: 75 },
+  { value: 3, label: '核心突破', target: 85 },
+]
+
+// Weight pool
+const RANK_WEIGHT = { 1: 0.30, 2: 0.25, 3: 0.20, 4: 0.15, 5: 0.10 }
+
+/** Calculate weights from ranks (with tie support) */
+function calcWeights() {
+  const selected = allModules.value.filter(m => selectedModuleCodes.value.has(m.code))
+  if (!selected.length) return {}
+  // Group by rank
+  const groups = {}
+  selected.forEach(m => {
+    const r = m._rank || 1
+    if (!groups[r]) groups[r] = []
+    groups[r].push(m)
+  })
+  // All same rank = balanced mode
+  if (Object.keys(groups).length === 1) {
+    const each = 1 / selected.length
+    const w = {}
+    selected.forEach(m => { w[m.code] = each })
+    return w
+  }
+  const weights = {}
+  Object.entries(groups).forEach(([rank, mods]) => {
+    let poolSum = 0
+    const r = Number(rank)
+    for (let i = r; i < r + mods.length; i++) poolSum += (RANK_WEIGHT[i] || 0)
+    const each = poolSum / mods.length
+    mods.forEach(m => { weights[m.code] = Math.round(each * 10000) / 10000 })
+  })
+  return weights
+}
+
+/** Get module preferences for API */
+function buildModulePreferences() {
+  const selected = allModules.value.filter(m => selectedModuleCodes.value.has(m.code))
+  return selected.map(m => ({
+    code: m.code,
+    rank: m._rank || 1,
+    level: m._level || 2,
+  }))
+}
 
 /* ------------------------------------------------------------------ */
 /*  Jobs ready for interview                                           */
@@ -557,7 +738,11 @@ async function handleStartInterview() {
   startingInterview.value = true
   startError.value = ''
   try {
-    const res = await startInterview({ jobId: selectedJob.value.id })
+    const payload = { jobId: selectedJob.value.id }
+    if (selectedModuleCodes.value.size === 5) {
+      payload.modulePreferences = buildModulePreferences()
+    }
+    const res = await startInterview(payload)
     router.push({
       path: '/interview',
       query: {
@@ -603,9 +788,30 @@ function scheduleObserve() {
 }
 
 watch(currentStep, scheduleObserve)
+async function fetchModules() {
+  modulesLoading.value = true
+  try {
+    const data = await getModules()
+    allModules.value = (Array.isArray(data) ? data : []).map(m => ({
+      ...m,
+      _rank: 1,
+      _level: 2,
+    }))
+    // Default: select first 5
+    if (allModules.value.length >= 5 && selectedModuleCodes.value.size === 0) {
+      allModules.value.slice(0, 5).forEach(m => selectedModuleCodes.value.add(m.code))
+    }
+  } catch (e) {
+    console.warn('Failed to load modules:', e)
+  } finally {
+    modulesLoading.value = false
+  }
+}
+
 onMounted(() => {
   scheduleObserve()
   fetchJobs()
+  fetchModules()
 })
 onUnmounted(() => { if (observer) observer.disconnect() })
 </script>
@@ -1631,6 +1837,217 @@ onUnmounted(() => { if (observer) observer.disconnect() })
   .search-box {
     transition: none;
   }
+}
+
+/* ===================================================================
+   STEP 3: MODULE SELECTION
+   =================================================================== */
+.module-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+.module-loading {
+  text-align: center;
+  padding: var(--space-10);
+  color: var(--neutral-400);
+}
+
+.module-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-3);
+}
+
+.module-check-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-4);
+  border: 1.5px solid var(--neutral-200);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--duration-normal) var(--ease-out-expo);
+  background: var(--surface-elevated);
+}
+
+.module-check-card:hover {
+  border-color: var(--accent-300);
+  background: var(--accent-50);
+}
+
+.module-check-card--on {
+  border-color: var(--accent-500);
+  background: rgba(16, 185, 129, 0.05);
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.12);
+}
+
+.module-check-input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.module-check-name {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--neutral-900);
+}
+
+.module-check-card--on .module-check-name {
+  color: var(--accent-700);
+}
+
+.module-check-desc {
+  font-size: 11px;
+  color: var(--neutral-400);
+  line-height: 1.4;
+}
+
+.module-check-mark {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent-500);
+}
+
+/* Sort area */
+.module-sort-card {
+  position: sticky;
+  top: calc(var(--nav-height) + var(--space-8));
+}
+
+.sort-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: var(--space-4) 0;
+}
+
+.sort-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--neutral-50);
+  border: 1px solid var(--neutral-200);
+  border-radius: var(--radius-md);
+  flex-wrap: wrap;
+}
+
+.sort-item__name {
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--neutral-800);
+  min-width: 90px;
+}
+
+.sort-item__ctrls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.sort-label {
+  font-size: 11px;
+  color: var(--neutral-400);
+  font-weight: 500;
+}
+
+.sort-select {
+  padding: 4px 8px;
+  border: 1px solid var(--neutral-300);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-family: var(--font-body);
+  background: var(--surface-elevated);
+  color: var(--neutral-800);
+  cursor: pointer;
+}
+
+/* Weight preview */
+.weight-preview {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--neutral-200);
+}
+
+.weight-preview__title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--neutral-700);
+  margin-bottom: var(--space-3);
+}
+
+.weight-bars {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.weight-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.weight-bar__label {
+  font-size: 11px;
+  color: var(--neutral-500);
+  width: 75px;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.weight-bar__track {
+  flex: 1;
+  height: 6px;
+  background: var(--neutral-200);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.weight-bar__fill {
+  height: 100%;
+  background: var(--accent-500);
+  border-radius: 3px;
+  transition: width 0.3s var(--ease-out-expo);
+}
+
+.weight-bar__num {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--neutral-600);
+  width: 35px;
+  flex-shrink: 0;
+}
+
+/* Module tags in confirm step */
+.module-tags-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.module-tag-chip {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: var(--accent-50);
+  border: 1px solid var(--accent-200);
+  color: var(--accent-700);
+  font-weight: 500;
+}
+
+.detail-row__value--muted {
+  color: var(--neutral-400);
+  font-style: italic;
 }
 
 /* ===================================================================
