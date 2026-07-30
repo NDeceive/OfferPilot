@@ -4,20 +4,25 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zhimian.common.BizException;
 import com.zhimian.config.UserContext;
+import com.zhimian.dto.ModuleScoreView;
 import com.zhimian.dto.ReportDetailResponse;
 import com.zhimian.dto.ReportDimensionView;
 import com.zhimian.entity.InterviewMessage;
+import com.zhimian.entity.InterviewModuleScore;
 import com.zhimian.entity.InterviewReport;
 import com.zhimian.entity.InterviewSession;
 import com.zhimian.entity.JobPosition;
 import com.zhimian.entity.ReportDimension;
+import com.zhimian.entity.ScoreModule;
 import com.zhimian.entity.SkillQuestion;
 import com.zhimian.mapper.InterviewMessageMapper;
+import com.zhimian.mapper.InterviewModuleScoreMapper;
 import com.zhimian.mapper.InterviewReportMapper;
 import com.zhimian.mapper.InterviewSessionMapper;
 import com.zhimian.mapper.JobPositionMapper;
-import com.zhimian.mapper.SkillQuestionMapper;
 import com.zhimian.mapper.ReportDimensionMapper;
+import com.zhimian.mapper.ScoreModuleMapper;
+import com.zhimian.mapper.SkillQuestionMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -48,6 +53,8 @@ public class ReportService {
     private final ReportDimensionMapper dimensionMapper;
     private final SkillQuestionMapper skillQuestionMapper;
     private final JobPositionMapper jobMapper;
+    private final InterviewModuleScoreMapper moduleScoreMapper;
+    private final ScoreModuleMapper scoreModuleMapper;
 
     private static final ObjectMapper JSON = new ObjectMapper();
 
@@ -198,6 +205,42 @@ public class ReportService {
         resp.setSuggestions(fromJson(report.getSuggestions()));
         resp.setWeakTags(report.getWeakTags());
         resp.setDimensions(dimViews);
+
+        // 评分系统改造：加载模块评分明细
+        resp.setOverallMatchScore(report.getOverallMatchScore());
+        resp.setDisplayLevel(report.getDisplayLevel());
+        resp.setProfileLabel(report.getProfileLabel());
+
+        List<InterviewModuleScore> moduleScores = moduleScoreMapper.selectList(
+                new LambdaQueryWrapper<InterviewModuleScore>()
+                        .eq(InterviewModuleScore::getReportId, reportId)
+                        .orderByAsc(InterviewModuleScore::getId));
+        if (!moduleScores.isEmpty()) {
+            // 加载模块名映射
+            List<ScoreModule> allModules = scoreModuleMapper.selectList(new LambdaQueryWrapper<>());
+            Map<String, String> nameMap = new HashMap<>();
+            for (ScoreModule sm : allModules) {
+                nameMap.put(sm.getCode(), sm.getName());
+            }
+            List<ModuleScoreView> moduleViews = new ArrayList<>();
+            for (InterviewModuleScore ms : moduleScores) {
+                ModuleScoreView mv = new ModuleScoreView();
+                mv.setModuleCode(ms.getModuleCode());
+                mv.setModuleName(nameMap.getOrDefault(ms.getModuleCode(), ms.getModuleCode()));
+                mv.setRawScore(ms.getRawScore());
+                mv.setTargetScore(ms.getTargetScore());
+                mv.setModuleMatch(ms.getModuleMatch());
+                mv.setBaseWeight(ms.getBaseWeight());
+                mv.setGapScore(ms.getGapScore());
+                mv.setImprovementPriority(ms.getImprovementPriority());
+                mv.setEvidence(ms.getEvidence());
+                mv.setSuggestion(ms.getSuggestion());
+                mv.setAiConfidence(ms.getAiConfidence());
+                mv.setScoreSource(ms.getScoreSource());
+                moduleViews.add(mv);
+            }
+            resp.setModuleScores(moduleViews);
+        }
         return resp;
     }
 

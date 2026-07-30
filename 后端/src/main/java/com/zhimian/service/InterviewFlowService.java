@@ -62,6 +62,8 @@ public class InterviewFlowService {
     private final QuestionBootstrapper questionBootstrapper;
     private final InterviewReportMapper reportMapper;
     private final ReportDimensionMapper dimensionMapper;
+    private final ModulePreferenceService modulePreferenceService;
+    private final ModuleScoreService moduleScoreService;
 
     // 新标签化题库
     private final SkillQuestionMapper skillQuestionMapper;
@@ -142,7 +144,21 @@ public class InterviewFlowService {
         session.setDurationSeconds(duration);
         session.setStatus(STATUS_ONGOING);
         session.setIsRetrain(0);
+
+        // 评分系统改造：保存模块偏好
+        List<ModulePreferenceService.PreferenceItem> moduleItems = null;
+        if (req.getModulePreferences() != null && !req.getModulePreferences().isEmpty()) {
+            moduleItems = req.getModulePreferences().stream()
+                    .map(p -> new ModulePreferenceService.PreferenceItem(p.getCode(), p.getRank(), p.getLevel()))
+                    .collect(Collectors.toList());
+            session.setHasModulePreference(1);
+        }
         sessionMapper.insert(session);
+
+        // 保存偏好必须在session.id生成之后
+        if (moduleItems != null) {
+            modulePreferenceService.savePreference(session.getId(), userId, moduleItems);
+        }
 
         SkillQuestion first = candidates.get(0);
         String abilityTag = resolveAbilityTag(first.getId());
@@ -271,7 +287,17 @@ public class InterviewFlowService {
             }
             sessionMapper.updateById(session);
         }
-        return reportService.generateForSession(session);
+        // 旧版报告（兼容历史）
+        Long reportId = reportService.generateForSession(session);
+
+        // 评分系统改造：模块化匹配度评分 + 更新报告
+        try {
+            moduleScoreService.scoreAndUpdateReport(sessionId, reportId);
+        } catch (Exception e) {
+            log.warn("模块评分失败 sessionId={}，使用旧版评分兜底: {}", sessionId, e.getMessage());
+        }
+
+        return reportId;
     }
 
     /** 删除面试会话及其关联数据（消息+报告+维度+追问记录），仅允许操作本人会话 */
