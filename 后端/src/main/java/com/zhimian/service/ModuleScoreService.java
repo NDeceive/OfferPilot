@@ -1,12 +1,14 @@
 package com.zhimian.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zhimian.config.UserContext;
 import com.zhimian.entity.*;
 import com.zhimian.mapper.*;
 import com.zhimian.service.ModulePreferenceService.PreferenceItem;
+import com.zhimian.service.ai.DeepSeekClient;
 import com.zhimian.service.ai.ScorePromptBuilder;
 import com.zhimian.service.ai.ScorePromptBuilder.ScoringContext;
 import lombok.RequiredArgsConstructor;
@@ -37,11 +39,10 @@ public class ModuleScoreService {
     private final JobPositionMapper jobMapper;
     private final InterviewReportMapper reportMapper;
     private final InterviewModuleScoreMapper moduleScoreMapper;
+    private final ScoreModuleMapper scoreModuleMapper;
     private final ModulePreferenceService preferenceService;
     private final ScorePromptBuilder scorePromptBuilder;
-
-    // DeepSeek 客户端将在 Step5 注入
-    // private final DeepSeekClient deepSeekClient;
+    private final DeepSeekClient deepSeekClient;
 
     private static final ObjectMapper JSON = new ObjectMapper();
 
@@ -65,6 +66,18 @@ public class ModuleScoreService {
             "岗位匹配程度", "position_cognition",
             "动态追问应对", "followup_adaptability"
     );
+
+    // ============================ 内部数据结构 ============================
+
+    /** AI评分完整结果（含分数、证据、建议、置信度） */
+    static class ScoreResult {
+        final Map<String, BigDecimal> scores = new LinkedHashMap<>();
+        final Map<String, String> evidences = new HashMap<>();
+        final Map<String, String> suggestions = new HashMap<>();
+        final Map<String, BigDecimal> confidences = new HashMap<>();
+        String overallComment;
+        String scoringSource;
+    }
 
     // ============================ 入口 ============================
 
@@ -93,8 +106,9 @@ public class ModuleScoreService {
         // 3. Layer 1: 信号提取
         Signals signals = extractSignals(messages, job);
 
-        // 4. Layer 2: 模块评分（当前使用规则兜底，Step5改为DeepSeek）
-        Map<String, BigDecimal> moduleScores = scoreAllModules(messages, job, session, preferences, signals);
+        // 4. Layer 2: 模块评分
+        ScoreResult scoreResult = scoreAllModules(messages, job, session, preferences, signals);
+        signals.scoringSource = scoreResult.scoringSource;
 
         // 5. 读取权重和目标线
         Map<String, Double> weights = preferenceService.getWeightsSnapshot(sessionId);
@@ -107,12 +121,12 @@ public class ModuleScoreService {
         }
 
         // 6. Layer 3: 匹配度 + 画像 + 警报
-        MatchResult matchResult = calculateMatch(moduleScores, weights, targets, preferences);
-        List<String> profileLabels = generateProfileLabel(moduleScores, weights, preferences);
-        List<String> alerts = checkAlerts(moduleScores, weights, targets, preferences);
+        MatchResult matchResult = calculateMatch(scoreResult.scores, weights, targets, preferences);
+        List<String> profileLabels = generateProfileLabel(scoreResult.scores, weights, preferences);
+        List<String> alerts = checkAlerts(scoreResult.scores, weights, targets, preferences);
 
         // 7. 保存模块评分明细
-        saveModuleScores(reportId, moduleScores, weights, targets, matchResult, signals);
+        saveModuleScores(reportId, scoreResult, weights, targets, matchResult);
 
         // 8. 更新报告
         updateReport(report, matchResult, profileLabels, alerts);
@@ -269,24 +283,30 @@ public class ModuleScoreService {
     // ============================ Layer 2: 模块评分 ============================
 
     /**
-     * 对全部10个模块打分。当前使用规则兜底，Step5接入DeepSeek。
+     * 对全部10个模块打分。优先DeepSeek AI，失败则规则兜底。
      */
-    private Map<String, BigDecimal> scoreAllModules(List<InterviewMessage> messages,
-                                                     JobPosition job,
-                                                     InterviewSession session,
-                                                     List<PreferenceItem> preferences,
-                                                     Signals signals) {
-        // TODO Step5: 调用 DeepSeek 评分
-        // Map<String, BigDecimal> aiScores = callDeepSeekScoring(messages, job, session, preferences, signals);
-        // if (aiScores != null) {
-        //     signals.scoringSource = "AI";
-        //     return aiScores;
-        // }
+    private ScoreResult scoreAllModules(List<InterviewMessage> messages,
+                                         JobPosition job,
+                                         InterviewSession session,
+                                         List<PreferenceItem> preferences,
+                                         Signals signals) {
+        // 1. 尝试 DeepSeek AI 评分
+        try {
+            ScoreResult aiResult = callDeepSeekScoring(messages, job, session, preferences, signals);
+            if (aiResult != null && aiResult.scores.size() >= 10) {
+                log.info("DeepSeek评分完成 sessionId={}", session.getId());
+                return aiResult;
+            }
+        } catch (Exception e) {
+            log.warn("DeepSeek评分异常，降级规则兜底 sessionId={}: {}", session.getId(), e.getMessage());
+        }
 
-        // 规则兜底
-        signals.scoringSource = "RULE";
+        // 2. 规则兜底
         log.info("使用规则兜底评分 sessionId={}", session.getId());
-        return fallbackRuleScoring(messages, job, signals);
+        ScoreResult ruleResult = new ScoreResult();
+        ruleResult.scores.putAll(fallbackRuleScoring(messages, job, signals));
+        ruleResult.scoringSource = "RULE";
+        return ruleResult;
     }
 
     /**
@@ -354,10 +374,134 @@ public class ModuleScoreService {
         return clamp(m.answerCount == 0 ? 0 : score);
     }
 
-    // TODO Step5: 接入 DeepSeek 评分
-    // private Map<String, BigDecimal> callDeepSeekScoring(...) { ... }
+    // ============================ DeepSeek 评分调用 ============================
 
-    // ============================ Q&A 文本格式化（供 DeepSeek Prompt 使用） ============================
+    /**
+     * 调用 DeepSeek 对10个模块打分。
+     * 成功返回 ScoreResult（含证据/建议/置信度）；失败返回 null。
+     */
+    private ScoreResult callDeepSeekScoring(List<InterviewMessage> messages,
+                                             JobPosition job,
+                                             InterviewSession session,
+                                             List<PreferenceItem> preferences,
+                                             Signals signals) {
+        // 1. 构建 Q&A 文本
+        String qaText = buildQaTranscript(messages);
+
+        // 2. 构建用户训练目标文本
+        String prefsText = buildPreferencesText(preferences);
+
+        // 3. 组装 ScoringContext
+        int durationMinutes = session.getDurationSeconds() != null
+                ? session.getDurationSeconds() / 60 : 30;
+        ScoringContext ctx = ScoringContext.builder()
+                .jobName(job != null ? job.getName() : "")
+                .jobKeywords(formatJobKeywords(job))
+                .durationMinutes(durationMinutes)
+                .answerCount(signals.answerCount)
+                .followupCount(signals.followupAsked)
+                .preferencesText(prefsText)
+                .totalLength(signals.totalLength)
+                .avgLength(signals.avgLength())
+                .techHits(signals.techHits)
+                .projectHits(signals.projectHits)
+                .logicHits(signals.logicHits)
+                .vagueHits(signals.vagueHits)
+                .shortAnswers(signals.shortAnswers)
+                .followupRatio(signals.followupRatio())
+                .qaTranscript(qaText)
+                .build();
+
+        // 4. 调用 DeepSeek
+        String systemPrompt = scorePromptBuilder.systemPrompt();
+        String userPrompt = scorePromptBuilder.userPrompt(ctx);
+        JsonNode result = deepSeekClient.chatJson(systemPrompt, userPrompt);
+        if (result == null) {
+            return null;
+        }
+
+        // 5. 解析模块评分 + 证据 + 建议 + 置信度
+        JsonNode modulesNode = result.path("modules");
+        if (!modulesNode.isArray() || modulesNode.size() == 0) {
+            log.warn("DeepSeek返回的modules为空或非数组");
+            return null;
+        }
+
+        ScoreResult sr = new ScoreResult();
+        sr.scoringSource = "AI";
+        sr.overallComment = result.path("overall_comment").asText("");
+
+        for (JsonNode node : modulesNode) {
+            String code = node.path("code").asText();
+            double score = node.path("score").asDouble();
+            if (code.isEmpty() || score < 0 || score > 100) continue;
+
+            sr.scores.put(code, BigDecimal.valueOf(score).setScale(1, RoundingMode.HALF_UP));
+
+            // 证据（数组 → 逗号拼接）
+            JsonNode evidenceArr = node.path("evidence");
+            if (evidenceArr.isArray()) {
+                List<String> items = new ArrayList<>();
+                for (JsonNode e : evidenceArr) {
+                    String txt = e.asText();
+                    if (txt != null && !txt.isBlank()) items.add(txt);
+                }
+                if (!items.isEmpty()) sr.evidences.put(code, String.join("；", items));
+            }
+
+            // 建议
+            String suggestion = node.path("suggestion").asText();
+            if (!suggestion.isBlank()) sr.suggestions.put(code, suggestion);
+
+            // 置信度
+            double conf = node.path("confidence").asDouble();
+            if (conf > 0) sr.confidences.put(code, BigDecimal.valueOf(conf));
+        }
+
+        if (sr.scores.size() < 10) {
+            log.warn("DeepSeek返回的模块数不足10个: {}", sr.scores.size());
+            return null;
+        }
+
+        return sr;
+    }
+
+    /** 将用户偏好格式化为可读文本 */
+    private String buildPreferencesText(List<PreferenceItem> preferences) {
+        if (preferences == null || preferences.isEmpty()) return "";
+        StringBuilder sb = new StringBuilder();
+        Map<String, String> moduleNames = loadModuleNameMap();
+        for (PreferenceItem p : preferences) {
+            String name = moduleNames.getOrDefault(p.getCode(), p.getCode());
+            String levelName = switch (p.getLevel()) {
+                case 3 -> "核心突破(85分)";
+                case 2 -> "重点提升(75分)";
+                default -> "简单关注(65分)";
+            };
+            sb.append("- ").append(name).append("：排第").append(p.getRank())
+                    .append("位，目标").append(levelName).append("\n");
+        }
+        return sb.toString();
+    }
+
+    private Map<String, String> loadModuleNameMap() {
+        List<ScoreModule> all = scoreModuleMapper.selectList(new LambdaQueryWrapper<>());
+        Map<String, String> map = new HashMap<>();
+        for (ScoreModule m : all) map.put(m.getCode(), m.getName());
+        return map;
+    }
+
+    private String formatJobKeywords(JobPosition job) {
+        if (job == null || job.getKeywords() == null) return "";
+        try {
+            List<String> kws = JSON.readValue(job.getKeywords(), new TypeReference<List<String>>() {});
+            return String.join(", ", kws);
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    // ============================ Q&A 文本格式化 ============================
 
     /**
      * 将消息列表格式化为易读的Q&A文本。TODO Step5: 由 ScorePromptBuilder.userPrompt() 使用。
@@ -499,10 +643,10 @@ public class ModuleScoreService {
 
     // ============================ 持久化 ============================
 
-    private void saveModuleScores(Long reportId, Map<String, BigDecimal> scores,
+    private void saveModuleScores(Long reportId, ScoreResult sr,
                                    Map<String, Double> weights, Map<String, Integer> targets,
-                                   MatchResult match, Signals signals) {
-        for (Map.Entry<String, BigDecimal> entry : scores.entrySet()) {
+                                   MatchResult match) {
+        for (Map.Entry<String, BigDecimal> entry : sr.scores.entrySet()) {
             String code = entry.getKey();
             double rawScore = entry.getValue().doubleValue();
             double target = targets.getOrDefault(code, 75);
@@ -520,8 +664,10 @@ public class ModuleScoreService {
             ms.setBaseWeight(bd(weight));
             ms.setGapScore(bd(gap));
             ms.setImprovementPriority(bd(priority));
-            ms.setScoreSource(signals.scoringSource);
-            // evidence / suggestion / aiConfidence 将来自 DeepSeek（Step5）
+            ms.setScoreSource(sr.scoringSource);
+            ms.setEvidence(sr.evidences.get(code));
+            ms.setSuggestion(sr.suggestions.get(code));
+            ms.setAiConfidence(sr.confidences.get(code));
             moduleScoreMapper.insert(ms);
         }
     }
