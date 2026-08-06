@@ -1,4 +1,31 @@
 <svg xmlns="http://www.w3.org/2000/svg">
+  <!-- Local SVG symbols selected for OfferPilot's Iconfont-style business icon set. -->
+  <symbol id="offerpilot-interview" viewBox="0 0 48 48">
+    <path fill="#D9F5E8" d="M8 9.5A5.5 5.5 0 0 1 13.5 4h21A5.5 5.5 0 0 1 40 9.5v19a5.5 5.5 0 0 1-5.5 5.5H22l-9.5 7v-7A5.5 5.5 0 0 1 8 28.5z"/>
+    <path fill="#0B6B52" d="M16 17.5a8 8 0 0 1 16 0v3.25a2.25 2.25 0 0 1-2.25 2.25H28v-8h1.2a5.5 5.5 0 0 0-10.4 0H20v8h-1.75A2.25 2.25 0 0 1 16 20.75z"/>
+    <rect width="5" height="7" x="17" y="17" fill="#35C58A" rx="2"/>
+    <rect width="5" height="7" x="26" y="17" fill="#35C58A" rx="2"/>
+    <path fill="#0B6B52" d="M22 28h8a2 2 0 0 1-2 2h-6z"/>
+    <circle cx="35.5" cy="9.5" r="3.5" fill="#FFB85C"/>
+  </symbol>
+  <symbol id="offerpilot-resume" viewBox="0 0 48 48">
+    <path fill="#DFF7EC" d="M11 7a4 4 0 0 1 4-4h17l7 7v31a4 4 0 0 1-4 4H15a4 4 0 0 1-4-4z"/>
+    <path fill="#0B6B52" d="M32 3v6a3 3 0 0 0 3 3h4z"/>
+    <circle cx="22" cy="19" r="5" fill="#35C58A"/>
+    <path fill="#0B6B52" d="M14.5 32a7.5 7.5 0 0 1 15 0v1h-15z"/>
+    <rect width="8" height="3" x="30" y="19" fill="#79DDB4" rx="1.5"/>
+    <rect width="8" height="3" x="30" y="25" fill="#79DDB4" rx="1.5"/>
+    <rect width="24" height="3" x="14" y="38" fill="#B4ECD4" rx="1.5"/>
+    <circle cx="39" cy="37" r="5" fill="#FFB85C"/>
+    <path fill="none" stroke="#fff" stroke-linecap="round" stroke-width="2" d="m37 37 1.3 1.3L41 35.5"/>
+  </symbol>
+  <symbol id="offerpilot-report" viewBox="0 0 48 48">
+    <rect width="38" height="38" x="5" y="5" fill="#DFF7EC" rx="9"/>
+    <path fill="#0B6B52" d="m24 11 3.4 8.3 8.9.7-6.8 5.8 2.1 8.7-7.6-4.7-7.6 4.7 2.1-8.7-6.8-5.8 8.9-.7z" opacity=".18"/>
+    <path fill="none" stroke="#0B6B52" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="m24 13 3 7.2 7.7.6-5.9 5 1.8 7.5-6.6-4-6.6 4 1.8-7.5-5.9-5 7.7-.6z"/>
+    <circle cx="24" cy="24" r="4.5" fill="#35C58A"/>
+    <circle cx="38" cy="11" r="4" fill="#FFB85C"/>
+  </symbol>
   <symbol id="bluesky-icon" viewBox="0 0 16 17">
     <g clip-path="url(#bluesky-clip)"><path fill="#08060d" d="M7.75 7.735c-.693-1.348-2.58-3.86-4.334-5.097-1.68-1.187-2.32-.981-2.74-.79C.188 2.065.1 2.812.1 3.251s.241 3.602.398 4.13c.52 1.744 2.367 2.333 4.07 2.145-2.495.37-4.71 1.278-1.805 4.512 3.196 3.309 4.38-.71 4.987-2.746.608 2.036 1.307 5.91 4.93 2.746 2.72-2.746.747-4.143-1.747-4.512 1.702.189 3.55-.4 4.07-2.145.156-.528.397-3.691.397-4.13s-.088-1.186-.575-1.406c-.42-.19-1.06-.395-2.741.79-1.755 1.24-3.64 3.752-4.334 5.099"/></g>
     <defs><clipPath id="bluesky-clip"><path fill="#fff" d="M.1.85h15.3v15.3H.1z"/></clipPath></defs>

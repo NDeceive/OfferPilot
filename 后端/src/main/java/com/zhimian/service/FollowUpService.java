@@ -19,8 +19,7 @@ import org.springframework.stereotype.Service;
  *   <li>Answer shorter than 15 chars: rule-based fallback (no AI call)</li>
  *   <li>AI not usable: rule-based fallback</li>
  *   <li>AI usable: send original question + reference answer + user answer, let AI decide</li>
- *   <li>AI decides no follow-up needed: return null</li>
- *   <li>AI decides follow-up needed: return AI-generated question</li>
+ *   <li>AI returns a focused follow-up question for every interview round</li>
  *   <li>AI call fails: rule-based fallback</li>
  * </ol>
  */
@@ -38,10 +37,10 @@ public class FollowUpService {
     private final RuleBasedFollowUpGenerator ruleGenerator;
 
     /**
-     * Generate a follow-up question, or return null to signal no follow-up is needed.
+     * Generate one focused follow-up question for the current interview round.
      *
      * @param req follow-up request (position / question / answer / referenceAnswer)
-     * @return follow-up response; null if AI determines no follow-up is needed
+     * @return AI follow-up response, or a rule-based fallback when AI is unavailable
      */
     public FollowUpResponse generate(FollowUpRequest req) {
         String answer = req.getAnswer() == null ? "" : req.getAnswer().trim();
@@ -69,16 +68,14 @@ public class FollowUpService {
 
         if (aiResult != null) {
             try {
-                boolean shouldFollowUp = aiResult.path("shouldFollowUp").asBoolean(false);
                 String aiQuestion = aiResult.path("followUpQuestion").asText("");
                 String reason = aiResult.path("reason").asText("AI judgement");
 
-                if (shouldFollowUp && aiQuestion != null && !aiQuestion.isBlank()) {
-                    log.info("[AI-FollowUp] shouldFollowUp=true, reason={}", reason);
+                // Follow-up is a core part of every interview round. Keep compatibility
+                // with older model responses that incorrectly set shouldFollowUp=false.
+                if (aiQuestion != null && !aiQuestion.isBlank()) {
+                    log.info("[AI-FollowUp] generated, reason={}", reason);
                     return FollowUpResponse.of(cleanup(aiQuestion), SOURCE_AI, reason);
-                } else {
-                    log.info("[AI-FollowUp] shouldFollowUp=false, reason={}", reason);
-                    return null; // AI decided no follow-up needed
                 }
             } catch (Exception e) {
                 log.warn("Failed to parse DeepSeek follow-up JSON, fallback to rule: {}", e.getMessage());

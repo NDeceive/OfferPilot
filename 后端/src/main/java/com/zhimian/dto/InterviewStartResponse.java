@@ -11,4 +11,6 @@ public class InterviewStartResponse {
     private Long sessionId;
     private String jobName;
     private QuestionView question;
+    /** 面试时长（秒） */
+    private Integer durationSeconds;
 }

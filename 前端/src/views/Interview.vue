@@ -38,89 +38,77 @@
 
     <!-- Body -->
     <div class="interview-body">
-      <!-- Chat Panel -->
+      <!-- Digital Human + Conversation Panel -->
       <div class="chat-panel">
-        <div class="chat-messages" ref="messagesRef">
-          <div v-for="(msg, i) in messages" :key="i" :class="['msg', msg.role]">
-            <div v-if="msg.role === 'ai'" class="avatar ai-av">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 2a5 5 0 0 1 5 5v3a5 5 0 0 1-10 0V7a5 5 0 0 1 5-5z"/>
-                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-              </svg>
-            </div>
-            <div class="bubble-wrap">
-              <span v-if="msg.followup" class="followup-pill">追问</span>
-              <div class="bubble">
-                <p>{{ msg.text }}</p>
-              </div>
-            </div>
-            <div v-if="msg.role === 'user'" class="avatar user-av"><span>张</span></div>
-          </div>
-
-          <!-- Typing indicator -->
-          <div v-if="isAiTyping" class="msg ai">
-            <div class="avatar ai-av">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 2a5 5 0 0 1 5 5v3a5 5 0 0 1-10 0V7a5 5 0 0 1 5-5z"/>
-              </svg>
-            </div>
-            <div class="bubble typing-bubble">
-              <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-            </div>
-          </div>
+        <div class="digital-human-stage">
+          <DigitalHumanStage
+            ref="digitalHumanRef"
+            :text="digitalHumanText"
+            :speech-key="digitalHumanSpeechKey"
+          />
         </div>
 
-        <!-- Input -->
+        <!-- Scrollable conversation and voice controls -->
         <div class="input-bar">
-          <div class="mode-tabs">
-            <button :class="['mode-tab', { on: inputMode === 'text' }]" @click="inputMode = 'text'">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                <path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-              </svg>
-              文字
-            </button>
-            <button :class="['mode-tab', { on: inputMode === 'voice' }]" @click="inputMode = 'voice'">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-              </svg>
-              语音
-            </button>
-          </div>
-
-          <div v-if="inputMode === 'text'" class="text-area-wrap">
-            <textarea
-              v-model="answer"
-              class="answer-textarea"
-              placeholder="请在此输入你的回答..."
-              rows="3"
-              @keydown.ctrl.enter="submitAnswerFn"
-            ></textarea>
-            <div class="text-actions">
-              <span class="shortcut-hint">Ctrl + Enter 发送</span>
-              <div class="action-btns">
-                <button class="btn-ghost" @click="skipQuestion" :disabled="isSubmitting">跳过</button>
-                <button class="btn-send" @click="submitAnswerFn" :disabled="!answer.trim() || isSubmitting">
-                  提交
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/>
-                  </svg>
-                </button>
+          <div class="conversation-scroll" ref="messagesRef">
+            <div
+              v-for="(msg, i) in messages"
+              :key="i"
+              :class="['conversation-entry', msg.role]"
+            >
+              <div class="conversation-meta">
+                <span>{{ msg.role === 'ai' ? '面试官' : '我的回答' }}</span>
+                <span v-if="msg.followup" class="followup-pill">追问</span>
               </div>
+              <p>{{ msg.text }}</p>
+            </div>
+
+            <div v-if="answer" class="conversation-entry user draft">
+              <div class="conversation-meta">
+                <span>当前回答</span>
+                <span class="draft-pill">{{ isSpeechProcessing ? '识别中' : '待提交' }}</span>
+              </div>
+              <p>{{ answer }}</p>
+            </div>
+
+            <div v-if="isAiTyping" class="conversation-entry ai typing-entry">
+              <div class="conversation-meta"><span>面试官</span></div>
+              <p>正在思考下一步问题……</p>
             </div>
           </div>
 
-          <div v-else class="voice-area">
-            <button :class="['mic-btn', { recording: isRecording }]" @click="toggleRecording">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                <line x1="12" y1="19" x2="12" y2="23"/>
-              </svg>
-            </button>
-            <span class="mic-label">{{ isRecording ? '正在录音，点击停止...' : '点击开始语音回答' }}</span>
+          <div class="text-answer">
+            <textarea
+              v-model="answer"
+              rows="2"
+              maxlength="2000"
+              aria-label="输入面试回答"
+              placeholder="输入你的回答，提交后面试官会结合内容继续追问"
+              :disabled="isSubmitting"
+              @keydown.ctrl.enter.prevent="submitAnswerFn"
+            ></textarea>
+            <div class="text-answer-actions">
+              <span>{{ answer.length }}/2000 · Ctrl + Enter 提交</span>
+              <button
+                type="button"
+                :disabled="!answer.trim() || isSubmitting || isSpeechProcessing"
+                @click="submitAnswerFn"
+              >
+                {{ isSubmitting ? '提交中…' : '提交回答' }}
+              </button>
+            </div>
           </div>
+
+          <MicrophoneControl
+            ref="microphoneRef"
+            :session-id="sessionId"
+            :transcript="answer"
+            :disabled="isSubmitting"
+            @transcript="appendSpeechTranscript"
+            @processing="isSpeechProcessing = $event"
+            @submit="submitAnswerFn"
+            @skip="skipQuestion"
+          />
         </div>
       </div>
 
@@ -128,22 +116,14 @@
       <aside class="info-panel">
         <!-- VR Card -->
         <div class="vr-card">
-          <div class="vr-content">
-            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color: var(--neutral-400)">
-              <path d="M12 2a5 5 0 0 1 5 5v3a5 5 0 0 1-10 0V7a5 5 0 0 1 5-5z"/>
-              <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-              <line x1="12" y1="19" x2="12" y2="23"/>
-            </svg>
-            <span class="vr-title">VR 面试官</span>
-            <span class="vr-soon">即将上线</span>
-          </div>
+          <CameraPreview ref="cameraPreviewRef" />
         </div>
 
         <!-- Question Card -->
         <div class="info-card">
           <div class="q-head">
             <span class="q-num">第 {{ currentQuestion }} 题</span>
-            <span class="q-of">/ {{ totalQuestions }}</span>
+            <span class="q-of">{{ formatTime(timeLeft) }}</span>
           </div>
           <div class="q-progress">
             <div class="q-bar" :style="{ width: progressPercent + '%' }"></div>
@@ -175,9 +155,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { startInterview, submitAnswer, getNextQuestion, finishInterview } from '../api'
+import { startInterview, submitAnswer, getNextQuestion, finishInterview, getReportStatus, getSessionMessages } from '../api'
+import CameraPreview from '../components/interview/CameraPreview.vue'
+import DigitalHumanStage from '../components/interview/DigitalHumanStage.vue'
+import MicrophoneControl from '../components/interview/MicrophoneControl.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -187,16 +170,19 @@ const sessionId = ref(null)
 const currentQuestionId = ref(null)
 const jobTitle = ref('前端开发工程师')
 const currentQuestion = ref(1)
-const totalQuestions = ref(8)
+const totalDuration = ref(1800)
 const timeLeft = ref(1800)
-const inputMode = ref('text')
 const answer = ref('')
-const isRecording = ref(false)
 const isAiTyping = ref(false)
 const isPaused = ref(false)
 const isSubmitting = ref(false)
+const isSpeechProcessing = ref(false)
 const messagesRef = ref(null)
-const MAX_QUESTIONS = 8
+const cameraPreviewRef = ref(null)
+const microphoneRef = ref(null)
+const digitalHumanRef = ref(null)
+const digitalHumanText = ref('')
+const digitalHumanSpeechKey = ref(0)
 
 const questionTypes = ref([])
 const questionDifficulties = ref([])
@@ -212,9 +198,19 @@ const evalItems = ref([
   { name: '技术深度', value: 0, color: '#8b5cf6' },
 ])
 
-const progressPercent = computed(() => (currentQuestion.value / totalQuestions.value) * 100)
+const progressPercent = computed(() => totalDuration.value > 0
+  ? ((totalDuration.value - timeLeft.value) / totalDuration.value) * 100
+  : 0)
 
 let timerInterval = null
+let autoFinished = false
+
+watch([timeLeft, isSubmitting], ([seconds, submitting]) => {
+  if (seconds <= 0 && sessionId.value && !submitting && !autoFinished) {
+    autoFinished = true
+    autoFinishInterview()
+  }
+})
 
 // --- Initialize interview on mount ---
 onMounted(async () => {
@@ -223,11 +219,39 @@ onMounted(async () => {
     if (timeLeft.value > 0 && !isPaused.value) timeLeft.value--
   }, 1000)
 
-  // Get jobId from query param, default to 1
+  // Keep the duration selected on the preparation page.
   const jobId = Number(route.query.jobId) || 1
+  const durationSeconds = Math.min(7200, Math.max(300, Number(route.query.durationSeconds) || 1800))
+  totalDuration.value = durationSeconds
+  timeLeft.value = durationSeconds
 
   try {
-    const res = await startInterview({ jobId })
+    const existingSessionId = Number(route.query.sessionId) || 0
+    if (existingSessionId) {
+      sessionId.value = existingSessionId
+      jobTitle.value = String(route.query.jobName || '模拟面试')
+      const routeQuestion = String(route.query.question || '').trim()
+      if (routeQuestion) {
+        currentQuestionId.value = Number(route.query.questionId) || null
+        questionTypes.value.push(mapQuestionType(route.query.questionType))
+        questionDifficulties.value.push(difficultyLabels[route.query.questionDifficulty] || '中等')
+        questionSkills.value.push(String(route.query.questionSkill || '综合能力'))
+        messages.value.push({ role: 'ai', text: routeQuestion, followup: false })
+        speakQuestion(routeQuestion)
+      } else {
+        const history = await getSessionMessages(existingSessionId)
+        const records = Array.isArray(history) ? history : []
+        const firstQuestion = records.find(item => item.role === 'INTERVIEWER' && item.msgType === 'MAIN')
+        if (firstQuestion) {
+          currentQuestionId.value = firstQuestion.questionId
+          messages.value.push({ role: 'ai', text: firstQuestion.content, followup: false })
+          speakQuestion(firstQuestion.content)
+        }
+      }
+      return
+    }
+
+    const res = await startInterview({ jobId, durationSeconds })
     sessionId.value = res.sessionId
     jobTitle.value = res.jobName || '模拟面试'
 
@@ -242,6 +266,7 @@ onMounted(async () => {
         text: res.question.content,
         followup: res.question.type === 'FOLLOWUP',
       })
+      speakQuestion(res.question.content)
     }
   } catch (e) {
     console.error('Failed to start interview:', e)
@@ -254,7 +279,10 @@ onMounted(async () => {
   }
 })
 
-onUnmounted(() => clearInterval(timerInterval))
+onUnmounted(() => {
+  clearInterval(timerInterval)
+  releaseMediaDevices()
+})
 
 // --- Helpers ---
 function mapQuestionType(type) {
@@ -270,7 +298,7 @@ function formatTime(seconds) {
 
 // --- Submit answer via API ---
 async function submitAnswerFn() {
-  if (!answer.value.trim() || isSubmitting.value || !sessionId.value) return
+  if (!answer.value.trim() || isSubmitting.value || isSpeechProcessing.value || !sessionId.value) return
   const userAnswer = answer.value.trim()
 
   // Push user message
@@ -290,13 +318,15 @@ async function submitAnswerFn() {
     isAiTyping.value = false
 
     if (res.nextAction === 'FOLLOWUP' && res.followupQuestion) {
-      // res.followupQuestion is a plain string, use it directly as text
+      const followupText = normalizeFollowupQuestion(res.followupQuestion)
+      if (!followupText) throw new Error('追问响应缺少问题内容')
       // questionId stays the same (followup is to the same main question)
       messages.value.push({
         role: 'ai',
-        text: res.followupQuestion,
+        text: followupText,
         followup: true,
       })
+      speakQuestion(followupText)
     } else if (res.nextAction === 'NEXT') {
       // Fetch the next question from the server
       try {
@@ -312,6 +342,7 @@ async function submitAnswerFn() {
             text: nextRes.question.content,
             followup: false,
           })
+          speakQuestion(nextRes.question.content)
         }
       } catch (nextErr) {
         console.error('Failed to get next question:', nextErr)
@@ -322,22 +353,18 @@ async function submitAnswerFn() {
         })
       }
 
-      // Auto-finish when max questions reached
-      if (currentQuestion.value >= MAX_QUESTIONS) {
-        return await autoFinishInterview()
-      }
     } else if (res.nextAction === 'FINISHABLE') {
       // Interview can be finished - call finish
       try {
         const finishRes = await finishInterview(sessionId.value)
+        releaseMediaDevices()
         messages.value.push({
           role: 'ai',
           text: '面试结束！感谢你的精彩回答。正在生成你的能力报告...',
           followup: false,
         })
         scrollToBottom()
-        const reportId = finishRes || 1
-        setTimeout(() => router.push(`/history/${reportId}`), 2000)
+        await waitForReport(sessionId.value)
         return
       } catch (finishErr) {
         console.error('Failed to finish interview:', finishErr)
@@ -373,7 +400,7 @@ async function submitAnswerFn() {
 }
 
 async function skipQuestion() {
-  if (isSubmitting.value || !sessionId.value) return
+  if (isSubmitting.value || isSpeechProcessing.value || !sessionId.value) return
   isSubmitting.value = true
   isAiTyping.value = true
   scrollToBottom()
@@ -393,10 +420,17 @@ async function skipQuestion() {
       questionDifficulties.value.push(difficultyLabels[res.question.difficulty] || '中等')
       questionSkills.value.push(res.question.abilityTag || '综合能力')
       messages.value.push({ role: 'ai', text: res.question.content, followup: false })
+      speakQuestion(res.question.content)
     } else if (res.nextAction === 'FOLLOWUP' && res.followupQuestion) {
-      currentQuestionId.value = res.followupQuestion.id
-      messages.value.push({ role: 'ai', text: res.followupQuestion.content, followup: true })
+      const followupText = normalizeFollowupQuestion(res.followupQuestion)
+      if (!followupText) throw new Error('追问响应缺少问题内容')
+      if (typeof res.followupQuestion !== 'string' && res.followupQuestion.id) {
+        currentQuestionId.value = res.followupQuestion.id
+      }
+      messages.value.push({ role: 'ai', text: followupText, followup: true })
+      speakQuestion(followupText)
     } else if (res.nextAction === 'FINISHED') {
+      releaseMediaDevices()
       messages.value.push({
         role: 'ai',
         text: '面试结束！感谢你的精彩回答。正在生成你的能力报告...',
@@ -406,10 +440,6 @@ async function skipQuestion() {
       setTimeout(() => router.push(`/history/${reportId}`), 2000)
     }
 
-    // Auto-finish when max questions reached
-    if (currentQuestion.value >= MAX_QUESTIONS) {
-      return await autoFinishInterview()
-    }
   } catch (e) {
     console.error('Failed to skip question:', e)
     isAiTyping.value = false
@@ -420,27 +450,38 @@ async function skipQuestion() {
   }
 }
 
-function toggleRecording() {
-  isRecording.value = !isRecording.value
+function appendSpeechTranscript(text) {
+  const normalized = text?.trim()
+  if (!normalized) return
+  answer.value = answer.value.trim()
+    ? `${answer.value.trim()} ${normalized}`
+    : normalized
+  scrollToBottom()
+}
+
+function normalizeFollowupQuestion(value) {
+  if (typeof value === 'string') return value.trim()
+  return String(value?.content || value?.followUpQuestion || value?.question || '').trim()
 }
 
 function togglePause() {
   isPaused.value = !isPaused.value
+  if (isPaused.value) digitalHumanRef.value?.stop()
 }
 
 async function endInterview() {
+  releaseMediaDevices()
   if (sessionId.value) {
     try {
       const res = await finishInterview(sessionId.value)
-      const reportId = res || 1
-      router.push(`/history/${reportId}`)
+      await waitForReport(sessionId.value)
       return
     } catch (e) {
       console.error('Failed to finish interview:', e)
     }
   }
   // Fallback navigation
-  router.push('/history/1')
+  router.push('/history')
 }
 
 function scrollToBottom() {
@@ -450,17 +491,17 @@ function scrollToBottom() {
 }
 
 async function autoFinishInterview() {
+  releaseMediaDevices()
   isAiTyping.value = true
   try {
     const finishRes = await finishInterview(sessionId.value)
     messages.value.push({
       role: 'ai',
-      text: `已达到 ${MAX_QUESTIONS} 道题目，面试自动结束。正在生成你的能力报告...`,
+      text: '面试时间已到，正在生成你的能力报告…',
       followup: false,
     })
     scrollToBottom()
-    const reportId = finishRes || 1
-    setTimeout(() => router.push(`/history/${reportId}`), 2000)
+    await waitForReport(sessionId.value)
   } catch (e) {
     console.error('Auto-finish failed:', e)
     messages.value.push({
@@ -472,6 +513,35 @@ async function autoFinishInterview() {
     isAiTyping.value = false
     isSubmitting.value = false
   }
+}
+
+function speakQuestion(text) {
+  const normalized = text?.trim()
+  if (!normalized) return
+  digitalHumanText.value = normalized
+  digitalHumanSpeechKey.value++
+}
+
+function releaseMediaDevices() {
+  cameraPreviewRef.value?.stopCamera()
+  microphoneRef.value?.stopMicrophone()
+  digitalHumanRef.value?.close()
+}
+
+async function waitForReport(sid) {
+  for (let attempt = 0; attempt < 60; attempt++) {
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    try {
+      const status = await getReportStatus(sid)
+      if (status?.ready && status.reportId) {
+        router.push(`/history/${status.reportId}`)
+        return
+      }
+    } catch (error) {
+      console.warn('Report is not ready yet:', error)
+    }
+  }
+  router.push('/history')
 }
 </script>
 
@@ -514,7 +584,7 @@ async function autoFinishInterview() {
 
 /* Progress */
 .progress-track { position: fixed; top: 56px; left: 0; right: 0; height: 3px; background: var(--neutral-200); z-index: 49; }
-.progress-fill { height: 100%; background: var(--accent-500); transition: width 0.5s var(--ease-out-expo); }
+.progress-fill { height: 100%; background: var(--accent-500); }
 
 /* Body */
 .interview-body {
@@ -526,7 +596,7 @@ async function autoFinishInterview() {
   overflow: hidden;
 }
 
-/* Chat Panel */
+/* Digital Human + Conversation Panel */
 .chat-panel {
   display: flex;
   flex-direction: column;
@@ -535,59 +605,153 @@ async function autoFinishInterview() {
   height: 100%;
   overflow: hidden;
 }
-.chat-messages {
+
+.digital-human-stage {
+  flex: 1;
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 10px 14px 0;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(59, 130, 246, 0.08), transparent 42%),
+    linear-gradient(180deg, var(--surface-primary), var(--neutral-50));
+}
+
+/* Scrollable conversation and bottom controls */
+.input-bar {
+  height: clamp(300px, 36vh, 370px);
+  border-top: 1px solid var(--neutral-200);
+  background: var(--surface-elevated);
+  padding: var(--space-3) var(--space-5);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.text-answer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: end;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--neutral-50);
+}
+
+.text-answer textarea {
+  width: 100%;
+  min-height: 62px;
+  resize: none;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--neutral-800);
+  font: inherit;
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+
+.text-answer textarea::placeholder { color: var(--neutral-400); }
+.text-answer textarea:focus-visible { box-shadow: inset 0 -2px 0 var(--accent-500); }
+.text-answer textarea:disabled { cursor: wait; opacity: .65; }
+
+.text-answer-actions {
+  display: flex;
+  align-items: flex-end;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.text-answer-actions span {
+  color: var(--neutral-400);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.text-answer-actions button {
+  min-height: 38px;
+  padding: 0 var(--space-4);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--accent-600);
+  color: #fff;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.text-answer-actions button:disabled {
+  cursor: not-allowed;
+  opacity: .45;
+}
+
+.conversation-scroll {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: var(--space-6);
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  gap: var(--space-4);
+  overscroll-behavior: contain;
+  padding: 2px var(--space-2) var(--space-2);
   scroll-behavior: smooth;
+  scrollbar-gutter: stable;
 }
 
-.msg { display: flex; gap: var(--space-3); max-width: 80%; animation: fade-in-up var(--duration-normal) var(--ease-out-expo); }
-.msg.user { align-self: flex-end; }
-.msg.ai { align-self: flex-start; }
-.avatar { width: 34px; height: 34px; border-radius: var(--radius-full); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.ai-av { background: var(--accent-50); color: var(--accent-600); }
-.user-av { background: linear-gradient(135deg, var(--accent-400), var(--accent-600)); color: white; font-size: 13px; font-weight: 600; }
-.bubble-wrap { display: flex; flex-direction: column; gap: 4px; }
-.followup-pill { font-size: 11px; font-weight: 600; color: var(--accent-700); padding: 2px 10px; background: var(--accent-50); border-radius: var(--radius-full); width: fit-content; }
-.bubble { padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg); font-size: var(--text-base); line-height: 1.7; }
-.ai .bubble { background: var(--surface-elevated); border: 1px solid var(--neutral-200); color: var(--neutral-800); border-top-left-radius: var(--radius-xs); }
-.user .bubble { background: var(--accent-600); color: white; border-bottom-right-radius: var(--radius-xs); }
-.typing-bubble { display: flex; gap: 5px; align-items: center; padding: var(--space-3) var(--space-4); }
-.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--neutral-400); animation: dot-bounce 1.4s infinite; }
-.dot:nth-child(2) { animation-delay: 0.2s; }
-.dot:nth-child(3) { animation-delay: 0.4s; }
-@keyframes dot-bounce { 0%,60%,100% { transform: translateY(0); } 30% { transform: translateY(-5px); } }
+.conversation-entry {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--neutral-100);
+}
 
-/* Input Bar */
-.input-bar { border-top: 1px solid var(--neutral-200); background: var(--surface-elevated); padding: var(--space-4) var(--space-6); flex-shrink: 0; }
-.mode-tabs { display: flex; gap: var(--space-2); margin-bottom: var(--space-3); }
-.mode-tab { display: flex; align-items: center; gap: 4px; padding: var(--space-1) var(--space-3); border: 1px solid var(--neutral-200); border-radius: var(--radius-full); background: var(--surface-elevated); color: var(--neutral-500); font-size: var(--text-xs); font-weight: 500; transition: all var(--duration-fast); }
-.mode-tab:hover { border-color: var(--neutral-300); }
-.mode-tab.on { border-color: var(--accent-500); background: var(--accent-50); color: var(--accent-700); }
-.text-area-wrap { display: flex; flex-direction: column; gap: var(--space-2); }
-.answer-textarea { width: 100%; padding: var(--space-3) var(--space-4); border: 1.5px solid var(--neutral-200); border-radius: var(--radius-md); background: var(--surface-elevated); color: var(--neutral-800); font-family: var(--font-body); font-size: var(--text-base); line-height: 1.6; resize: none; outline: none; transition: border-color var(--duration-normal); }
-.answer-textarea:focus { border-color: var(--accent-400); box-shadow: 0 0 0 3px rgba(16,185,129,0.1); }
-.answer-textarea::placeholder { color: var(--neutral-400); }
-.text-actions { display: flex; justify-content: space-between; align-items: center; }
-.shortcut-hint { font-size: var(--text-xs); color: var(--neutral-400); }
-.action-btns { display: flex; gap: var(--space-2); }
-.btn-ghost { padding: var(--space-2) var(--space-4); border: 1px solid var(--neutral-200); border-radius: var(--radius-sm); background: var(--surface-elevated); color: var(--neutral-600); font-size: var(--text-sm); transition: all var(--duration-fast); }
-.btn-ghost:hover { border-color: var(--neutral-300); background: var(--neutral-50); }
-.btn-send { display: inline-flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-5); background: var(--accent-600); border: none; border-radius: var(--radius-sm); color: white; font-size: var(--text-sm); font-weight: 600; transition: all var(--duration-normal) var(--ease-out-expo); }
-.btn-send:hover { background: var(--accent-500); box-shadow: var(--shadow-accent); }
-.btn-send:disabled { opacity: 0.4; cursor: not-allowed; }
-.voice-area { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); padding: var(--space-6); }
-.mic-btn { width: 68px; height: 68px; border-radius: 50%; border: 2px solid var(--accent-400); background: var(--accent-50); color: var(--accent-600); display: flex; align-items: center; justify-content: center; transition: all var(--duration-normal) var(--ease-out-expo); }
-.mic-btn:hover { background: var(--accent-100); box-shadow: var(--shadow-accent); }
-.mic-btn.recording { background: rgba(239,68,68,0.08); border-color: var(--color-error); color: var(--color-error); animation: pulse-recording 1.5s ease-in-out infinite; }
-@keyframes pulse-recording { 0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.3); } 50% { box-shadow: 0 0 0 12px rgba(239,68,68,0); } }
-.mic-label { font-size: var(--text-sm); color: var(--neutral-500); }
+.conversation-entry:last-child {
+  border-bottom: none;
+}
+
+.conversation-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: 4px;
+  color: var(--neutral-500);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.conversation-entry.ai .conversation-meta {
+  color: var(--accent-700);
+}
+
+.conversation-entry.user .conversation-meta {
+  color: #2563eb;
+}
+
+.conversation-entry p {
+  color: var(--neutral-800);
+  font-size: var(--text-sm);
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.conversation-entry.draft {
+  background: rgba(59, 130, 246, 0.035);
+}
+
+.followup-pill,
+.draft-pill {
+  padding: 1px 7px;
+  border-radius: var(--radius-full);
+  background: var(--accent-50);
+  color: var(--accent-700);
+  font-size: 10px;
+}
+
+.draft-pill {
+  background: rgba(59, 130, 246, 0.08);
+  color: #2563eb;
+}
+
+.typing-entry p {
+  color: var(--neutral-400);
+}
 
 /* Info Panel — independent scrolling column */
 .info-panel {
@@ -603,17 +767,14 @@ async function autoFinishInterview() {
   gap: var(--space-4);
   scroll-behavior: smooth;
 }
-.vr-card { aspect-ratio: 16/9; background: var(--neutral-100); border-radius: var(--radius-lg); border: 2px dashed var(--neutral-300); display: flex; align-items: center; justify-content: center; flex-shrink: 0; position: sticky; top: 0; z-index: 5; }
-.vr-content { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); }
-.vr-title { font-size: var(--text-sm); font-weight: 600; color: var(--neutral-500); }
-.vr-soon { font-size: 11px; color: var(--neutral-400); padding: 2px 10px; background: var(--neutral-200); border-radius: var(--radius-full); }
+.vr-card { aspect-ratio: 16/9; background: var(--neutral-100); border-radius: var(--radius-lg); border: 1px solid var(--neutral-200); display: flex; align-items: center; justify-content: center; flex-shrink: 0; position: sticky; top: 0; z-index: 5; overflow: hidden; }
 .info-card { background: var(--neutral-50); border-radius: var(--radius-lg); padding: var(--space-4); flex-shrink: 0; }
 .info-card-title { font-size: var(--text-sm); font-weight: 600; color: var(--neutral-700); margin-bottom: var(--space-3); }
 .q-head { display: flex; align-items: baseline; gap: var(--space-1); margin-bottom: var(--space-3); }
 .q-num { font-family: var(--font-mono); font-size: var(--text-lg); font-weight: 700; color: var(--accent-600); }
 .q-of { font-size: var(--text-sm); color: var(--neutral-500); }
 .q-progress { height: 4px; background: var(--neutral-200); border-radius: 2px; margin-bottom: var(--space-3); overflow: hidden; }
-.q-bar { height: 100%; background: var(--accent-500); border-radius: 2px; transition: width 0.5s var(--ease-out-expo); }
+.q-bar { height: 100%; background: var(--accent-500); border-radius: 2px; }
 .q-rows { display: flex; flex-direction: column; gap: var(--space-2); }
 .q-row { display: flex; justify-content: space-between; }
 .ql { font-size: var(--text-sm); color: var(--neutral-500); }
@@ -622,7 +783,7 @@ async function autoFinishInterview() {
 .eval-row { display: flex; align-items: center; gap: var(--space-3); }
 .eval-label { width: 60px; font-size: var(--text-xs); color: var(--neutral-600); flex-shrink: 0; }
 .eval-track { flex: 1; height: 6px; background: var(--neutral-200); border-radius: 3px; overflow: hidden; }
-.eval-fill { height: 100%; border-radius: 3px; transition: width 0.8s var(--ease-out-expo); }
+.eval-fill { height: 100%; border-radius: 3px; }
 .eval-val { width: 34px; text-align: right; font-family: var(--font-mono); font-size: 11px; font-weight: 600; color: var(--neutral-600); }
 .eval-footnote { font-size: var(--text-xs); color: var(--neutral-400); text-align: center; margin-top: var(--space-3); }
 
@@ -633,7 +794,8 @@ async function autoFinishInterview() {
     grid-template-rows: 1fr auto;
     overflow-y: auto;
   }
-  .chat-panel { height: 50vh; }
+  .chat-panel { height: 68vh; min-height: 620px; }
+  .digital-human-stage { min-height: 360px; }
   .info-panel {
     height: auto;
     max-height: none;
@@ -647,9 +809,12 @@ async function autoFinishInterview() {
   .vr-card { width: 200px; }
   .info-card { flex: 1; min-width: 200px; }
 }
+@media (max-width: 640px) {
+  .input-bar { height: auto; min-height: 340px; padding-inline: var(--space-3); }
+  .text-answer { grid-template-columns: 1fr; }
+  .text-answer-actions { align-items: center; flex-direction: row; justify-content: space-between; }
+}
 @media (prefers-reduced-motion: reduce) {
-  .msg { animation: none; }
-  .dot { animation: none; }
-  .mic-btn.recording { animation: none; }
+  .conversation-scroll { scroll-behavior: auto; }
 }
 </style>

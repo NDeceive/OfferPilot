@@ -51,6 +51,16 @@ public class ResumeService {
         return resume;
     }
 
+    /** 更新当前用户的技能标签（前端增删标签后同步回简历画像） */
+    public void updateTags(List<String> tags) {
+        Long userId = UserContext.getUserId();
+        Resume resume = resumeMapper.selectOne(
+                new LambdaQueryWrapper<Resume>().eq(Resume::getUserId, userId).last("LIMIT 1"));
+        if (resume == null) return;
+        resume.setSkills(toJson(tags));
+        resumeMapper.updateById(resume);
+    }
+
     /** 查询当前用户简历，没有则返回 null */
     public Resume getMine() {
         return resumeMapper.selectOne(

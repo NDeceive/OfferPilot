@@ -18,6 +18,12 @@ node_modules/
 # npm 缓存
 .npm-cache/
 
+# ===== 临时工作与检查产物 =====
+tmp/
+.codex-tmp/
+.impeccable/live/
+*.inspect.ndjson
+
 # ===== 本地配置 / IDE =====
 .claude/settings.local.json
 .idea/

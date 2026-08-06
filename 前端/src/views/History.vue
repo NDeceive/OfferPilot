@@ -17,9 +17,7 @@
         </div>
         <select v-model="filterJob" class="filter-select">
           <option value="all">全部岗位</option>
-          <option value="frontend">前端开发</option>
-          <option value="backend">后端开发</option>
-          <option value="product">产品经理</option>
+          <option v-for="category in jobCategories" :key="category" :value="category">{{ category }}</option>
         </select>
       </div>
     </div>
@@ -33,9 +31,7 @@
         :style="{ '--reveal-delay': i * 60 + 'ms' }"
       >
         <div class="record-main" @click="viewReport(record)">
-          <div class="record-icon" :class="'icon-' + record.status">
-            {{ record.position.charAt(0) }}
-          </div>
+          <JobLogo :icon-key="record.iconKey" :tone="record.themeKey" />
           <div class="record-info">
             <div class="record-top">
               <span class="record-position">{{ record.position }}</span>
@@ -125,8 +121,9 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AppLayout from '../components/layout/AppLayout.vue'
-import { getInterviewRecords } from '../api'
-import request from '../utils/request'
+import JobLogo from '../components/jobs/JobLogo.vue'
+import { deleteInterview, getInterviewRecords, getJobList } from '../api'
+import { getJobPresentation } from '../utils/jobPresentation'
 
 const router = useRouter()
 const activeStatus = ref('全部')
@@ -161,14 +158,18 @@ async function fetchRecords() {
   loading.value = true
   loadError.value = false
   try {
-    const data = await getInterviewRecords()
+    const [data, jobs] = await Promise.all([getInterviewRecords(), getJobList()])
+    const jobsById = new Map((jobs || []).map(job => [String(job.id), job]))
     records.value = (data || []).map(item => ({
+      ...getJobPresentation(jobsById.get(String(item.jobId))),
       id: item.sessionId,
       reportId: item.reportId,
-      date: formatDate(item.createTime),
+      date: formatDate(item.startTime),
       position: item.jobName || '未知岗位',
+      category: item.category || '其他岗位',
+      directionCode: item.directionCode || '',
       score: item.totalScore,
-      duration: formatDuration(item.durationSeconds),
+      duration: formatDuration(item.actualDurationSeconds || item.durationSeconds),
       status: statusApiMap[item.status] || 'completed',
     }))
   } catch (e) {
@@ -186,13 +187,12 @@ const filteredRecords = computed(() => {
       (activeStatus.value === '已完成' && r.status === 'completed') ||
       (activeStatus.value === '进行中' && r.status === 'in_progress') ||
       (activeStatus.value === '已中断' && r.status === 'interrupted')
-    const matchJob = filterJob.value === 'all' ||
-      (filterJob.value === 'frontend' && r.position.includes('前端')) ||
-      (filterJob.value === 'backend' && r.position.includes('后端')) ||
-      (filterJob.value === 'product' && r.position.includes('产品'))
+    const matchJob = filterJob.value === 'all' || r.category === filterJob.value
     return matchStatus && matchJob
   })
 })
+
+const jobCategories = computed(() => [...new Set(records.value.map(record => record.category))])
 
 const totalPages = computed(() => Math.max(1, Math.ceil(filteredRecords.value.length / 10)))
 
@@ -216,7 +216,7 @@ async function doDelete() {
   const record = deleteTarget.value
   if (!record) return
   try {
-    await request.delete(`/interview/${record.id}`)
+    await deleteInterview(record.id)
     records.value = records.value.filter(r => r.id !== record.id)
   } catch (e) {
     console.error('Delete failed:', e)

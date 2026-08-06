@@ -57,6 +57,12 @@ public class InterviewRecordService {
             rec.setStatus(s.getStatus());
             rec.setStartTime(s.getStartTime());
             rec.setEndTime(s.getEndTime());
+            rec.setDurationSeconds(s.getDurationSeconds());
+            // 实际时长：已结束的用 endTime - startTime 计算
+            if (s.getEndTime() != null && s.getStartTime() != null) {
+                rec.setActualDurationSeconds(
+                    java.time.Duration.between(s.getStartTime(), s.getEndTime()).toSeconds());
+            }
 
             JobPosition job = jobMapper.selectById(s.getJobId());
             rec.setJobName(job != null ? job.getName() : "未知岗位");

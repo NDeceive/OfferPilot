@@ -36,16 +36,27 @@ jwt:
   # token 有效期（毫秒），默认 7 天
   expiration: 604800000
 
+# ============================================================
 # AI 大模型配置（DeepSeek，OpenAI 兼容接口）
+# ============================================================
+# 启用 AI 驱动的智能追问/评分/提升建议需要 DeepSeek API Key。
+# 不填 Key 时系统自动使用内置规则引擎（Rule-based），可正常演示完整面试流程。
+#
+# 接入步骤：
+#   1. 访问 https://platform.deepseek.com → API Keys → 创建 Key
+#   2. 二选一：
+#      a) 环境变量：export AI_API_KEY=sk-xxx（推荐，不提交到代码仓库）
+#      b) 直接改下面 api-key 的默认值（注意 .gitignore 不要提交）
+#   3. 将 enabled 改为 true
+# ============================================================
 ai:
   provider: deepseek
   base-url: https://api.deepseek.com
-  # API Key 只从环境变量 AI_API_KEY 注入，严禁把真实 key 写进本文件提交到仓库
-  api-key: ${AI_API_KEY:在这里填你的DeepSeek_API_Key}
+  # ↓ 填入你的 DeepSeek API Key（或通过环境变量 AI_API_KEY 注入）
+  api-key: ${AI_API_KEY:your-deepseek-api-key-here}
   model: deepseek-chat
-  # 是否启用真实 AI 调用；false 时使用内置规则/模拟（无 key 也能演示）
-  enabled: true
-  # 调用超时（毫秒），同时作为连接与读取超时
+  # 配置 AI_API_KEY 后默认启用；可用 AI_ENABLED=false 显式关闭。
+  enabled: ${AI_ENABLED:true}
   timeout-ms: 20000
 
 # CORS 允许的前端来源（逗号分隔）。开发默认放行本地 Vite 前端，避免影响本地联调。

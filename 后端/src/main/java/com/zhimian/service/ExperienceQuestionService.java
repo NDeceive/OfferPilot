@@ -34,6 +34,10 @@ public class ExperienceQuestionService {
      * @return 题目结果；AI 不可用时回退模板
      */
     public ExperienceQuestionResult generate(String position, Resume resume, List<String> askedQuestions) {
+        // 从简历技能中随机选一个作为本题焦点，避免每次都选同一技能
+        String focusSkill = pickFocusSkill(resume, askedQuestions);
+        log.info("[体验题] 焦点技能={}", focusSkill);
+
         if (aiProps.isUsable()) {
             JsonNode result = deepSeekClient.chatJson(
                     promptBuilder.systemPrompt(),
@@ -42,6 +46,7 @@ public class ExperienceQuestionService {
                             resume != null ? resume.getSkills() : "",
                             resume != null ? resume.getKeywords() : "",
                             resume != null ? resume.getProjects() : "",
+                            focusSkill,
                             askedQuestions));
             if (result != null) {
                 try {
@@ -60,6 +65,43 @@ public class ExperienceQuestionService {
         // 回退到模板题目
         log.info("[体验题] AI不可用，回退模板");
         return fallbackQuestion(position, resume);
+    }
+
+    /** 从简历技能中随机选一个；优先选已问题目中未覆盖的 */
+    private String pickFocusSkill(Resume resume, List<String> askedQuestions) {
+        List<String> allSkills = new java.util.ArrayList<>();
+        if (resume != null) {
+            allSkills.addAll(parseJsonList(resume.getSkills()));
+            allSkills.addAll(parseJsonList(resume.getKeywords()));
+        }
+        allSkills = allSkills.stream().distinct().collect(java.util.stream.Collectors.toList());
+        if (allSkills.isEmpty()) return "综合能力";
+
+        // 排除已问题目中明显涉及到的技能
+        List<String> fresh = new java.util.ArrayList<>(allSkills);
+        if (askedQuestions != null) {
+            String askedText = String.join(" ", askedQuestions).toLowerCase();
+            fresh.removeIf(skill -> askedText.contains(skill.toLowerCase()));
+        }
+        // 如果全部被覆盖了，就用全量池
+        if (fresh.isEmpty()) fresh = allSkills;
+
+        java.util.Collections.shuffle(fresh);
+        return fresh.get(0);
+    }
+
+    private List<String> parseJsonList(String json) {
+        if (json == null || json.isBlank()) return java.util.Collections.emptyList();
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper om = new com.fasterxml.jackson.databind.ObjectMapper();
+            com.fasterxml.jackson.databind.JsonNode arr = om.readTree(json);
+            if (!arr.isArray()) return java.util.Collections.emptyList();
+            List<String> list = new java.util.ArrayList<>();
+            arr.forEach(n -> list.add(n.asText()));
+            return list;
+        } catch (Exception e) {
+            return java.util.Collections.emptyList();
+        }
     }
 
     private ExperienceQuestionResult fallbackQuestion(String position, Resume resume) {

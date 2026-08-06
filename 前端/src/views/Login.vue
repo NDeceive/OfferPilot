@@ -12,71 +12,16 @@
       <div class="stage-content">
         <div class="stage-logo">
           <LogoIcon :size="36" />
-          <span class="stage-brand">OfferPilot</span>
+          <span class="stage-brand">
+            <span class="brand-cn">智面幻境</span>
+            <span class="brand-en">OfferPilot</span>
+          </span>
         </div>
 
-        <h1 class="stage-title">
-          在这里<br />
-          <span class="title-accent">练出自信</span>
-        </h1>
-        <p class="stage-desc">AI 面试官实时追问, 多维能力评估, 让每次练习都接近真实</p>
+        <h1 class="stage-title">把准备落实到<br /><span class="title-accent">每一次回答</span></h1>
+        <p class="stage-desc">围绕目标岗位完成模拟问答，在复盘中看清表达与能力之间的差距。</p>
+        <AuthShowcase :initial-slide="0" />
 
-        <!-- Interactive Scene -->
-        <div class="scene">
-          <!-- Central AI Orb -->
-          <div
-            class="ai-orb"
-            @mouseenter="orbActive = true"
-            @mouseleave="orbActive = false"
-            :class="{ active: orbActive }"
-          >
-            <div class="orb-ring orb-ring-1"></div>
-            <div class="orb-ring orb-ring-2"></div>
-            <div class="orb-ring orb-ring-3"></div>
-            <div class="orb-core">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                <path d="M12 2a5 5 0 0 1 5 5v3a5 5 0 0 1-10 0V7a5 5 0 0 1 5-5z"/>
-                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                <line x1="12" y1="19" x2="12" y2="23"/>
-              </svg>
-            </div>
-            <span class="orb-label">AI 面试官</span>
-          </div>
-
-          <!-- Floating Question Bubbles -->
-          <div
-            v-for="(q, i) in questionBubbles"
-            :key="i"
-            class="q-bubble"
-            :class="{ popped: q.popped }"
-            :style="q.style"
-            @mouseenter="popBubble(i)"
-          >
-            <span class="q-text">{{ q.text }}</span>
-            <div v-if="q.popped" class="q-ripple"></div>
-          </div>
-
-          <!-- Score Meter -->
-          <div
-            class="score-meter"
-            :class="{ expanded: scoreExpanded }"
-            @mouseenter="scoreExpanded = true"
-            @mouseleave="scoreExpanded = false"
-          >
-            <div class="meter-track">
-              <div class="meter-fill" :style="{ width: interactionScore + '%' }"></div>
-            </div>
-            <div class="meter-label">
-              <span class="meter-icon">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                </svg>
-              </span>
-              <span class="meter-val">{{ interactionScore }}</span>
-              <span class="meter-hint">试试与场景互动</span>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
 
@@ -92,7 +37,7 @@
 
         <div class="form-header">
           <h1 class="form-title">欢迎回来</h1>
-          <p class="form-sub">登录你的 OfferPilot 账号</p>
+          <p class="form-sub">登录后继续查看练习记录与复盘</p>
         </div>
 
         <!-- Role Tabs -->
@@ -169,32 +114,21 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../store/user'
 import { login as loginApi } from '../api'
 import LogoIcon from '../components/ui/LogoIcon.vue'
+import AuthShowcase from '../components/auth/AuthShowcase.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
 const activeRole = ref('student')
 const showPwd = ref(false)
-const orbActive = ref(false)
-const scoreExpanded = ref(false)
-const btnHover = ref(false)
-const interactionScore = ref(12)
 const errorMsg = ref('')
 const loading = ref(false)
 
 const mouse = reactive({ x: -200, y: -200 })
-
-const questionBubbles = reactive([
-  { text: '介绍一下你自己', style: { '--x': '10%', '--y': '20%', '--delay': '0s' }, popped: false },
-  { text: '你的优势是什么?', style: { '--x': '65%', '--y': '10%', '--delay': '0.3s' }, popped: false },
-  { text: '遇到过什么挑战?', style: { '--x': '75%', '--y': '55%', '--delay': '0.6s' }, popped: false },
-  { text: '为什么选我们?', style: { '--x': '5%', '--y': '65%', '--delay': '0.9s' }, popped: false },
-  { text: '技术栈是什么?', style: { '--x': '50%', '--y': '78%', '--delay': '1.2s' }, popped: false },
-])
 
 const roles = [
   { id: 'student', label: '学生端', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>' },
@@ -207,14 +141,6 @@ const form = reactive({ account: '', password: '', remember: false })
 function onMouseMove(e) {
   mouse.x = e.clientX
   mouse.y = e.clientY
-}
-
-function popBubble(i) {
-  if (!questionBubbles[i].popped) {
-    questionBubbles[i].popped = true
-    interactionScore.value = Math.min(100, interactionScore.value + 8)
-    setTimeout(() => { questionBubbles[i].popped = false }, 2000)
-  }
 }
 
 async function handleLogin() {
@@ -237,25 +163,6 @@ async function handleLogin() {
   }
 }
 
-onMounted(() => {
-  // Ticking score animation on orb hover
-  let interval = null
-  const watchOrb = () => {
-    if (orbActive.value) {
-      interval = setInterval(() => {
-        interactionScore.value = Math.min(100, interactionScore.value + 1)
-      }, 300)
-    } else {
-      clearInterval(interval)
-    }
-  }
-  // Simple reactive watcher
-  setInterval(() => {
-    if (orbActive.value && interactionScore.value < 100) {
-      interactionScore.value = Math.min(100, interactionScore.value + 0.5)
-    }
-  }, 200)
-})
 </script>
 
 <style scoped>
@@ -303,14 +210,14 @@ onMounted(() => {
 .stage-panel {
   position: relative;
   z-index: 1;
-  flex: 0 0 50%;
+  flex: 0 0 52%;
   display: flex;
   align-items: center;
   padding: var(--space-10);
 }
 
 .stage-content {
-  max-width: 500px;
+  max-width: 580px;
   width: 100%;
 }
 
@@ -322,10 +229,25 @@ onMounted(() => {
 }
 
 .stage-brand {
+  display: flex;
+  flex-direction: column;
   font-family: var(--font-display);
-  font-size: var(--text-lg);
-  font-weight: 700;
   color: var(--neutral-800);
+  line-height: 1;
+}
+
+.stage-brand .brand-cn {
+  font-size: 1.25rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+}
+
+.stage-brand .brand-en {
+  margin-top: 4px;
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--neutral-500);
 }
 
 .stage-title {
@@ -511,7 +433,6 @@ onMounted(() => {
   height: 100%;
   background: linear-gradient(90deg, var(--accent-400), var(--accent-500));
   border-radius: 3px;
-  transition: width 0.5s var(--ease-out-expo);
 }
 
 .meter-label {
