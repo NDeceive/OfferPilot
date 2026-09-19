@@ -39,6 +39,7 @@ export const finishInterview = (sessionId) => request.post(`/interview/${session
 export const getReportStatus = (sessionId) => request.get(`/interview/${sessionId}/report-status`)
 export const getSessionMessages = (sessionId) => request.get(`/interview/${sessionId}/messages`)
 export const deleteInterview = (sessionId) => request.delete(`/interview/${sessionId}`)
+export const batchDeleteInterview = (sessionIds) => request.post('/interview/batch-delete', { sessionIds })
 export const submitFollowUp = (data) => request.post('/interview/follow-up', data)
 
 /* ==================== Speech ==================== */

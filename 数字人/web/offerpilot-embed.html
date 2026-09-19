@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OfferPilot Interviewer</title>
+    <style>
+        :root {
+            color-scheme: light;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+            background:
+                radial-gradient(circle at top, rgba(140, 87, 255, 0.18), transparent 55%),
+                linear-gradient(180deg, #f8f6ff 0%, #eef4ff 100%);
+        }
+
+        .stage {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            border-radius: 18px;
+            overflow: hidden;
+            background:
+                radial-gradient(circle at 50% 42%, rgba(255, 255, 255, 0.96), rgba(225, 234, 247, 0.86) 58%, rgba(205, 218, 237, 0.9));
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center center;
+            background: transparent;
+        }
+
+        audio {
+            display: none;
+        }
+
+        .status {
+            display: none;
+        }
+
+        .status.ready {
+            background: rgba(22, 167, 106, 0.88);
+        }
+
+        .status.speaking {
+            background: rgba(37, 99, 235, 0.88);
+        }
+
+        .status.error {
+            background: rgba(220, 38, 38, 0.9);
+        }
+
+        .unlock-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 3;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            background: rgba(15, 23, 42, 0.28);
+            backdrop-filter: blur(4px);
+        }
+
+        .unlock-overlay[hidden] {
+            display: none;
+        }
+
+        .unlock-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            width: min(160px, 100%);
+            padding: 16px 14px;
+            color: #fff;
+            text-align: center;
+            border-radius: 20px;
+            background: rgba(15, 23, 42, 0.72);
+            box-shadow: 0 16px 36px rgba(15, 23, 42, 0.28);
+        }
+
+        .unlock-title {
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        .unlock-tip {
+            font-size: 12px;
+            line-height: 1.5;
+            opacity: 0.88;
+        }
+
+        .unlock-btn {
+            padding: 9px 14px;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 700;
+            border: 0;
+            border-radius: 999px;
+            background: linear-gradient(135deg, #2563eb, #7c3aed);
+            cursor: pointer;
+        }
+
+        .connect {
+            position: absolute;
+            right: 12px;
+            bottom: 12px;
+            padding: 10px 14px;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 700;
+            border: 0;
+            border-radius: 999px;
+            background: linear-gradient(135deg, #2563eb, #7c3aed);
+            box-shadow: 0 12px 28px rgba(99, 102, 241, 0.34);
+            cursor: pointer;
+        }
+
+        .connect[disabled] {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="stage">
+        <div id="status" class="status">Offline</div>
+        <div id="unlockOverlay" class="unlock-overlay" hidden>
+            <div class="unlock-card">
+                <div class="unlock-title">点击开启语音</div>
+                <div class="unlock-tip">浏览器需要你先点一下当前数字人区域，才能播放声音。</div>
+                <button id="unlockBtn" class="unlock-btn" type="button">开启语音</button>
+            </div>
+        </div>
+        <button id="connectBtn" class="connect" type="button">Connect</button>
+        <audio id="audio" autoplay></audio>
+        <video id="video" autoplay playsinline muted></video>
+    </div>
+
+    <script>
+        let pc = null;
+        let sessionId = 0;
+        let isConnecting = false;
+        let isConnected = false;
+        let latestSpeech = null;
+        let playbackUnlocked = false;
+        let pendingPlayback = false;
+        let remoteVideoTrackReceived = false;
+        let videoReadyNotified = false;
+        let firstFrameRequested = false;
+
+        const statusEl = document.getElementById('status');
+        const connectBtn = document.getElementById('connectBtn');
+        const videoEl = document.getElementById('video');
+        const audioEl = document.getElementById('audio');
+        const unlockOverlayEl = document.getElementById('unlockOverlay');
+        const unlockBtnEl = document.getElementById('unlockBtn');
+
+        function checkVideoReady() {
+            if (videoReadyNotified || firstFrameRequested || !remoteVideoTrackReceived ||
+                !pc || pc.connectionState !== 'connected' ||
+                videoEl.readyState < HTMLMediaElement.HAVE_CURRENT_DATA ||
+                !videoEl.videoWidth || !videoEl.videoHeight) {
+                return;
+            }
+
+            firstFrameRequested = true;
+            if (typeof videoEl.requestVideoFrameCallback === 'function') {
+                videoEl.requestVideoFrameCallback(() => {
+                    firstFrameRequested = false;
+                    if (pc && pc.connectionState === 'connected' && !videoReadyNotified) {
+                        videoReadyNotified = true;
+                        notifyParent('offerpilot.embed.videoReady', {});
+                    }
+                });
+            } else {
+                requestAnimationFrame(() => {
+                    firstFrameRequested = false;
+                    if (pc && pc.connectionState === 'connected' && !videoReadyNotified) {
+                        videoReadyNotified = true;
+                        notifyParent('offerpilot.embed.videoReady', {});
+                    }
+                });
+            }
+        }
+
+        ['loadeddata', 'canplay', 'playing'].forEach((eventName) => {
+            videoEl.addEventListener(eventName, checkVideoReady);
+        });
+
+        function setUnlockOverlay(visible) {
+            unlockOverlayEl.hidden = !visible;
+        }
+
+        async function tryPlay(element) {
+            if (!element) {
+                return false;
+            }
+
+            try {
+                await element.play();
+                pendingPlayback = false;
+                if (element === audioEl) {
+                    setUnlockOverlay(false);
+                }
+                return true;
+            } catch (error) {
+                if (error && error.name === 'NotAllowedError') {
+                    pendingPlayback = true;
+                    if (element === audioEl) {
+                        setUnlockOverlay(true);
+                    }
+                    notifyParent('offerpilot.embed.playbackBlocked', {});
+                    return false;
+                }
+                console.error(error);
+                return false;
+            }
+        }
+
+        async function unlockPlayback() {
+            playbackUnlocked = true;
+
+            if (videoEl.srcObject) {
+                await tryPlay(videoEl);
+            }
+
+            if (audioEl.srcObject) {
+                const audioStarted = await tryPlay(audioEl);
+                if (audioStarted && isConnected) {
+                    updateStatus('Connected', 'ready');
+                }
+            }
+        }
+
+        async function bindRemoteMedia(element, stream) {
+            element.srcObject = stream;
+
+            const started = await tryPlay(element);
+            if (element === videoEl) checkVideoReady();
+            if (!started && element === audioEl) {
+                updateStatus('Click avatar to enable audio', '');
+            }
+        }
+
+        function notifyParent(type, extra) {
+            if (!window.parent || window.parent === window) {
+                return;
+            }
+            window.parent.postMessage({ type, ...extra }, '*');
+        }
+
+        function updateStatus(text, tone) {
+            statusEl.textContent = text;
+            statusEl.className = 'status' + (tone ? ' ' + tone : '');
+        }
+
+        async function interruptTalk() {
+            if (!sessionId) {
+                return;
+            }
+            await fetch('/interrupt_talk', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sessionid: sessionId })
+            });
+        }
+
+        async function closeSession() {
+            if (!sessionId) {
+                cleanup();
+                return;
+            }
+
+            try {
+                await fetch('/close_session', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionid: sessionId })
+                });
+            } catch (error) {
+                console.error(error);
+            } finally {
+                sessionId = 0;
+                isConnected = false;
+                cleanup();
+            }
+        }
+
+        async function speak(payload) {
+            latestSpeech = payload;
+            if (!payload || !payload.text) {
+                return;
+            }
+            if (!isConnected) {
+                updateStatus('Waiting for connect', '');
+                return;
+            }
+
+            const response = await fetch('/human', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    text: payload.text,
+                    type: 'echo',
+                    interrupt: true,
+                    sessionid: sessionId
+                })
+            });
+            const result = await response.json();
+            if (result.code !== 0) {
+                throw new Error(result.msg || 'Speak failed');
+            }
+            updateStatus('Speaking', 'speaking');
+        }
+
+        async function negotiate() {
+            pc.addTransceiver('video', { direction: 'recvonly' });
+            pc.addTransceiver('audio', { direction: 'recvonly' });
+
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+
+            await new Promise((resolve) => {
+                if (pc.iceGatheringState === 'complete') {
+                    resolve();
+                    return;
+                }
+                const checkState = () => {
+                    if (pc.iceGatheringState === 'complete') {
+                        pc.removeEventListener('icegatheringstatechange', checkState);
+                        resolve();
+                    }
+                };
+                pc.addEventListener('icegatheringstatechange', checkState);
+            });
+
+            const response = await fetch('/offer', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    sdp: pc.localDescription.sdp,
+                    type: pc.localDescription.type
+                })
+            });
+
+            const answer = await response.json();
+            sessionId = answer.sessionid || 0;
+            await pc.setRemoteDescription(answer);
+        }
+
+        async function connect() {
+            if (isConnecting || isConnected) {
+                return;
+            }
+
+            isConnecting = true;
+            remoteVideoTrackReceived = false;
+            videoReadyNotified = false;
+            firstFrameRequested = false;
+            connectBtn.disabled = true;
+            updateStatus('Connecting...', '');
+
+            try {
+                pc = new RTCPeerConnection({ sdpSemantics: 'unified-plan' });
+                pc.addEventListener('track', (event) => {
+                    if (event.track.kind === 'video') {
+                        remoteVideoTrackReceived = true;
+                        void bindRemoteMedia(videoEl, event.streams[0]);
+                    } else {
+                        void bindRemoteMedia(audioEl, event.streams[0]);
+                    }
+                });
+                pc.addEventListener('connectionstatechange', () => {
+                    if (pc.connectionState === 'connected') checkVideoReady();
+                    if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected' || pc.connectionState === 'closed') {
+                        isConnected = false;
+                        connectBtn.disabled = false;
+                        connectBtn.textContent = 'Reconnect';
+                        updateStatus('Disconnected', 'error');
+                        notifyParent('offerpilot.embed.disconnected', {});
+                    }
+                });
+
+                await negotiate();
+
+                isConnected = true;
+                connectBtn.textContent = 'Connected';
+                updateStatus('Connected', 'ready');
+                notifyParent('offerpilot.embed.ready', { sessionId });
+
+                if (latestSpeech) {
+                    await speak(latestSpeech);
+                }
+            } catch (error) {
+                console.error(error);
+                updateStatus('Connect failed', 'error');
+                connectBtn.disabled = false;
+                connectBtn.textContent = 'Reconnect';
+                notifyParent('offerpilot.embed.disconnected', {});
+            } finally {
+                isConnecting = false;
+            }
+        }
+
+        function cleanup() {
+            if (pc) {
+                const currentPc = pc;
+                pc = null;
+                setTimeout(() => currentPc.close(), 0);
+            }
+        }
+
+        connectBtn.addEventListener('click', connect);
+        unlockBtnEl.addEventListener('click', () => {
+            void unlockPlayback();
+        });
+        ['pointerdown', 'keydown', 'touchstart'].forEach((eventName) => {
+            window.addEventListener(eventName, () => {
+                if (!playbackUnlocked || pendingPlayback) {
+                    void unlockPlayback();
+                }
+            }, { passive: true });
+        });
+        window.addEventListener('load', () => {
+            void connect();
+        });
+
+        window.addEventListener('message', async (event) => {
+            const data = event.data || {};
+            if (data.type === 'offerpilot.speak' && typeof data.text === 'string') {
+                const text = data.text.trim();
+                if (!text) {
+                    return;
+                }
+                try {
+                    await speak({ key: data.key || '', text });
+                } catch (error) {
+                    console.error(error);
+                    updateStatus('播报失败', 'error');
+                }
+            }
+
+            if (data.type === 'offerpilot.stop') {
+                try {
+                    await interruptTalk();
+                    updateStatus(isConnected ? 'Connected' : 'Offline', isConnected ? 'ready' : '');
+                } catch (error) {
+                    console.error(error);
+                }
+            }
+
+            if (data.type === 'offerpilot.close') {
+                await closeSession();
+            }
+
+            if (data.type === 'offerpilot.unlockAudio') {
+                await unlockPlayback();
+            }
+        });
+
+        window.addEventListener('beforeunload', () => {
+            void closeSession();
+        });
+    </script>
+</body>
+</html>

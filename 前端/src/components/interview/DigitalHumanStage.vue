@@ -1,8 +1,38 @@
 <template>
   <div class="digital-human">
+    <img
+      class="stage-poster"
+      :src="INTERVIEW_AVATAR_ASSETS.poster"
+      alt=""
+      aria-hidden="true"
+    />
+    <video
+      ref="waitingRef"
+      class="stage-video waiting-video"
+      :class="{ visible: stage === 'WAITING' }"
+      :src="INTERVIEW_AVATAR_ASSETS.waiting"
+      :poster="INTERVIEW_AVATAR_ASSETS.poster"
+      autoplay muted playsinline preload="auto"
+      aria-hidden="true"
+      @ended="handleWaitingEnded"
+      @error="handleWaitingError"
+    />
+    <video
+      ref="openingRef"
+      class="stage-video opening-video"
+      :class="{ visible: stage === 'OPENING' }"
+      :src="INTERVIEW_AVATAR_ASSETS.opening"
+      :poster="INTERVIEW_AVATAR_ASSETS.poster"
+      muted playsinline preload="auto"
+      aria-hidden="true"
+      @playing="handleOpeningPlaying"
+      @ended="showLive"
+      @error="skipOpening"
+    />
     <iframe
       ref="frameRef"
       class="digital-human-frame"
+      :class="{ visible: stage === 'LIVE' }"
       :src="embedUrl"
       title="AI 数字人面试官"
       allow="autoplay; fullscreen"
@@ -42,18 +72,70 @@ const props = defineProps({
 const embedBaseUrl = import.meta.env.VITE_DIGITAL_HUMAN_EMBED_URL
   || '/digital-human/offerpilot-embed.html'
 const embedUrl = withLayoutVersion(embedBaseUrl)
+const INTERVIEW_AVATAR_ASSETS = {
+  waiting: '/assets/interview-avatar/waiting-loop-v3.mp4',
+  opening: '/assets/interview-avatar/door-opening-v3.mp4',
+  interviewerFallback: '/assets/interview-avatar/interviewer-v3.mp4',
+  poster: '/assets/interview-avatar/closed-door-j0.png',
+}
 
 const frameRef = ref(null)
+const waitingRef = ref(null)
+const openingRef = ref(null)
+const stage = ref('WAITING')
+const avatarReady = ref(false)
+const waitingFailed = ref(false)
 const connectionState = ref('connecting')
 const pendingSpeech = ref(null)
 let connectionTimer = null
+let openingPending = false
+let speechTimer = null
+let liveReady = false
 
 const statusText = computed(() => ({
-  connecting: '数字人连接中',
-  ready: '数字人已连接',
+  connecting: '正在连接数字人',
+  ready: stage.value === 'OPENING' ? 'AI 面试官已就绪' : stage.value === 'LIVE' ? '数字人已连接' : '正在准备 AI 面试官…',
   speaking: '数字人播报中',
-  error: '数字人连接失败',
-})[connectionState.value] || '数字人连接中')
+  error: '数字人连接异常，请重新连接',
+})[connectionState.value] || '正在连接数字人')
+
+function handleWaitingEnded() {
+  if (stage.value !== 'WAITING') return
+  if (avatarReady.value) {
+    enterOpening()
+  } else {
+    waitingRef.value.currentTime = 0
+    waitingRef.value.play().catch(handleWaitingError)
+  }
+}
+
+function handleWaitingError() {
+  waitingFailed.value = true
+  if (avatarReady.value) enterOpening()
+}
+
+function enterOpening() {
+  if (stage.value !== 'WAITING' || !avatarReady.value || openingPending) return
+  openingPending = true
+  openingRef.value.currentTime = 0
+  openingRef.value.play().catch(skipOpening)
+}
+
+function handleOpeningPlaying() {
+  if (openingPending && avatarReady.value) {
+    openingPending = false
+    stage.value = 'OPENING'
+  }
+}
+
+function skipOpening() {
+  openingPending = false
+  if (avatarReady.value) enterLive()
+}
+
+function showLive() {
+  if (stage.value === 'OPENING' && avatarReady.value) enterLive()
+}
 
 function postToFrame(message) {
   const targetWindow = frameRef.value?.contentWindow
@@ -81,11 +163,33 @@ function speak(text, key = '') {
   if (!normalized) return
 
   pendingSpeech.value = { text: normalized, key }
-  if (connectionState.value === 'ready' || connectionState.value === 'speaking') {
-    postToFrame({ type: 'offerpilot.speak', ...pendingSpeech.value })
-    pendingSpeech.value = null
-    connectionState.value = 'ready'
-  }
+  tryFlush()
+}
+
+function flushPendingSpeech() {
+  if (!pendingSpeech.value) return
+  const speech = pendingSpeech.value
+  pendingSpeech.value = null
+  postToFrame({ type: 'offerpilot.speak', ...speech })
+  connectionState.value = 'ready'
+}
+
+function tryFlush() {
+  if (!pendingSpeech.value) return
+  if (stage.value !== 'LIVE' || !liveReady) return
+  if (connectionState.value !== 'ready' && connectionState.value !== 'speaking') return
+  flushPendingSpeech()
+}
+
+function enterLive() {
+  if (stage.value === 'LIVE') return
+  stage.value = 'LIVE'
+  clearTimeout(speechTimer)
+  liveReady = false
+  speechTimer = setTimeout(() => {
+    liveReady = true
+    tryFlush()
+  }, 1000)
 }
 
 function stop() {
@@ -126,10 +230,10 @@ function applyEmbeddedLayout() {
           radial-gradient(circle at 50% 42%, rgba(255,255,255,.96),
           rgba(225,234,247,.86) 58%, rgba(205,218,237,.9)) !important;
       }
-      video {
+      #video {
         width: 100% !important;
         height: 100% !important;
-        object-fit: contain !important;
+        object-fit: cover !important;
         object-position: center center !important;
       }
       .status { display: none !important; }
@@ -141,7 +245,17 @@ function applyEmbeddedLayout() {
 }
 
 function reload() {
+  openingPending = false
+  stage.value = 'WAITING'
+  avatarReady.value = false
   connectionState.value = 'connecting'
+  clearTimeout(speechTimer)
+  liveReady = false
+  openingRef.value?.pause()
+  if (!waitingFailed.value && waitingRef.value) {
+    waitingRef.value.currentTime = 0
+    waitingRef.value.play().catch(handleWaitingError)
+  }
   startConnectionTimeout()
   const frame = frameRef.value
   if (!frame) return
@@ -162,14 +276,27 @@ function handleMessage(event) {
     clearTimeout(connectionTimer)
     connectionState.value = 'ready'
     unlockAudio()
-    if (pendingSpeech.value) {
-      postToFrame({ type: 'offerpilot.speak', ...pendingSpeech.value })
-      pendingSpeech.value = null
-      connectionState.value = 'ready'
-    }
+    tryFlush()
+  } else if (data.type === 'offerpilot.embed.videoReady') {
+    clearTimeout(connectionTimer)
+    avatarReady.value = true
+    connectionState.value = 'ready'
+    if (waitingFailed.value) enterOpening()
   } else if (data.type === 'offerpilot.embed.disconnected') {
     clearTimeout(connectionTimer)
     connectionState.value = 'error'
+    avatarReady.value = false
+    clearTimeout(speechTimer)
+    liveReady = false
+    if (stage.value === 'OPENING' || openingPending) {
+      openingPending = false
+      openingRef.value?.pause()
+      stage.value = 'WAITING'
+      if (!waitingFailed.value && waitingRef.value) {
+        waitingRef.value.currentTime = 0
+        waitingRef.value.play().catch(handleWaitingError)
+      }
+    }
   }
 }
 
@@ -177,7 +304,7 @@ function startConnectionTimeout() {
   clearTimeout(connectionTimer)
   connectionTimer = setTimeout(() => {
     if (connectionState.value === 'connecting') connectionState.value = 'error'
-  }, 20000)
+  }, 120000)
 }
 
 watch(
@@ -190,6 +317,7 @@ window.addEventListener('message', handleMessage)
 
 onBeforeUnmount(() => {
   clearTimeout(connectionTimer)
+  clearTimeout(speechTimer)
   close()
   window.removeEventListener('message', handleMessage)
 })
@@ -216,13 +344,36 @@ defineExpose({
   background: #e3ebf6;
 }
 
-.digital-human-frame {
-  display: block;
+.stage-video,
+.digital-human-frame,
+.stage-poster {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   border: 0;
   background: #e3ebf6;
+  pointer-events: none;
+  object-fit: cover;
+  object-position: center;
 }
+
+.stage-video,
+.digital-human-frame { opacity: 0; }
+.stage-poster { opacity: 1; }
+
+.waiting-video.visible,
+.opening-video.visible,
+.digital-human-frame.visible { opacity: 1; }
+.opening-video { transition: opacity 250ms ease; }
+.digital-human-frame { transition: opacity 250ms ease; }
+.digital-human-frame.visible { pointer-events: auto; }
+.stage-poster { z-index: 0; }
+.digital-human-frame { z-index: 1; }
+.opening-video { z-index: 2; }
+.waiting-video { z-index: 3; }
+.connection-status,
+.retry-button { z-index: 4; }
 
 .connection-status {
   position: absolute;

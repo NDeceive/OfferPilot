@@ -33,12 +33,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -357,6 +359,32 @@ public class InterviewFlowService {
         messageMapper.delete(new LambdaQueryWrapper<InterviewMessage>()
                 .eq(InterviewMessage::getSessionId, sessionId));
         sessionMapper.deleteById(sessionId);
+    }
+
+    /**
+     * 批量删除面试会话及其关联数据。逐条复用 {@link #delete}，单个会话删除失败不影响其余会话，
+     * 返回成功与失败的数量供前端提示。
+     */
+    @Transactional
+    public Map<String, Object> deleteBatch(List<Long> sessionIds) {
+        int deleted = 0;
+        int failed = 0;
+        if (sessionIds != null) {
+            for (Long id : sessionIds) {
+                if (id == null) {
+                    failed++;
+                    continue;
+                }
+                try {
+                    delete(id);
+                    deleted++;
+                } catch (BizException e) {
+                    log.warn("批量删除会话失败 sessionId={}, reason={}", id, e.getMessage());
+                    failed++;
+                }
+            }
+        }
+        return Map.of("deleted", deleted, "failed", failed);
     }
 
     // ============================ 标签化出题 ============================

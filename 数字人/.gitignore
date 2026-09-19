@@ -1,0 +1,19 @@
+envs/
+.venv/
+.venv*/
+.venv-broken-*/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.log
+logs/
+tmp*/
+trial*/
+data/record.mp4
+data/**
+!data/avatars/
+!data/avatars/.gitkeep
+models/**
+!models/put models here.txt
+.idea/
+.vscode/

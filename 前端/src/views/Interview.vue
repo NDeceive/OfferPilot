@@ -77,28 +77,6 @@
             </div>
           </div>
 
-          <div class="text-answer">
-            <textarea
-              v-model="answer"
-              rows="2"
-              maxlength="2000"
-              aria-label="输入面试回答"
-              placeholder="输入你的回答，提交后面试官会结合内容继续追问"
-              :disabled="isSubmitting"
-              @keydown.ctrl.enter.prevent="submitAnswerFn"
-            ></textarea>
-            <div class="text-answer-actions">
-              <span>{{ answer.length }}/2000 · Ctrl + Enter 提交</span>
-              <button
-                type="button"
-                :disabled="!answer.trim() || isSubmitting || isSpeechProcessing"
-                @click="submitAnswerFn"
-              >
-                {{ isSubmitting ? '提交中…' : '提交回答' }}
-              </button>
-            </div>
-          </div>
-
           <MicrophoneControl
             ref="microphoneRef"
             :session-id="sessionId"
@@ -631,62 +609,6 @@ async function waitForReport(sid) {
   gap: var(--space-2);
 }
 
-.text-answer {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: var(--space-3);
-  align-items: end;
-  padding: var(--space-3);
-  border-radius: var(--radius-md);
-  background: var(--neutral-50);
-}
-
-.text-answer textarea {
-  width: 100%;
-  min-height: 62px;
-  resize: none;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  color: var(--neutral-800);
-  font: inherit;
-  font-size: var(--text-sm);
-  line-height: 1.6;
-}
-
-.text-answer textarea::placeholder { color: var(--neutral-400); }
-.text-answer textarea:focus-visible { box-shadow: inset 0 -2px 0 var(--accent-500); }
-.text-answer textarea:disabled { cursor: wait; opacity: .65; }
-
-.text-answer-actions {
-  display: flex;
-  align-items: flex-end;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.text-answer-actions span {
-  color: var(--neutral-400);
-  font-size: 11px;
-  white-space: nowrap;
-}
-
-.text-answer-actions button {
-  min-height: 38px;
-  padding: 0 var(--space-4);
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: var(--accent-600);
-  color: #fff;
-  font-size: var(--text-sm);
-  font-weight: 600;
-}
-
-.text-answer-actions button:disabled {
-  cursor: not-allowed;
-  opacity: .45;
-}
-
 .conversation-scroll {
   flex: 1;
   min-height: 0;
@@ -811,8 +733,6 @@ async function waitForReport(sid) {
 }
 @media (max-width: 640px) {
   .input-bar { height: auto; min-height: 340px; padding-inline: var(--space-3); }
-  .text-answer { grid-template-columns: 1fr; }
-  .text-answer-actions { align-items: center; flex-direction: row; justify-content: space-between; }
 }
 @media (prefers-reduced-motion: reduce) {
   .conversation-scroll { scroll-behavior: auto; }

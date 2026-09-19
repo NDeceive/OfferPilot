@@ -101,6 +101,14 @@ OfferPilot/
 
 ## 快速开始
 
+### Windows 一键启动
+
+完成下方数据库初始化后，双击项目根目录的 **`一键启动网页.bat`**，即可自动启动后端和前端，并在服务就绪后打开浏览器。需要本机已安装 Java、Node.js，且 MySQL 正在运行；首次缺少前端依赖时会自动执行 `npm ci`。
+
+使用期间保留启动窗口，结束时在窗口内按回车，即可停止本次启动的服务。已经运行的服务会复用，不会被此窗口停止。数字人仍由后端按现有配置自动启动。
+
+启动日志位于 `后端/logs/web-*.log`。可运行 `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-web.ps1 -SmokeTest` 验证前后端及代理连通性；验证后会停止本次启动的服务，不打开浏览器。
+
 ### 1. 数据库初始化
 
 ```powershell

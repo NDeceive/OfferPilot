@@ -5,6 +5,7 @@ import com.zhimian.common.BizException;
 import com.zhimian.common.Result;
 import com.zhimian.config.UserContext;
 import com.zhimian.dto.AnswerRequest;
+import com.zhimian.dto.BatchDeleteRequest;
 import com.zhimian.dto.FollowUpRequest;
 import com.zhimian.dto.FollowUpResponse;
 import com.zhimian.dto.InterviewRecord;
@@ -133,5 +134,11 @@ public class InterviewController {
     public Result<Void> delete(@PathVariable Long sessionId) {
         flowService.delete(sessionId);
         return Result.success(null);
+    }
+
+    /** 批量删除面试会话及其关联数据。返回删除成功与失败的数量。 */
+    @PostMapping("/batch-delete")
+    public Result<java.util.Map<String, Object>> batchDelete(@Valid @RequestBody BatchDeleteRequest req) {
+        return Result.success(flowService.deleteBatch(req.getSessionIds()));
     }
 }
