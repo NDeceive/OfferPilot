@@ -5,6 +5,7 @@ import com.zhimian.common.Result;
 import com.zhimian.dto.ReportDetailResponse;
 import com.zhimian.export.ExportException;
 import com.zhimian.export.ExportService;
+import com.zhimian.service.ImprovementPlanService;
 import com.zhimian.service.ReportService;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 
 /**
  * 能力报告接口（Phase 2 规则化 + 导出）。
@@ -30,11 +32,18 @@ public class ReportController {
 
     private final ReportService reportService;
     private final ExportService exportService;
+    private final ImprovementPlanService improvementPlanService;
 
     /** 报告详情：仅本人可查看（服务层按 UserContext 校验归属） */
     @GetMapping("/{reportId}")
     public Result<ReportDetailResponse> detail(@PathVariable Long reportId) {
         return Result.success(reportService.getDetail(reportId));
+    }
+
+    /** 个性化提升建议：基于候选人实际回答生成，非套话模板 */
+    @GetMapping("/{reportId}/improvement-path")
+    public Result<Map<String, ImprovementPlanService.SuggestionItem>> improvementPath(@PathVariable Long reportId) {
+        return Result.success(improvementPlanService.generate(reportId));
     }
 
     /**

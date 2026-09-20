@@ -33,6 +33,15 @@ public class AiProperties {
     private int timeoutMs = 20000;
 
     /**
+     * 流式调用的读取超时（毫秒）。
+     * <p>
+     * 底层 {@code HttpURLConnection.setReadTimeout} 管的是「两次 read 之间的间隔」而不是整段时长，
+     * 所以这里要比 {@link #timeoutMs} 宽松：长回复中途偶尔静默不该被判成失败。
+     * 有 Java 默认值，不需要在 application.yml 里配。
+     */
+    private int streamTimeoutMs = 60000;
+
+    /**
      * AI 是否真正可用：开关已打开，且 key 已正确配置（非空且不是占位符）。
      * 避免把 application.yml 中的默认占位符误当成真实 key 去调用。
      */

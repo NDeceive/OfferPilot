@@ -27,7 +27,7 @@
             <polygon points="5 3 19 12 5 21 5 3"/>
           </svg>
         </button>
-        <button class="end-btn" @click="endInterview">结束面试</button>
+        <button class="end-btn" @click="endInterview" :disabled="!canEndInterview" :title="canEndInterview ? '' : '请先完成当前题目（含追问）并进入下一题'">结束面试</button>
       </div>
     </header>
 
@@ -143,7 +143,7 @@
         <div class="info-card">
           <div class="q-head">
             <span class="q-num">第 {{ currentQuestion }} 题</span>
-            <span class="q-of">/ {{ totalQuestions }}</span>
+            <span class="q-of">{{ formatTime(timeLeft) }}</span>
           </div>
           <div class="q-progress">
             <div class="q-bar" :style="{ width: progressPercent + '%' }"></div>
@@ -155,29 +155,16 @@
           </div>
         </div>
 
-        <!-- Eval Card -->
-        <div class="info-card">
-          <h3 class="info-card-title">实时评估</h3>
-          <div class="eval-list">
-            <div v-for="(e, i) in evalItems" :key="i" class="eval-row">
-              <span class="eval-label">{{ e.name }}</span>
-              <div class="eval-track">
-                <div class="eval-fill" :style="{ width: e.value + '%', background: e.color }"></div>
-              </div>
-              <span class="eval-val">{{ e.value }}%</span>
-            </div>
-          </div>
-          <p class="eval-footnote">面试结束后查看完整报告</p>
-        </div>
+        <!-- 评分将在面试结束后统一生成 -->
       </aside>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { startInterview, submitAnswer, getNextQuestion, finishInterview } from '../api'
+import { startInterview, submitAnswer, getNextQuestion, finishInterview, getReportStatus, getSessionMessages } from '../api'
 
 const router = useRouter()
 const route = useRoute()
@@ -187,7 +174,7 @@ const sessionId = ref(null)
 const currentQuestionId = ref(null)
 const jobTitle = ref('前端开发工程师')
 const currentQuestion = ref(1)
-const totalQuestions = ref(8)
+const totalDuration = ref(1800)  // 面试总时长（秒），从后端获取
 const timeLeft = ref(1800)
 const inputMode = ref('text')
 const answer = ref('')
@@ -196,52 +183,68 @@ const isAiTyping = ref(false)
 const isPaused = ref(false)
 const isSubmitting = ref(false)
 const messagesRef = ref(null)
-const MAX_QUESTIONS = 8
 
 const questionTypes = ref([])
 const questionDifficulties = ref([])
 const questionSkills = ref([])
 
+// 追问未完成时不可结束面试：需完整答完第一题（含追问）并进入第二题后才开放
+const canEndInterview = ref(false)
+
 const difficultyLabels = { 1: '简单', 2: '中等', 3: '困难', 4: '困难' }
 
 const messages = ref([])
 
-const evalItems = ref([
-  { name: '表达能力', value: 0, color: '#10b981' },
-  { name: '逻辑性', value: 0, color: '#3b82f6' },
-  { name: '技术深度', value: 0, color: '#8b5cf6' },
-])
-
-const progressPercent = computed(() => (currentQuestion.value / totalQuestions.value) * 100)
+const progressPercent = computed(() => {
+  if (totalDuration.value <= 0) return 0
+  return ((totalDuration.value - timeLeft.value) / totalDuration.value) * 100
+})
 
 let timerInterval = null
 
+// Watch for time-up → auto-finish（防重入）
+let autoFinished = false
+watch(timeLeft, (val) => {
+  if (val <= 0 && sessionId.value && !isSubmitting.value && !autoFinished) {
+    autoFinished = true
+    autoFinishInterview()
+  }
+})
+
 // --- Initialize interview on mount ---
 onMounted(async () => {
-  // Start local timer
   timerInterval = setInterval(() => {
     if (timeLeft.value > 0 && !isPaused.value) timeLeft.value--
   }, 1000)
 
-  // Get jobId from query param, default to 1
   const jobId = Number(route.query.jobId) || 1
+  const preSid = Number(route.query.sessionId) || 0
 
   try {
-    const res = await startInterview({ jobId })
-    sessionId.value = res.sessionId
-    jobTitle.value = res.jobName || '模拟面试'
-
-    // Set first question
-    if (res.question) {
-      currentQuestionId.value = res.question.id
-      questionTypes.value.push(mapQuestionType(res.question.type))
-      questionDifficulties.value.push(difficultyLabels[res.question.difficulty] || '中等')
-      questionSkills.value.push(res.question.abilityTag || '综合能力')
-      messages.value.push({
-        role: 'ai',
-        text: res.question.content,
-        followup: res.question.type === 'FOLLOWUP',
-      })
+    let res
+    if (preSid > 0) {
+      // JobSelect 已创建面试，直接用已有 session
+      sessionId.value = preSid
+      const msgs = await getSessionMessages(preSid)
+      const msgList = Array.isArray(msgs) ? msgs : (msgs?.data || [])
+      const firstQ = msgList.find(m => m.role === 'INTERVIEWER' && m.msgType === 'MAIN')
+      if (firstQ) {
+        currentQuestionId.value = firstQ.questionId
+        messages.value.push({ role: 'ai', text: firstQ.content, followup: false })
+      }
+      jobTitle.value = route.query.jobName || '模拟面试'
+      totalDuration.value = Number(route.query.duration) || 1800
+      timeLeft.value = totalDuration.value
+    } else {
+      res = await startInterview({ jobId })
+      sessionId.value = res.sessionId
+      jobTitle.value = res.jobName || '模拟面试'
+      totalDuration.value = res.durationSeconds || 1800
+      timeLeft.value = totalDuration.value
+      if (res.question) {
+        currentQuestionId.value = res.question.id
+        messages.value.push({ role: 'ai', text: res.question.content, followup: false })
+      }
     }
   } catch (e) {
     console.error('Failed to start interview:', e)
@@ -298,7 +301,8 @@ async function submitAnswerFn() {
         followup: true,
       })
     } else if (res.nextAction === 'NEXT') {
-      // Fetch the next question from the server
+      // Fetch the next question from the server — keep dots animating
+      isAiTyping.value = true
       try {
         const nextRes = await getNextQuestion(sessionId.value)
         if (nextRes.question) {
@@ -312,61 +316,47 @@ async function submitAnswerFn() {
             text: nextRes.question.content,
             followup: false,
           })
+          canEndInterview.value = true // 已进入下一题，允许结束
         }
       } catch (nextErr) {
         console.error('Failed to get next question:', nextErr)
+        isAiTyping.value = false
         messages.value.push({
           role: 'ai',
           text: '加载下一题失败，你可以手动结束面试。',
           followup: false,
         })
+      } finally {
+        isAiTyping.value = false
       }
 
-      // Auto-finish when max questions reached
-      if (currentQuestion.value >= MAX_QUESTIONS) {
-        return await autoFinishInterview()
-      }
     } else if (res.nextAction === 'FINISHABLE') {
-      // Interview can be finished - call finish
+      messages.value.push({
+        role: 'ai',
+        text: '所有题目已完成，正在生成你的能力报告…',
+        followup: false,
+      })
+      scrollToBottom()
+      isAiTyping.value = true
       try {
-        const finishRes = await finishInterview(sessionId.value)
-        messages.value.push({
-          role: 'ai',
-          text: '面试结束！感谢你的精彩回答。正在生成你的能力报告...',
-          followup: false,
-        })
-        scrollToBottom()
-        const reportId = finishRes || 1
-        setTimeout(() => router.push(`/history/${reportId}`), 2000)
-        return
-      } catch (finishErr) {
-        console.error('Failed to finish interview:', finishErr)
-        messages.value.push({
-          role: 'ai',
-          text: '面试结束但报告生成失败，你可以稍后在面试记录中查看。',
-          followup: false,
-        })
-      }
+        await finishInterview(sessionId.value)
+      } catch (e) { /* ignore */ }
+      await waitForReport(sessionId.value)
+      return
     }
 
-    // Update eval items if server provides them
-    if (res.evalItems && Array.isArray(res.evalItems)) {
-      evalItems.value = res.evalItems
-    } else {
-      // Keep local incremental eval as a fallback
-      evalItems.value[0].value = Math.min(100, evalItems.value[0].value + Math.floor(Math.random() * 15 + 5))
-      evalItems.value[1].value = Math.min(100, evalItems.value[1].value + Math.floor(Math.random() * 12 + 3))
-      evalItems.value[2].value = Math.min(100, evalItems.value[2].value + Math.floor(Math.random() * 10 + 5))
-    }
+    // 评分在面试结束后统一生成
   } catch (e) {
     console.error('Failed to submit answer:', e)
     isAiTyping.value = false
+    const errMsg = e?.response?.data?.message || e?.message || '未知错误'
     messages.value.push({
       role: 'ai',
-      text: '提交回答失败，请检查网络后重试。',
+      text: `提交失败：${errMsg}`,
       followup: false,
     })
   } finally {
+    isAiTyping.value = false
     isSubmitting.value = false
     scrollToBottom()
   }
@@ -380,14 +370,13 @@ async function skipQuestion() {
 
   try {
     // 提交跳过标记（≥15字避免触发"回答过短"追问）
-    const isLastQuestion = currentQuestion.value >= MAX_QUESTIONS
     await submitAnswer(sessionId.value, {
       questionId: currentQuestionId.value,
-      answer: isLastQuestion ? '（此题已跳过，面试已结束）' : '（此题已跳过，直接进入下一题）',
+      answer: '（此题已跳过，直接进入下一题）',
     })
-    isAiTyping.value = false
 
     // 不管后端返回 FOLLOWUP 还是 NEXT，始终取下一题
+    isAiTyping.value = true
     try {
       const nextRes = await getNextQuestion(sessionId.value)
       if (nextRes.question) {
@@ -397,17 +386,15 @@ async function skipQuestion() {
         questionDifficulties.value.push(difficultyLabels[nextRes.question.difficulty] || '中等')
         questionSkills.value.push(nextRes.question.abilityTag || '综合能力')
         messages.value.push({ role: 'ai', text: nextRes.question.content, followup: false })
+        canEndInterview.value = true // 已进入下一题，允许结束
       } else if (nextRes.nextAction === 'FINISHABLE') {
         return await autoFinishInterview()
       }
     } catch (nextErr) {
       console.error('Failed to get next question after skip:', nextErr)
       messages.value.push({ role: 'ai', text: '加载下一题失败，你可以手动结束面试。', followup: false })
-    }
-
-    // Auto-finish when max questions reached
-    if (currentQuestion.value >= MAX_QUESTIONS) {
-      return await autoFinishInterview()
+    } finally {
+      isAiTyping.value = false
     }
   } catch (e) {
     console.error('Failed to skip question:', e)
@@ -428,18 +415,37 @@ function togglePause() {
 }
 
 async function endInterview() {
-  if (sessionId.value) {
-    try {
-      const res = await finishInterview(sessionId.value)
-      const reportId = res || 1
-      router.push(`/history/${reportId}`)
-      return
-    } catch (e) {
-      console.error('Failed to finish interview:', e)
-    }
+  if (!sessionId.value) {
+    router.push('/history')
+    return
   }
-  // Fallback navigation
-  router.push('/history/1')
+  isAiTyping.value = true
+  try {
+    const res = await finishInterview(sessionId.value)
+    messages.value.push({ role: 'ai', text: '正在生成你的能力报告，请稍候…', followup: false })
+    scrollToBottom()
+    await waitForReport(res)
+  } catch (e) {
+    console.error('Failed to finish interview:', e)
+    router.push('/history')
+  } finally {
+    isAiTyping.value = false
+  }
+}
+
+async function autoFinishInterview() {
+  isAiTyping.value = true
+  try {
+    const finishRes = await finishInterview(sessionId.value)
+    messages.value.push({ role: 'ai', text: '面试时间到！正在生成你的能力报告…', followup: false })
+    scrollToBottom()
+    await waitForReport(finishRes)
+  } catch (e) {
+    console.error('Auto-finish failed:', e)
+    messages.value.push({ role: 'ai', text: '面试结束但报告生成失败，你可以稍后在面试记录中查看。', followup: false })
+  } finally {
+    isAiTyping.value = false
+  }
 }
 
 function scrollToBottom() {
@@ -448,29 +454,19 @@ function scrollToBottom() {
   })
 }
 
-async function autoFinishInterview() {
-  isAiTyping.value = true
-  try {
-    const finishRes = await finishInterview(sessionId.value)
-    messages.value.push({
-      role: 'ai',
-      text: `已达到 ${MAX_QUESTIONS} 道题目，面试自动结束。正在生成你的能力报告...`,
-      followup: false,
-    })
-    scrollToBottom()
-    const reportId = finishRes || 1
-    setTimeout(() => router.push(`/history/${reportId}`), 2000)
-  } catch (e) {
-    console.error('Auto-finish failed:', e)
-    messages.value.push({
-      role: 'ai',
-      text: '面试结束但报告生成失败，你可以稍后在面试记录中查看。',
-      followup: false,
-    })
-  } finally {
-    isAiTyping.value = false
-    isSubmitting.value = false
+/** 轮询报告状态，就绪后跳转 */
+async function waitForReport(sid) {
+  for (let i = 0; i < 60; i++) {
+    await new Promise(r => setTimeout(r, 1000))
+    try {
+      const data = await getReportStatus(sid)
+      if (data && data.ready && data.reportId) {
+        router.push(`/history/${data.reportId}`)
+        return
+      }
+    } catch (e) { /* 继续轮询 */ }
   }
+  router.push('/history')
 }
 </script>
 
@@ -541,7 +537,6 @@ async function autoFinishInterview() {
   padding: var(--space-6);
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
   gap: var(--space-4);
   scroll-behavior: smooth;
 }
@@ -617,13 +612,6 @@ async function autoFinishInterview() {
 .q-row { display: flex; justify-content: space-between; }
 .ql { font-size: var(--text-sm); color: var(--neutral-500); }
 .qv { font-size: var(--text-sm); font-weight: 500; color: var(--neutral-700); }
-.eval-list { display: flex; flex-direction: column; gap: var(--space-3); }
-.eval-row { display: flex; align-items: center; gap: var(--space-3); }
-.eval-label { width: 60px; font-size: var(--text-xs); color: var(--neutral-600); flex-shrink: 0; }
-.eval-track { flex: 1; height: 6px; background: var(--neutral-200); border-radius: 3px; overflow: hidden; }
-.eval-fill { height: 100%; border-radius: 3px; transition: width 0.8s var(--ease-out-expo); }
-.eval-val { width: 34px; text-align: right; font-family: var(--font-mono); font-size: 11px; font-weight: 600; color: var(--neutral-600); }
-.eval-footnote { font-size: var(--text-xs); color: var(--neutral-400); text-align: center; margin-top: var(--space-3); }
 
 /* Responsive */
 @media (max-width: 1024px) {

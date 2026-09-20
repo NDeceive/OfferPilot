@@ -71,10 +71,18 @@ public class InterviewController {
         return Result.success(flowService.next(sessionId));
     }
 
-    /** 结束面试：会话置为 FINISHED（幂等），并生成规则化报告，返回 reportId */
+    /** 结束面试：会话置为 FINISHED，异步生成报告，立即返回 sessionId */
     @PostMapping("/{sessionId}/finish")
     public Result<Long> finish(@PathVariable Long sessionId) {
         return Result.success(flowService.finish(sessionId));
+    }
+
+    /** 查询报告生成状态：前端轮询此接口，ready=true 时拿到 reportId 跳转 */
+    @GetMapping("/{sessionId}/report-status")
+    public Result<java.util.Map<String, Object>> reportStatus(@PathVariable Long sessionId) {
+        boolean ready = flowService.isReportReady(sessionId);
+        Long reportId = ready ? flowService.getReadyReportId(sessionId) : null;
+        return Result.success(java.util.Map.of("ready", ready, "reportId", reportId != null ? reportId : 0));
     }
 
     /**

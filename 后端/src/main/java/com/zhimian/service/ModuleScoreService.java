@@ -110,6 +110,9 @@ public class ModuleScoreService {
         ScoreResult scoreResult = scoreAllModules(messages, job, session, preferences, signals);
         signals.scoringSource = scoreResult.scoringSource;
 
+        // 4.5 🆕 后校验：信号极差时强制压分（防止AI虚高）
+        validateAndCapScores(scoreResult, signals);
+
         // 5. 读取权重和目标线
         Map<String, Double> weights = preferenceService.getWeightsSnapshot(sessionId);
         Map<String, Integer> targets = preferenceService.getTargetsSnapshot(sessionId);
@@ -118,17 +121,28 @@ public class ModuleScoreService {
         if (weights.isEmpty()) {
             weights = defaultWeights();
             targets = defaultTargets();
+            log.info("使用默认权重/目标 sessionId={}", sessionId);
+        } else {
+            log.info("加载用户偏好权重={} 目标={} sessionId={}", weights, targets, sessionId);
         }
 
-        // 6. Layer 3: 匹配度 + 画像 + 警报
+        // 6. 确定本次面试涉及的模块：有偏好则只用选中的5个，否则用默认
+        Set<String> selectedModules;
+        if (preferences != null && !preferences.isEmpty()) {
+            selectedModules = preferences.stream().map(PreferenceItem::getCode).collect(Collectors.toSet());
+        } else {
+            selectedModules = weights.keySet(); // 旧面试兼容：默认5模块
+        }
+
+        // 7. Layer 3: 匹配度 + 画像 + 警报
         MatchResult matchResult = calculateMatch(scoreResult.scores, weights, targets, preferences);
         List<String> profileLabels = generateProfileLabel(scoreResult.scores, weights, preferences);
         List<String> alerts = checkAlerts(scoreResult.scores, weights, targets, preferences);
 
-        // 7. 保存模块评分明细
-        saveModuleScores(reportId, scoreResult, weights, targets, matchResult);
+        // 8. 保存模块评分明细（只保存用户选中的模块）
+        saveModuleScores(reportId, scoreResult, weights, targets, matchResult, selectedModules);
 
-        // 8. 更新报告
+        // 9. 更新报告
         updateReport(report, matchResult, profileLabels, alerts);
 
         log.info("模块评分完成 sessionId={} reportId={} overallMatch={} source={}",
@@ -152,6 +166,8 @@ public class ModuleScoreService {
         int longAnswers;         // >200字
         int hasStarPattern;      // STAR结构检测
         int hasReflection;       // 复盘反思信号
+        int garbageHits;         // 🆕 垃圾/乱敲检测命中次数
+        int totalAnswers;        // 🆕 总回答条数（含追问回答）
         String scoringSource;    // AI / RULE
 
         double avgLength() {
@@ -162,6 +178,54 @@ public class ModuleScoreService {
             if (followupAsked == 0) return "N/A（未触发追问）";
             return String.format("%d/%d (%.0f%%)", followupAnswered, followupAsked,
                     100.0 * followupAnswered / followupAsked);
+        }
+
+        /** 🆕 内容质量评分 0-1：综合垃圾率、信号丰富度、回答长度 */
+        double contentQuality() {
+            if (totalAnswers == 0) return 0;
+
+            double garbageRate = (double) garbageHits / totalAnswers;
+            double shortRate = (double) shortAnswers / Math.max(totalAnswers, 1);
+            double vagueRate = (double) vagueHits / Math.max(totalAnswers, 1);
+            double avgLen = avgLength();
+
+            // ===== 垃圾回答占比 =====
+            if (garbageRate >= 0.6) return 0.0;  // 全垃圾 → 精确 0
+            if (garbageRate >= 0.4) return 0.04;
+            if (garbageRate >= 0.2) return 0.10;
+
+            // ===== 零有效信号 → 可能是简洁但正确的回答，不应过度惩罚 =====
+            // 关键词信号（techHits/projectHits/logicHits等）只是辅助指标，
+            // 不代表回答质量。AI评分才是质量判断的主要依据。
+            boolean hasAnySignal = techHits > 0 || projectHits > 0 || logicHits > 0
+                    || hasStarPattern > 0 || hasReflection > 0 || jobHits > 0;
+            if (answerCount > 0 && !hasAnySignal) {
+                // 只有伴随垃圾/敷衍时才是真问题
+                if (garbageRate > 0) return 0.0;
+                // 大量过短回答 → 质量偏低但不为0
+                if (shortRate >= 0.5) return 0.2;
+                // 没有垃圾、没有过短 → 可能是简洁的正确回答，给中等质量让AI判断
+                return 0.55;
+            }
+
+            double quality = 1.0;
+
+            // 垃圾/敷衍每条扣分加重
+            quality -= garbageRate * 2.0;
+            quality -= shortRate * 0.8;
+            quality -= vagueRate * 0.5;
+
+            // 平均长度
+            if (avgLen < 10 && avgLen > 0) quality -= 0.6;
+            else if (avgLen < 20 && avgLen > 0) quality -= 0.4;
+            else if (avgLen < 30 && avgLen > 0) quality -= 0.2;
+
+            // 信号贫乏惩罚
+            if (techHits == 0 && answerCount > 0) quality -= 0.15;
+            if (logicHits == 0 && answerCount > 0) quality -= 0.1;
+            if (projectHits == 0 && answerCount > 0) quality -= 0.1;
+
+            return Math.max(0, Math.min(1.0, quality));
         }
     }
 
@@ -188,6 +252,93 @@ public class ModuleScoreService {
     // 反思信号词
     private static final List<String> REFLECTION_WORDS = List.of(
             "不足", "改进", "优化空间", "学到了", "成长", "如果重来", "下次会");
+
+    // 🆕 垃圾/乱敲检测模式
+    private static final List<String> GARBAGE_PATTERNS = List.of(
+            // 英文键盘乱敲
+            "asdf", "qwer", "zxcv", "uiop", "jkl;", "hhhh", "aaaa", "ssss", "dddd",
+            "ffff", "gggg", "jjjj", "kkkk", "llll", "tyui", "ghjk", "bnm,",
+            // 中文乱敲/敷衍
+            "测试测试", "随便", "乱打", "凑字数", "灌水", "12345", "abcd",
+            "。。。", "......", "哈哈哈哈", "呵呵呵呵", "啦啦啦啦", "哦哦哦哦",
+            "嗯嗯嗯嗯", "啊啊啊啊", "无语", "不知道说啥", "不想写", "懒得写",
+            "随便写写", "凑合", "将就", "打发", "糊弄", "应付", "敷衍",
+            // 无意义填充
+            "字数补丁", "占位", "填充", "充数", "打酱油", "路过",
+            "没什么可说", "无话可说", "无话");
+
+    // 🆕 纯敷衍短语（整个回答就是这些之一）
+    private static final List<String> BRUSH_OFF_PHRASES = List.of(
+            "不会", "不知道", "不清楚", "不了解", "嗯", "哦", "好", "行", "可以", "还行",
+            "差不多", "就这样", "没什么好说的", "随便", "你猜",
+            "算了", "不会做", "太难了", "放弃", "跳过", "过", "pass", "skip",
+            "不想回答", "拒绝回答", "无可奉告");
+
+    /** 🆕 检测文本是否为无意义/乱敲 */
+    private boolean isGarbage(String text) {
+        if (text == null || text.trim().isEmpty()) return true;
+
+        String t = text.trim().toLowerCase();
+
+        // 1. 纯敷衍短语（整条回答就是敷衍词）
+        for (String bp : BRUSH_OFF_PHRASES) {
+            if (t.equals(bp) || t.replaceAll("[\\s.,;!?，。；！？…、\"']", "").equals(bp)) return true;
+        }
+
+        // 2. 极短且无意义（< 5字符的纯字母/数字/标点）
+        if (t.length() < 5 && t.matches("[a-z0-9\\s.,;!?，。；！？…]+")) return true;
+
+        // 3. 键盘乱敲/敷衍模式检测
+        int garbagePatternHits = 0;
+        for (String gp : GARBAGE_PATTERNS) {
+            if (t.contains(gp)) garbagePatternHits++;
+        }
+        // 短文本只需命中1个模式即可判垃圾（如"随便打几个字"只有1个"随便"）
+        if (t.length() < 25 && garbagePatternHits >= 1) return true;
+        // 长文本需2个
+        if (garbagePatternHits >= 2) return true;
+
+        // 4. 纯字母连续重复5次以上（如 "aaaaaaa"）
+        if (t.matches(".*([a-zA-Z])\\1{4,}.*")) return true;
+
+        // 5. 纯中文字符但总长<8且全是高频敷衍字
+        if (t.length() < 8 && t.matches("[一-鿿]+")) {
+            String stripped = t.replaceAll("[不不知知道道会清清懂解了了没没用过忘随随便便算算了了]", "");
+            if (stripped.length() < 3) return true;
+        }
+
+        // 6. 内容完全是标点/空格/数字
+        if (t.replaceAll("[\\s.,;!?，。；！？…、\"'0-9]", "").length() < 3) return true;
+
+        // 7. 🆕 中文字符熵检测：同一个字出现 > 总长50%（如 "哈哈哈哈哈测试哈"）
+        if (t.length() >= 6) {
+            int[] freq = new int[65536];
+            int chineseChars = 0;
+            for (char c : t.toCharArray()) {
+                if (c >= 0x4e00 && c <= 0x9fff) {
+                    freq[c]++;
+                    chineseChars++;
+                }
+            }
+            if (chineseChars >= 4) {
+                int maxFreq = 0;
+                for (int f : freq) { if (f > maxFreq) maxFreq = f; }
+                if ((double) maxFreq / chineseChars > 0.5) return true;
+            }
+        }
+
+        // 8. 🆕 纯英文无空格超长字符串（键盘滚过）
+        if (t.length() > 10 && t.matches("[a-z]+") && !t.contains(" ")) {
+            // 检查是否为自然英文：不含元音的比例过高则判垃圾
+            int vowels = 0;
+            for (char c : t.toCharArray()) {
+                if ("aeiou".indexOf(c) >= 0) vowels++;
+            }
+            if ((double) vowels / t.length() < 0.15) return true;
+        }
+
+        return false;
+    }
 
     private Signals extractSignals(List<InterviewMessage> messages, JobPosition job) {
         Signals s = new Signals();
@@ -222,17 +373,23 @@ public class ModuleScoreService {
             boolean isFollowupAnswer = seen >= 1 && qId != null && followedUpQuestionIds.contains(qId);
 
             if (isFollowupAnswer) {
+                s.totalAnswers++;
                 if (isMeaningful(text)) {
                     s.followupAnswered++;
                 }
+                if (isGarbage(text)) s.garbageHits++;
                 continue; // 追问回答不计入主指标
             }
 
             // 主问回答
             s.answerCount++;
+            s.totalAnswers++;
             s.totalLength += text.length();
             if (text.length() < 15) s.shortAnswers++;
             if (text.length() > 200) s.longAnswers++;
+
+            // 🆕 垃圾检测
+            if (isGarbage(text)) s.garbageHits++;
 
             String lower = text.toLowerCase();
 
@@ -310,69 +467,78 @@ public class ModuleScoreService {
     }
 
     /**
-     * 规则兜底：5个旧维度用现有公式，5个新模块给中性分60。
+     * 规则兜底：5个旧维度用现有公式，5个新模块给中性分。
+     * 🆕 所有公式结果乘以内容质量系数，垃圾回答被大幅压低。
      */
     private Map<String, BigDecimal> fallbackRuleScoring(List<InterviewMessage> messages,
                                                          JobPosition job, Signals s) {
         Map<String, BigDecimal> scores = new LinkedHashMap<>();
+        double quality = s.contentQuality();
 
-        // 旧5维公式
-        scores.put("technical_base", scoreKnowledge(s));
-        scores.put("project_expression", scoreProject(s));
-        scores.put("logical_structure", scoreLogic(s));
-        scores.put("position_cognition", scoreMatch(s));
-        scores.put("followup_adaptability", scoreFollowup(s));
+        // 旧5维公式（基准分已降低 + 乘以质量系数）
+        scores.put("technical_base", clamp(scoreKnowledgeRaw(s) * quality));
+        scores.put("project_expression", clamp(scoreProjectRaw(s) * quality));
+        scores.put("logical_structure", clamp(scoreLogicRaw(s) * quality));
+        scores.put("position_cognition", clamp(scoreMatchRaw(s) * quality));
+        scores.put("followup_adaptability", clamp(scoreFollowupRaw(s) * quality));
 
-        // 新5模块：信号辅助的中性分（不完全等于60，有一点区分度）
-        scores.put("technical_depth", scoreDepth(s));
-        scores.put("engineering_practice", clamp(55 + Math.min(15, s.projectHits * 3.0)));
-        scores.put("problem_analysis", clamp(50 + Math.min(20, (s.logicHits + s.hasStarPattern) * 4.0)));
-        scores.put("expression_clarity", clamp(60 - s.vagueHits * 5.0 - s.shortAnswers * 4.0));
-        scores.put("project_review", clamp(50 + Math.min(25, s.hasReflection * 8.0)));
+        // 新5模块：信号辅助 × 质量系数
+        double depthScore = 45 + Math.min(35, s.techHits * 8.0);
+        // 长度加分仅在有技术深度信号时才给
+        if (s.techHits > 0 || s.hasStarPattern > 0) {
+            depthScore += (s.avgLength() >= 80 ? 10 : s.avgLength() >= 50 ? 5 : 0);
+        }
+        depthScore -= s.vagueHits * 4.0;
+        scores.put("technical_depth", clamp(depthScore * quality));
+        scores.put("engineering_practice", clamp((55 + Math.min(15, s.projectHits * 3.0)) * quality));
+        scores.put("problem_analysis", clamp((50 + Math.min(20, (s.logicHits + s.hasStarPattern) * 4.0)) * quality));
+        scores.put("expression_clarity", clamp((60 - s.vagueHits * 5.0 - s.shortAnswers * 4.0) * quality));
+        scores.put("project_review", clamp((50 + Math.min(25, s.hasReflection * 8.0)) * quality));
 
         return scores;
     }
 
-    // -- 旧5维公式（与 ReportService 保持一致） --
-    private BigDecimal scoreKnowledge(Signals m) {
-        double score = 50 + Math.min(40, m.techHits * 8.0) - m.vagueHits * 6.0 - m.shortAnswers * 5.0;
-        return clamp(m.answerCount == 0 ? 0 : score);
+    // 🆕 原始分计算（不含质量系数），供 fallbackRuleScoring 使用
+    private double scoreKnowledgeRaw(Signals m) {
+        if (m.answerCount == 0) return 0;
+        return 50 + Math.min(40, m.techHits * 8.0) - m.vagueHits * 6.0 - m.shortAnswers * 5.0;
     }
 
-    private BigDecimal scoreProject(Signals m) {
-        double score = 48 + Math.min(42, m.projectHits * 7.0) - m.shortAnswers * 5.0 - m.vagueHits * 4.0;
-        return clamp(m.answerCount == 0 ? 0 : score);
+    private double scoreProjectRaw(Signals m) {
+        if (m.answerCount == 0) return 0;
+        // 未涉及项目内容时给中性分而非低分（可能面试官没问项目）
+        double base = m.projectHits > 0 ? 48 : 60;
+        return base + Math.min(42, m.projectHits * 7.0) - m.shortAnswers * 5.0 - m.vagueHits * 4.0;
     }
 
-    private BigDecimal scoreLogic(Signals m) {
+    private double scoreLogicRaw(Signals m) {
+        if (m.answerCount == 0) return 0;
         double score = 50 + Math.min(30, m.logicHits * 8.0);
-        if (m.avgLength() >= 60) score += 14;
-        else if (m.avgLength() >= 30) score += 8;
-        else if (m.avgLength() > 0 && m.avgLength() < 15) score -= 10;
+        // 长度加分仅在回答有实质内容时才给（至少有逻辑/技术/项目/反思任一信号）
+        boolean hasSubstance = m.logicHits > 0 || m.techHits > 0 || m.projectHits > 0
+                || m.hasStarPattern > 0 || m.hasReflection > 0;
+        if (hasSubstance) {
+            if (m.avgLength() >= 60) score += 14;
+            else if (m.avgLength() >= 30) score += 8;
+        }
+        if (m.avgLength() > 0 && m.avgLength() < 15) score -= 10;
         score -= m.vagueHits * 4.0;
-        return clamp(m.answerCount == 0 ? 0 : score);
+        return score;
     }
 
-    private BigDecimal scoreMatch(Signals m) {
-        double score = 52 + Math.min(40, m.jobHits * 10.0) - m.shortAnswers * 4.0;
-        return clamp(m.answerCount == 0 ? 0 : score);
+    private double scoreMatchRaw(Signals m) {
+        if (m.answerCount == 0) return 0;
+        return 52 + Math.min(40, m.jobHits * 10.0) - m.shortAnswers * 4.0;
     }
 
-    private BigDecimal scoreFollowup(Signals m) {
-        if (m.answerCount == 0) return clamp(0);
-        if (m.followupAsked == 0) return clamp(75);
+    private double scoreFollowupRaw(Signals m) {
+        if (m.answerCount == 0) return 0;
+        // 未触发任何追问 → 回答完整全面，无需追问 → 接近满分
+        if (m.followupAsked == 0) return 95;
         double ratio = (double) m.followupAnswered / m.followupAsked;
-        return clamp(45 + ratio * 45);
+        return 45 + ratio * 45;
     }
 
-    private BigDecimal scoreDepth(Signals m) {
-        // 技术深度：基于深度信号词 + 回答篇幅
-        double score = 45 + Math.min(35, m.techHits * 8.0);
-        if (m.avgLength() >= 80) score += 10;
-        else if (m.avgLength() >= 50) score += 5;
-        score -= m.vagueHits * 4.0;
-        return clamp(m.answerCount == 0 ? 0 : score);
-    }
 
     // ============================ DeepSeek 评分调用 ============================
 
@@ -498,6 +664,52 @@ public class ModuleScoreService {
             return String.join(", ", kws);
         } catch (Exception e) {
             return "";
+        }
+    }
+
+    // ============================ 🆕 后校验：信号压分 ============================
+
+    /**
+     * 根据信号质量对评分结果进行后校验，防止AI对垃圾/无关回答给出虚高分数。
+     *
+     * 压分策略：
+     * - quality == 0（纯垃圾/全乱敲）   → 上限 0 分（不给任何分）
+     * - quality < 0.08（严重无效内容）   → 上限 8 分
+     * - quality < 0.15（大量无效内容）   → 上限 18 分
+     * - quality < 0.30（内容贫乏）       → 上限 35 分
+     * - quality < 0.45（明显偏弱）       → 上限 50 分
+     * - quality >= 0.45                  → 不干预
+     */
+    private void validateAndCapScores(ScoreResult sr, Signals signals) {
+        double quality = signals.contentQuality();
+        int cap;
+
+        if (quality == 0) {
+            cap = 0;
+        } else if (quality < 0.08) {
+            cap = 8;
+        } else if (quality < 0.15) {
+            cap = 18;
+        } else if (quality < 0.30) {
+            cap = 35;
+        } else if (quality < 0.45) {
+            cap = 50;
+        } else {
+            return; // 质量尚可，不干预
+        }
+
+        int cappedCount = 0;
+        for (Map.Entry<String, BigDecimal> entry : sr.scores.entrySet()) {
+            double original = entry.getValue().doubleValue();
+            if (original > cap) {
+                entry.setValue(BigDecimal.valueOf(cap));
+                cappedCount++;
+            }
+        }
+
+        if (cappedCount > 0) {
+            log.info("后校验压分: quality={} cap={} 压了{}/{}个模块",
+                    String.format("%.3f", quality), cap, cappedCount, sr.scores.size());
         }
     }
 
@@ -645,9 +857,13 @@ public class ModuleScoreService {
 
     private void saveModuleScores(Long reportId, ScoreResult sr,
                                    Map<String, Double> weights, Map<String, Integer> targets,
-                                   MatchResult match) {
+                                   MatchResult match, Set<String> selectedModules) {
         for (Map.Entry<String, BigDecimal> entry : sr.scores.entrySet()) {
             String code = entry.getKey();
+            // 只保存用户选中的模块（selectedModules 为空时保存全部，兼容旧数据）
+            if (!selectedModules.isEmpty() && !selectedModules.contains(code)) {
+                continue;
+            }
             double rawScore = entry.getValue().doubleValue();
             double target = targets.getOrDefault(code, 75);
             double weight = weights.getOrDefault(code, 0.20);
@@ -666,7 +882,7 @@ public class ModuleScoreService {
             ms.setImprovementPriority(bd(priority));
             ms.setScoreSource(sr.scoringSource);
             ms.setEvidence(sr.evidences.get(code));
-            ms.setSuggestion(sr.suggestions.get(code));
+            ms.setSuggestion(ensureDot(sr.suggestions.get(code)));
             ms.setAiConfidence(sr.confidences.get(code));
             moduleScoreMapper.insert(ms);
         }
@@ -725,6 +941,17 @@ public class ModuleScoreService {
 
     private String safe(String s) {
         return s == null ? "" : s.trim();
+    }
+
+    /** 确保字符串以句号结尾 */
+    private String ensureDot(String s) {
+        if (s == null || s.isBlank()) return s;
+        String t = s.strip();
+        char last = t.charAt(t.length() - 1);
+        if (last != '。' && last != '！' && last != '？' && last != '!' && last != '?' && last != '…' && last != '.') {
+            return t + "。";
+        }
+        return t;
     }
 
     private List<String> parseJsonList(String json) {

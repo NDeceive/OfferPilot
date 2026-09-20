@@ -19,7 +19,7 @@
             <h1 class="hero-name">{{ displayName }}</h1>
           </div>
 
-          <router-link to="/jobs" class="hero-cta">
+          <router-link to="/interview/ai" class="hero-cta">
             <span class="cta-ring">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
             </span>
@@ -270,7 +270,7 @@ function formatInterviewDate(createTime) {
 }
 
 const quickActions = [
-  { to: '/job-select', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>', color: '#10b981', bg: 'rgba(16,185,129,0.08)', title: '面试准备', desc: '选岗位、上传简历' },
+  { to: '/interview/ai', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>', color: '#10b981', bg: 'rgba(16,185,129,0.08)', title: '面试准备', desc: '选岗位、上传简历' },
   { to: '/interview', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>', color: '#3b82f6', bg: 'rgba(59,130,246,0.08)', title: '快速面试', desc: '直接进入模拟' },
   { to: '/history', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>', color: '#f59e0b', bg: 'rgba(245,158,11,0.08)', title: '历史记录', desc: '查看报告与详情' },
 ]

@@ -5,6 +5,10 @@
       <header class="page-header reveal">
         <h1 class="page-title">面试准备</h1>
         <p class="page-desc">选择目标岗位，上传简历，AI 将为你定制专属面试方案</p>
+        <!-- 与 AI 对话入口互为切换：两条路最终落在同一个第 4 步，流程完全一致 -->
+        <button class="mode-switch" @click="router.push('/interview/ai')">
+          <span aria-hidden="true">⇄</span> 切换为 AI 对话
+        </button>
       </header>
 
       <!-- Step Indicator -->
@@ -15,19 +19,23 @@
           class="stepper__item"
           :class="{
             'stepper__item--active': currentStep === i,
-            'stepper__item--done': currentStep > i
+            'stepper__item--done': isStepDone(i),
+            'stepper__item--skipped': isStepSkipped(i)
           }"
         >
           <div class="stepper__dot" :aria-current="currentStep === i ? 'step' : undefined">
-            <svg v-if="currentStep > i" class="stepper__check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <svg v-if="isStepDone(i)" class="stepper__check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="20 6 9 17 4 12" />
             </svg>
             <span v-else class="stepper__num">{{ i + 1 }}</span>
           </div>
-          <span class="stepper__label">{{ step }}</span>
+          <div class="stepper__text-col">
+            <span class="stepper__label">{{ step }}</span>
+            <span v-if="isStepSkipped(i)" class="stepper__warn">⚠️ 未上传简历</span>
+          </div>
         </div>
         <div class="stepper__track">
-          <div class="stepper__track-fill" :style="{ width: (currentStep / 2 * 100) + '%' }" />
+          <div class="stepper__track-fill" :style="{ width: (currentStep / 3 * 100) + '%' }" />
         </div>
       </nav>
 
@@ -192,6 +200,11 @@
                 </template>
               </div>
 
+              <p class="online-hint">
+                没有简历文件？<button class="online-hint__btn" @click="showOnlineResume = true">在线填一份</button>
+                也一样能开始面试
+              </p>
+
               <!-- Extracted Skills -->
               <Transition name="slide-up">
                 <div v-if="extractedSkills.length" class="extracted-skills">
@@ -207,7 +220,40 @@
                       :key="skill"
                       class="skill-pill"
                       :style="{ animationDelay: i * 0.04 + 's' }"
-                    >{{ skill }}</span>
+                    >
+                      {{ skill }}
+                      <button class="skill-pill__remove" @click.stop="removeSkill(i)" title="移除标签">&times;</button>
+                    </span>
+                  </div>
+                  <button class="add-tag-btn" @click="openTagDialog">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    自行增加
+                  </button>
+                </div>
+              </Transition>
+
+              <!-- Tag Selection Dialog -->
+              <Transition name="modal">
+                <div v-if="showTagDialog" class="modal-overlay" @click.self="showTagDialog = false">
+                  <div class="tag-dialog">
+                    <h3 class="tag-dialog__title">选择技能标签</h3>
+                    <p class="tag-dialog__hint">勾选需要添加到个人画像的标签，这些标签会影响面试出题方向</p>
+                    <div v-if="allTags.length" class="tag-dialog__grid">
+                      <label
+                        v-for="tag in allTags"
+                        :key="tag.id"
+                        class="tag-dialog__item"
+                        :class="{ checked: tagChecked(tag.name) }"
+                      >
+                        <input type="checkbox" :checked="tagChecked(tag.name)" @change="toggleTag(tag.name)" />
+                        <span class="tag-dialog__name">{{ tag.name }}</span>
+                        <span v-if="tag.category" class="tag-dialog__cat">{{ tag.category }}</span>
+                      </label>
+                    </div>
+                    <div v-else class="tag-dialog__loading">加载中…</div>
+                    <div class="tag-dialog__actions">
+                      <button class="modal-btn modal-btn-cancel" @click="showTagDialog = false">完成</button>
+                    </div>
                   </div>
                 </div>
               </Transition>
@@ -228,7 +274,7 @@
               <div class="summary-section">
                 <h4 class="summary-section__label">面试重点</h4>
                 <div class="summary-section__tags">
-                  <span v-for="focus in selectedJob.focus" :key="focus" class="focus-pill">{{ focus }}</span>
+                  <span v-for="t in jobTags" :key="t" class="focus-pill">{{ t }}</span>
                 </div>
               </div>
             </aside>
@@ -274,14 +320,7 @@
                     type="checkbox"
                     :checked="selectedModuleCodes.has(m.code)"
                     :disabled="!selectedModuleCodes.has(m.code) && selectedModuleCodes.size >= 5"
-                    @change="(e) => {
-                      if (e.target.checked) {
-                        if (selectedModuleCodes.size < 5) selectedModuleCodes.add(m.code)
-                      } else {
-                        selectedModuleCodes.delete(m.code)
-                      }
-                      selectedModuleCodes = new Set(selectedModuleCodes)
-                    }"
+                    @change="(e) => toggleModule(m.code, e.target.checked)"
                     class="module-check-input"
                   />
                   <span class="module-check-name">{{ m.name }}</span>
@@ -294,20 +333,36 @@
             <!-- Sort area -->
             <div class="module-sort-card card" v-if="selectedModuleCodes.size > 0">
               <h3 class="card__title">排序与目标</h3>
-              <p class="card__desc">设定排位（相同数字=并列）和期望等级，下方实时预览权重分配。</p>
+              <p class="card__desc">拖拽调整顺序，或通过下拉框设定排位（相同数字=并列）</p>
 
-              <div class="sort-list">
+              <TransitionGroup name="sort-tr" tag="div" class="sort-list">
                 <div
-                  v-for="m in allModules.filter(x => selectedModuleCodes.has(x.code))"
-                  :key="'sort-' + m.code"
+                  v-for="(m, idx) in sortedSelectedModules"
+                  :key="m.code"
                   class="sort-item"
+                  :class="{ 'sort-item--dragging': dragIndex === idx, 'sort-item--over': dragOverIndex === idx && dragIndex !== idx }"
+                  draggable="true"
+                  @dragstart="onDragStart($event, idx)"
+                  @dragover.prevent="onDragOver($event, idx)"
+                  @drop="onDrop($event, idx)"
+                  @dragend="onDragEnd"
                 >
+                  <!-- 拖拽手柄 -->
+                  <div class="sort-item__grip">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                      <line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="18" x2="16" y2="18"/>
+                    </svg>
+                  </div>
+
+                  <!-- 模块名 -->
                   <span class="sort-item__name">{{ m.name }}</span>
+
+                  <!-- 排位 + 目标 -->
                   <div class="sort-item__ctrls">
                     <label class="sort-label">排位</label>
                     <select
                       :value="m._rank"
-                      @change="(e) => { m._rank = Number(e.target.value) }"
+                      @change="(e) => onRankChange(m.code, Number(e.target.value))"
                       class="sort-select"
                     >
                       <option v-for="r in [1,2,3,4,5]" :key="r" :value="r">第{{ r }}位</option>
@@ -319,19 +374,19 @@
                       class="sort-select"
                     >
                       <option v-for="opt in LEVEL_OPTIONS" :key="opt.value" :value="opt.value">
-                        {{ opt.label }} ({{ opt.target }}分)
+                        {{ opt.label }}
                       </option>
                     </select>
                   </div>
                 </div>
-              </div>
+              </TransitionGroup>
 
               <!-- Weight preview -->
               <div class="weight-preview" v-if="selectedModuleCodes.size === 5">
                 <h4 class="weight-preview__title">权重预览</h4>
                 <div class="weight-bars">
                   <div
-                    v-for="m in allModules.filter(x => selectedModuleCodes.has(x.code))"
+                    v-for="m in sortedSelectedModules"
                     :key="'w-' + m.code"
                     class="weight-bar"
                   >
@@ -441,27 +496,41 @@
             </button>
           </div>
         </section>
+
+      <!-- 在线简历：与 AI 对话入口共用同一个组件，两条路产出同一份画像 -->
+      <OnlineResumeDialog v-model="showOnlineResume" @saved="onOnlineResumeSaved" />
     </div>
   </AppLayout>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import AppLayout from '../components/layout/AppLayout.vue'
-import { getJobList, uploadResumeFile, startInterview, getModules } from '../api'
+import OnlineResumeDialog from '../components/resume/OnlineResumeDialog.vue'
+import { getJobList, uploadResumeFile, startInterview, getModules, getResumeFileProfile, getMyResume } from '../api'
+import request from '../utils/request'
+import { READY_JOBS, JOB_FAMILIES as families, familyColorMap, mapJobFromBackend, parseJsonField } from '../utils/jobs'
 
 /* ------------------------------------------------------------------ */
 /*  State                                                              */
 /* ------------------------------------------------------------------ */
 const router = useRouter()
+const route = useRoute()
 const currentStep = ref(0)
 const searchQuery = ref('')
 const selectedJob = ref(null)
+const jobTags = computed(() => {
+  if (!selectedJob.value) return []
+  return [...new Set([...selectedJob.value.tags, ...selectedJob.value.focus])]
+})
 const isDragging = ref(false)
 const uploadedFile = ref(null)
 const fileInput = ref(null)
 const extractedSkills = ref([])
+const allTags = ref([])
+const showTagDialog = ref(false)
+const showOnlineResume = ref(false)
 
 const jobsLoading = ref(false)
 const jobsError = ref('')
@@ -473,12 +542,47 @@ const activeFamily = ref('')
 
 const stepsInfo = ['选择岗位', '上传简历', '训练目标', '确认信息']
 
+/** 每一步是否真正完成（而非仅被跳过） */
+function isStepDone(i) {
+  switch (i) {
+    case 0: // 选择岗位 — 走到了下一步且确实选了岗位
+      return currentStep.value > 0 && selectedJob.value !== null
+    case 1: // 上传简历 — 必须确实上传了文件才算完成
+      return uploadedFile.value !== null
+    case 2: // 训练目标 — 走到了确认页且选了5个模块
+      return currentStep.value > 2 && selectedModuleCodes.value.size === 5
+    case 3: // 确认信息 — 最后一步永远不显示"完成"
+      return false
+    default:
+      return false
+  }
+}
+
+/** 步骤是否被跳过（走过但未完成） */
+function isStepSkipped(i) {
+  // 仅"上传简历"步骤可跳过：currentStep 已越过它 且 确实没上传文件
+  if (i === 1) return currentStep.value > 1 && uploadedFile.value === null
+  return false
+}
+
+/** 已完成步骤数（控制进度条填充宽度） */
+const doneCount = computed(() => {
+  let count = 0
+  for (let i = 0; i < stepsInfo.length; i++) {
+    if (isStepDone(i)) count++
+  }
+  return count
+})
+
 /* ------------------------------------------------------------------ */
 /*  Module selection state (Step 3)                                     */
 /* ------------------------------------------------------------------ */
 const allModules = ref([])
 const modulesLoading = ref(false)
 const selectedModuleCodes = ref(new Set())  // user-selected module codes (max 5)
+
+/** 拖拽排序后的模块顺序（code 数组，位置=排位） */
+const sortOrder = ref([])
 
 // Level labels and their target scores
 const LEVEL_OPTIONS = [
@@ -490,110 +594,151 @@ const LEVEL_OPTIONS = [
 // Weight pool
 const RANK_WEIGHT = { 1: 0.30, 2: 0.25, 3: 0.20, 4: 0.15, 5: 0.10 }
 
-/** Calculate weights from ranks (with tie support) */
-function calcWeights() {
-  const selected = allModules.value.filter(m => selectedModuleCodes.value.has(m.code))
-  if (!selected.length) return {}
-  // Group by rank
-  const groups = {}
-  selected.forEach(m => {
-    const r = m._rank || 1
-    if (!groups[r]) groups[r] = []
-    groups[r].push(m)
+/** 按 sortOrder 排序后的选中模块列表 */
+const sortedSelectedModules = computed(() => {
+  return sortOrder.value.map(code => {
+    const m = allModules.value.find(x => x.code === code)
+    return m || { code, name: code, _level: 2 }
   })
-  // All same rank = balanced mode
-  if (Object.keys(groups).length === 1) {
-    const each = 1 / selected.length
-    const w = {}
-    selected.forEach(m => { w[m.code] = each })
-    return w
+})
+
+// --- 拖拽状态 ---
+const dragIndex = ref(null)
+const dragOverIndex = ref(null)
+
+function onDragStart(e, idx) {
+  dragIndex.value = idx
+  e.dataTransfer.effectAllowed = 'move'
+  e.dataTransfer.setData('text/plain', String(idx))
+  // 让拖拽时的半透明预览生效
+  if (e.target.closest('.sort-item')) {
+    e.dataTransfer.setDragImage(e.target.closest('.sort-item'), 0, 0)
   }
+}
+
+function onDragOver(e, idx) {
+  if (dragIndex.value === null) return
+  dragOverIndex.value = idx
+}
+
+function onDrop(e, idx) {
+  if (dragIndex.value === null || dragIndex.value === idx) return
+  const fromIdx = dragIndex.value
+  const toIdx = idx
+
+  // 移动模块
+  const items = [...sortOrder.value]
+  const [moved] = items.splice(fromIdx, 1)
+  items.splice(toIdx, 0, moved)
+  sortOrder.value = items
+
+  // 只交换两个被拖拽项的 _rank，其他项完全不动
+  const fromCode = sortOrder.value[toIdx]
+  const displacedCode = fromIdx < toIdx
+    ? sortOrder.value[toIdx - 1]
+    : sortOrder.value[toIdx + 1]
+
+  if (fromCode && displacedCode) {
+    const fromMod = allModules.value.find(x => x.code === fromCode)
+    const dispMod = allModules.value.find(x => x.code === displacedCode)
+    if (fromMod && dispMod) {
+      const tmp = fromMod._rank
+      fromMod._rank = dispMod._rank
+      dispMod._rank = tmp
+    }
+  }
+}
+
+function onDragEnd() {
+  dragIndex.value = null
+  dragOverIndex.value = null
+}
+
+/** 下拉框改变排位 → 重新排序并压缩空位（不出现 1 1 1 1 5 这种跳号） */
+function onRankChange(code, newRank) {
+  const m = allModules.value.find(x => x.code === code)
+  if (m) m._rank = newRank
+
+  // 1. 先按用户选择的 _rank 排序
+  const selected = allModules.value.filter(x => selectedModuleCodes.value.has(x.code))
+  selected.sort((a, b) => {
+    const ra = a._rank || 1
+    const rb = b._rank || 1
+    if (ra !== rb) return ra - rb
+    const ia = sortOrder.value.indexOf(a.code)
+    const ib = sortOrder.value.indexOf(b.code)
+    return ia - ib
+  })
+
+  // 2. 消除空位：去重排序后映射（1→1, 3→2, 5→3，保留同排位）
+  const uniqueRanks = [...new Set(selected.map(m => m._rank))].sort((a, b) => a - b)
+  const rankMap = {}
+  uniqueRanks.forEach((r, i) => { rankMap[r] = i + 1 })
+  selected.forEach(m => { m._rank = rankMap[m._rank] })
+
+  sortOrder.value = selected.map(x => x.code)
+}
+
+/** 勾选/取消模块 */
+function toggleModule(code, checked) {
+  if (checked) {
+    if (selectedModuleCodes.value.size >= 5) return
+    selectedModuleCodes.value.add(code)
+  } else {
+    selectedModuleCodes.value.delete(code)
+  }
+  selectedModuleCodes.value = new Set(selectedModuleCodes.value)
+  syncSortOrder()
+}
+
+// 当选中的模块变化时，同步 sortOrder
+function syncSortOrder() {
+  const selected = [...selectedModuleCodes.value]
+  // 移除已取消选择的
+  sortOrder.value = sortOrder.value.filter(c => selected.includes(c))
+  // 新选中的追加到末尾，并自动分配顺序排位（不再全挤在第1位）
+  for (const code of selected) {
+    if (!sortOrder.value.includes(code)) {
+      sortOrder.value.push(code)
+    }
+  }
+  // 按当前顺序自动分配排位 1,2,3,4,5（之后用户可拖拽或下拉修改）
+  sortOrder.value.forEach((code, idx) => {
+    const mod = allModules.value.find(x => x.code === code)
+    if (mod) mod._rank = idx + 1
+  })
+}
+
+/** Calculate weights from sortOrder position */
+function calcWeights() {
   const weights = {}
-  Object.entries(groups).forEach(([rank, mods]) => {
-    let poolSum = 0
-    const r = Number(rank)
-    for (let i = r; i < r + mods.length; i++) poolSum += (RANK_WEIGHT[i] || 0)
-    const each = poolSum / mods.length
-    mods.forEach(m => { weights[m.code] = Math.round(each * 10000) / 10000 })
+  sortOrder.value.forEach((code, idx) => {
+    weights[code] = RANK_WEIGHT[idx + 1] || 0.10
   })
   return weights
 }
 
-/** Get module preferences for API */
+/** Get module preferences for API（直接从 sortOrder 位置算排位，不依赖 _rank） */
 function buildModulePreferences() {
-  const selected = allModules.value.filter(m => selectedModuleCodes.value.has(m.code))
-  return selected.map(m => ({
-    code: m.code,
-    rank: m._rank || 1,
-    level: m._level || 2,
-  }))
-}
-
-/* ------------------------------------------------------------------ */
-/*  Jobs ready for interview                                           */
-/* ------------------------------------------------------------------ */
-const READY_JOBS = new Set([
-  'BE-JAVA',   // Java后端开发工程师
-  'BE-PY',     // Python后端开发工程师
-  'FE-WEB',    // Web前端开发工程师
-  'FS-JAVA',   // Java Web全栈开发工程师
-  'ALG-ML',    // 机器学习算法工程师
-])
-
-/* ------------------------------------------------------------------ */
-/*  Family definitions                                                  */
-/* ------------------------------------------------------------------ */
-const families = [
-  { code: '后端开发', name: '后端开发', icon: 'B' },
-  { code: '前端与客户端开发', name: '前端与客户端', icon: 'F' },
-  { code: '全栈开发', name: '全栈开发', icon: 'S' },
-  { code: '算法与人工智能', name: '算法与AI', icon: 'A' },
-  { code: '产品经理', name: '产品经理', icon: 'P' },
-  { code: '数据分析', name: '数据分析', icon: 'D' },
-  { code: '软件测试', name: '软件测试', icon: 'Q' },
-]
-
-const familyColorMap = {
-  '后端开发':          { iconBg: 'rgba(99,102,241,0.08)',  accentColor: '#6366f1' },
-  '前端与客户端开发':  { iconBg: 'rgba(249,115,22,0.08)',  accentColor: '#f97316' },
-  '全栈开发':          { iconBg: 'rgba(16,185,129,0.08)',  accentColor: '#10b981' },
-  '算法与人工智能':    { iconBg: 'rgba(236,72,153,0.08)',  accentColor: '#ec4899' },
-  '产品经理':          { iconBg: 'rgba(6,182,212,0.08)',   accentColor: '#06b6d4' },
-  '数据分析':          { iconBg: 'rgba(168,85,247,0.08)',  accentColor: '#a855f7' },
-  '软件测试':          { iconBg: 'rgba(234,179,8,0.08)',   accentColor: '#eab308' },
+  return sortOrder.value.map((code, idx) => {
+    const m = allModules.value.find(x => x.code === code)
+    return {
+      code,
+      rank: idx + 1,         // 位置即排位，不受 _rank 重置影响
+      level: m?._level || 2,
+    }
+  })
 }
 
 /* ------------------------------------------------------------------ */
 /*  Job data - loaded from API                                         */
 /* ------------------------------------------------------------------ */
+// READY_JOBS / families / familyColorMap / mapJobFromBackend 已抽到 utils/jobs.js：
+// AI 对话入口（AiPrep.vue）要用同一份。尤其 READY_JOBS 是「题库撑得住」的正确性白名单
+// （题库支撑见 后端/src/main/resources/db/migration_v4_job_banks.sql，⚠ 岗位与题目没有外键，
+// 全靠运行时模糊匹配，加岗位或改标签后必须跑 db/check_pools.py 复算，要求每个岗位可抽题数 >= 25），
+// 复制一份迟早会漏掉某个岗位，用户选中后要到启动面试才报「未找到匹配的面试题目」。
 const jobs = ref([])
-
-/* ------------------------------------------------------------------ */
-/*  Mappers                                                            */
-/* ------------------------------------------------------------------ */
-function mapJobFromBackend(job) {
-  const colors = familyColorMap[job.family] || familyColorMap['后端开发']
-  return {
-    id: job.id,
-    title: job.name,
-    code: job.code || '',
-    family: job.family || '',
-    tags: parseJsonField(job.keywords),
-    focus: parseJsonField(job.abilities),
-    iconBg: colors.iconBg,
-    accentColor: colors.accentColor,
-    category: job.category || '',
-    pro: false,
-  }
-}
-
-function parseJsonField(raw) {
-  if (Array.isArray(raw)) return raw
-  if (typeof raw === 'string') {
-    try { return JSON.parse(raw) } catch { return [raw] }
-  }
-  return []
-}
 
 async function fetchJobs() {
   jobsLoading.value = true
@@ -633,13 +778,18 @@ const filteredJobs = computed(() => {
   const pool = activeFamily.value
     ? (jobsByFamily.value[activeFamily.value] || [])
     : jobs.value
-  return pool.filter(j => {
-    const matchSearch =
-      !searchQuery.value ||
-      j.title.includes(searchQuery.value) ||
-      j.tags.some(t => t.includes(searchQuery.value))
-    return matchSearch
-  })
+  // 可面试的岗位排前面：按接口返回顺序，分区里「敬请期待」的卡片有时恰好排在第一张，
+  // 点进去第一眼看到的是点不开的岗位。filter 已经返回新数组，这里 sort 不会改动原列表；
+  // Array.sort 自 ES2019 起稳定，所以两组内部仍保持接口返回的次序。
+  return pool
+    .filter(j => {
+      const matchSearch =
+        !searchQuery.value ||
+        j.title.includes(searchQuery.value) ||
+        j.tags.some(t => t.includes(searchQuery.value))
+      return matchSearch
+    })
+    .sort((a, b) => (READY_JOBS.has(a.code) ? 0 : 1) - (READY_JOBS.has(b.code) ? 0 : 1))
 })
 
 /* Ensure grid stays as tall as the largest family's grid */
@@ -727,20 +877,69 @@ function simulateExtract() {
     })
 }
 
+// ---- 标签管理 ----
+function removeSkill(index) {
+  extractedSkills.value.splice(index, 1)
+  syncTagsToServer()
+}
+
+async function openTagDialog() {
+  showTagDialog.value = true
+  if (!allTags.value.length) {
+    try {
+      const data = await request.get('/tags')
+      allTags.value = data || []
+    } catch (e) {
+      console.error('Failed to load tags', e)
+    }
+  }
+}
+
+function tagChecked(name) {
+  return extractedSkills.value.includes(name)
+}
+
+function toggleTag(name) {
+  const idx = extractedSkills.value.indexOf(name)
+  if (idx >= 0) {
+    extractedSkills.value.splice(idx, 1)
+  } else {
+    extractedSkills.value.push(name)
+  }
+  syncTagsToServer()
+}
+
+function syncTagsToServer() {
+  request.put('/resume/tags', { tags: extractedSkills.value }).catch(e => {
+    console.error('Failed to sync tags', e)
+  })
+}
+
+/** 在线简历填完：当作「简历已就绪」处理，后续出题读的是同一张 resume 表 */
+function onOnlineResumeSaved(payload) {
+  extractedSkills.value = payload?.skills || []
+  uploadedFile.value = { name: '在线简历', size: 0 }
+  resumeError.value = ''
+}
+
 function formatSize(bytes) {
+  // AI 入口接力过来时只回填一个占位对象（没有真实文件、size 为 0），
+  // 没有这道守卫会把它显示成「0 B」
+  if (!bytes) return ''
   if (bytes < 1024) return bytes + ' B'
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
 }
 
 async function handleStartInterview() {
-  if (!selectedJob.value) return
+  if (!selectedJob.value || startingInterview.value) return
   startingInterview.value = true
   startError.value = ''
   try {
     const payload = { jobId: selectedJob.value.id }
     if (selectedModuleCodes.value.size === 5) {
       payload.modulePreferences = buildModulePreferences()
+      console.log('发送模块偏好:', JSON.stringify(payload.modulePreferences))
     }
     const res = await startInterview(payload)
     router.push({
@@ -748,6 +947,8 @@ async function handleStartInterview() {
       query: {
         sessionId: String(res.sessionId),
         jobId: String(selectedJob.value.id),
+        jobName: res.jobName || '',
+        duration: String(res.durationSeconds || 1800),
       },
     })
   } catch (e) {
@@ -792,14 +993,21 @@ async function fetchModules() {
   modulesLoading.value = true
   try {
     const data = await getModules()
-    allModules.value = (Array.isArray(data) ? data : []).map(m => ({
+    allModules.value = (Array.isArray(data) ? data : []).map((m, i) => ({
       ...m,
       _rank: 1,
-      _level: 2,
+      _level: (i % 3) + 1,  // 默认轮换：1=简单关注, 2=重点提升, 3=核心突破
     }))
     // Default: select first 5
     if (allModules.value.length >= 5 && selectedModuleCodes.value.size === 0) {
       allModules.value.slice(0, 5).forEach(m => selectedModuleCodes.value.add(m.code))
+    }
+    // Initialize sort order with sequential ranks
+    if (sortOrder.value.length === 0 && selectedModuleCodes.value.size > 0) {
+      sortOrder.value = allModules.value
+        .filter(m => selectedModuleCodes.value.has(m.code))
+        .map(m => m.code)
+      syncSortOrder() // 分配 1,2,3,4,5 排位
     }
   } catch (e) {
     console.warn('Failed to load modules:', e)
@@ -808,10 +1016,73 @@ async function fetchModules() {
   }
 }
 
-onMounted(() => {
+/* ------------------------------------------------------------------ */
+/*  承接 AI 对话入口的接力（/jobs?job=CODE&step=2&from=ai）              */
+/* ------------------------------------------------------------------ */
+/**
+ * AiPrep.vue 已经收完岗位和简历，这里只做「接着往下走」。
+ *
+ * 回读简历画像不是为了展示好看：第 2 步增删标签会调 syncTagsToServer()，用本地数组
+ * **整体覆盖** resume.skills。不回读的话，用户一删标签就会把出题依据替换成一份不完整的
+ * 列表 —— 只影响展示的部分可以偷懒，这里不行。
+ */
+async function applyQueryPrefill() {
+  const q = route.query
+
+  // 岗位：按 code 命中（两端一致的稳定标识），未就绪的不认，避免选了个没题的岗位
+  const code = typeof q.job === 'string' ? q.job : ''
+  if (code) {
+    const hit = jobs.value.find(j => j.code === code)
+    if (hit && READY_JOBS.has(hit.code)) {
+      selectedJob.value = hit
+      // 不设岗位族的话，第 1 步会停在「请选择一个岗位族」的空态
+      activeFamily.value = hit.family
+    }
+  }
+
+  if (q.from === 'ai') {
+    // 文件名只有上传过文件才有，在线简历这条路拿不到（也不需要有）
+    let filename = ''
+    try {
+      const profile = await getResumeFileProfile()
+      filename = profile?.filename || ''
+    } catch (e) {
+      console.warn('Failed to preload resume file profile:', e)
+    }
+
+    // 标签以 resume 表为准：InterviewFlowService#extractTagsFromResume 读的就是这张表的
+    // skills + keywords，而在线简历只有这张表有数据 —— 只看 file-profile 的话，
+    // 在线填的简历到这里会变成「一个标签都没有」，甚至被判成没传过简历。
+    // 两个字段后端都存成 JSON 字符串，用 parseJsonField 解一层。
+    let skills = []
+    try {
+      const mine = await getMyResume()
+      skills = [...new Set([...parseJsonField(mine?.skills), ...parseJsonField(mine?.keywords)])]
+    } catch (e) {
+      console.warn('Failed to preload resume tags:', e)
+    }
+
+    if (filename || skills.length) {
+      // 占位对象：第 1 步靠 uploadedFile !== null 判定「已上传」。这里没有真实文件，
+      // size 给 0 并由 formatSize 的守卫显示成空串，而不是「0 B」
+      uploadedFile.value = { name: filename || '在线简历', size: 0 }
+      extractedSkills.value = skills
+    }
+  }
+
+  const step = Number(q.step)
+  if (Number.isInteger(step) && step >= 0 && step <= 3) {
+    currentStep.value = step
+  }
+}
+
+onMounted(async () => {
   scheduleObserve()
-  fetchJobs()
-  fetchModules()
+  // 必须等岗位加载完再预选：jobs 还是空数组时按 code 找不到任何岗位，
+  // 用户会看到「明明从 AI 页选了岗位，这里却没选上」
+  await Promise.all([fetchJobs(), fetchModules()])
+  await applyQueryPrefill()
+  scheduleObserve()
 })
 onUnmounted(() => { if (observer) observer.disconnect() })
 </script>
@@ -848,6 +1119,29 @@ onUnmounted(() => { if (observer) observer.disconnect() })
   font-size: var(--text-base);
   color: var(--neutral-500);
   font-family: var(--font-body);
+}
+
+/* 与 AI 对话入口的切换按钮：做成低调的胶囊，不抢「面试准备」标题的视觉重心 */
+.mode-switch {
+  margin-top: var(--space-4);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--neutral-200);
+  border-radius: var(--radius-full);
+  background: var(--surface-elevated);
+  color: var(--neutral-600);
+  font-size: var(--text-sm);
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out-quart);
+}
+
+.mode-switch:hover {
+  border-color: var(--accent-500);
+  color: var(--accent-600);
+  background: var(--accent-50);
 }
 
 /* ===================================================================
@@ -927,6 +1221,31 @@ onUnmounted(() => { if (observer) observer.disconnect() })
 
 .stepper__item--done .stepper__label {
   color: var(--neutral-600);
+}
+
+/* Skipped (e.g. 未上传简历) */
+.stepper__item--skipped .stepper__dot {
+  border-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.08);
+  color: #f59e0b;
+}
+
+.stepper__item--skipped .stepper__label {
+  color: #92400e;
+}
+
+.stepper__text-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+}
+
+.stepper__warn {
+  font-size: 10px;
+  color: #d97706;
+  font-weight: 500;
+  white-space: nowrap;
 }
 
 /* Track */
@@ -1422,6 +1741,30 @@ onUnmounted(() => { if (observer) observer.disconnect() })
   color: var(--neutral-400);
 }
 
+/* 没有简历文件时的第二条路 */
+.online-hint {
+  margin: var(--space-4) 0 0;
+  font-size: var(--text-sm);
+  color: var(--neutral-500);
+  text-align: center;
+}
+
+.online-hint__btn {
+  border: none;
+  background: transparent;
+  padding: 0 2px;
+  color: var(--accent-600);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.online-hint__btn:hover {
+  color: var(--accent-700);
+}
+
 /* File chip (after upload) */
 .file-chip {
   display: flex;
@@ -1502,7 +1845,10 @@ onUnmounted(() => { if (observer) observer.disconnect() })
 }
 
 .skill-pill {
-  padding: var(--space-1) var(--space-3);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: var(--space-1) var(--space-2) var(--space-1) var(--space-3);
   border-radius: var(--radius-full);
   background: var(--accent-50);
   border: 1px solid var(--accent-200);
@@ -1511,6 +1857,157 @@ onUnmounted(() => { if (observer) observer.disconnect() })
   font-family: var(--font-mono);
   animation: skill-pop 0.3s var(--ease-out-expo) backwards;
 }
+
+.skill-pill__remove {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--accent-400);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--duration-fast);
+  flex-shrink: 0;
+  margin-left: 2px;
+}
+.skill-pill__remove:hover {
+  background: var(--accent-200);
+  color: var(--accent-700);
+}
+
+.add-tag-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: var(--space-3);
+  padding: var(--space-1) var(--space-3);
+  border: 1px dashed var(--neutral-300);
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--neutral-500);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+.add-tag-btn:hover {
+  border-color: var(--accent-400);
+  color: var(--accent-600);
+  background: var(--accent-50);
+}
+
+/* Tag Selection Dialog */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+}
+
+.tag-dialog {
+  background: var(--surface-elevated);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  max-width: 520px;
+  width: 90%;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-xl);
+}
+.tag-dialog__title {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--neutral-900);
+  margin-bottom: var(--space-2);
+}
+.tag-dialog__hint {
+  font-size: var(--text-xs);
+  color: var(--neutral-500);
+  margin-bottom: var(--space-4);
+  line-height: 1.5;
+}
+.tag-dialog__grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  overflow-y: auto;
+  flex: 1;
+  padding-bottom: var(--space-2);
+}
+.tag-dialog__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--neutral-200);
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+  user-select: none;
+}
+.tag-dialog__item:hover {
+  border-color: var(--accent-300);
+  background: var(--accent-50);
+}
+.tag-dialog__item.checked {
+  border-color: var(--accent-400);
+  background: var(--accent-50);
+  color: var(--accent-700);
+}
+.tag-dialog__item input[type="checkbox"] {
+  accent-color: var(--color-primary);
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+.tag-dialog__name {
+  font-weight: 500;
+  color: var(--neutral-800);
+}
+.tag-dialog__cat {
+  font-size: var(--text-xs);
+  color: var(--neutral-400);
+}
+.tag-dialog__loading {
+  text-align: center;
+  color: var(--neutral-400);
+  padding: var(--space-6);
+}
+.tag-dialog__actions {
+  margin-top: var(--space-4);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.modal-btn {
+  padding: var(--space-2) var(--space-5);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all var(--duration-fast);
+}
+.modal-btn-cancel {
+  background: var(--neutral-100);
+  color: var(--neutral-600);
+}
+.modal-btn-cancel:hover { background: var(--neutral-200); }
+
+.modal-enter-active,
+.modal-leave-active { transition: opacity 0.2s; }
+.modal-enter-from,
+.modal-leave-to { opacity: 0; }
 
 .slide-up-enter-active {
   transition: all 0.4s var(--ease-out-expo);
@@ -1925,33 +2422,74 @@ onUnmounted(() => { if (observer) observer.disconnect() })
 .sort-list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-2);
   margin: var(--space-4) 0;
+  position: relative;
 }
 
 .sort-item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-2);
   background: var(--neutral-50);
   border: 1px solid var(--neutral-200);
   border-radius: var(--radius-md);
-  flex-wrap: wrap;
+  cursor: default;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.sort-item:hover {
+  border-color: var(--neutral-300);
+}
+
+.sort-item--dragging {
+  opacity: 0.4;
+  background: var(--accent-50);
+}
+
+.sort-item--over {
+  border-color: var(--accent-400);
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.15);
+  background: rgba(16, 185, 129, 0.04);
+}
+
+/* Drag grip */
+.sort-item__grip {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--neutral-300);
+  cursor: grab;
+  border-radius: var(--radius-sm);
+  transition: color 0.15s, background 0.15s;
+}
+
+.sort-item__grip:hover {
+  color: var(--neutral-500);
+  background: var(--neutral-100);
+}
+
+.sort-item__grip:active {
+  cursor: grabbing;
 }
 
 .sort-item__name {
   font-weight: 600;
   font-size: var(--text-sm);
   color: var(--neutral-800);
-  min-width: 90px;
+  flex: 1;
+  min-width: 0;
 }
 
 .sort-item__ctrls {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  flex-shrink: 0;
 }
 
 .sort-label {
@@ -1969,6 +2507,32 @@ onUnmounted(() => { if (observer) observer.disconnect() })
   background: var(--surface-elevated);
   color: var(--neutral-800);
   cursor: pointer;
+}
+
+/* ===================================================================
+   TransitionGroup: sort list animations
+   =================================================================== */
+.sort-tr-enter-active {
+  transition: all 0.4s var(--ease-out-expo);
+}
+
+.sort-tr-leave-active {
+  transition: all 0.25s ease-in;
+  position: absolute;
+}
+
+.sort-tr-enter-from {
+  opacity: 0;
+  transform: translateX(40px) scale(0.95);
+}
+
+.sort-tr-leave-to {
+  opacity: 0;
+  transform: translateX(-30px) scale(0.9);
+}
+
+.sort-tr-move {
+  transition: transform 0.35s var(--ease-out-expo);
 }
 
 /* Weight preview */

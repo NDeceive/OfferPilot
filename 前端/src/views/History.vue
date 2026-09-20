@@ -27,7 +27,7 @@
     <!-- Records List -->
     <div class="records-list">
       <div
-        v-for="(record, i) in filteredRecords"
+        v-for="(record, i) in pagedRecords"
         :key="record.id"
         class="record-card"
         :style="{ '--reveal-delay': i * 60 + 'ms' }"
@@ -92,7 +92,7 @@
 
     <!-- Pagination -->
     <div class="pagination" v-if="filteredRecords.length > 0">
-      <span class="page-info">共 {{ records.length }} 条记录</span>
+      <span class="page-info">共 {{ filteredRecords.length }} 条记录</span>
       <div class="page-buttons">
         <button class="page-btn" :disabled="currentPage === 1" @click="currentPage--">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
@@ -110,6 +110,10 @@
         <div class="modal-card">
           <h3 class="modal-title">确认删除</h3>
           <p class="modal-body">确定要删除「{{ deleteTarget.position }}」的面试记录吗？此操作不可撤销。</p>
+          <label class="modal-skip">
+            <input type="checkbox" v-model="skipConfirm" />
+            <span>之后不再提醒</span>
+          </label>
           <div class="modal-actions">
             <button class="modal-btn modal-btn-cancel" @click="deleteTarget = null">取消</button>
             <button class="modal-btn modal-btn-danger" @click="doDelete">确认删除</button>
@@ -122,7 +126,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import AppLayout from '../components/layout/AppLayout.vue'
 import { getInterviewRecords } from '../api'
@@ -140,17 +144,35 @@ const records = ref([])
 const loading = ref(true)
 const loadError = ref(false)
 const deleteTarget = ref(null)
+const skipConfirm = ref(false)
+const SKIP_KEY = 'interview_delete_skip_confirm'
+
+// 初始化时读取 localStorage 偏好
+try {
+  skipConfirm.value = localStorage.getItem(SKIP_KEY) === 'true'
+} catch {}
+
+function confirmDelete(record) {
+  // 用户已选择"不再提醒"，直接删除
+  if (skipConfirm.value) {
+    deleteTarget.value = record
+    doDelete()
+    return
+  }
+  deleteTarget.value = record
+}
 
 function formatDuration(seconds) {
-  if (!seconds) return ''
+  if (seconds == null) return '未记录'
   const m = Math.floor(seconds / 60)
   const s = seconds % 60
   return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0')
 }
 
 function formatDate(dateStr) {
-  if (!dateStr) return ''
+  if (!dateStr) return '未记录'
   const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return '未记录'
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
@@ -165,10 +187,10 @@ async function fetchRecords() {
     records.value = (data || []).map(item => ({
       id: item.sessionId,
       reportId: item.reportId,
-      date: formatDate(item.createTime),
+      date: formatDate(item.startTime),
       position: item.jobName || '未知岗位',
       score: item.totalScore,
-      duration: formatDuration(item.durationSeconds),
+      duration: formatDuration(item.actualDurationSeconds ?? item.durationSeconds),
       status: statusApiMap[item.status] || 'completed',
     }))
   } catch (e) {
@@ -194,7 +216,26 @@ const filteredRecords = computed(() => {
   })
 })
 
-const totalPages = computed(() => Math.max(1, Math.ceil(filteredRecords.value.length / 10)))
+const PAGE_SIZE = 10
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredRecords.value.length / PAGE_SIZE)))
+
+// 实际分页后的记录
+const pagedRecords = computed(() => {
+  const start = (currentPage.value - 1) * PAGE_SIZE
+  return filteredRecords.value.slice(start, start + PAGE_SIZE)
+})
+
+// 删除或筛选后，当前页可能超出总页数，自动回退
+function clampPage() {
+  if (currentPage.value > totalPages.value) {
+    currentPage.value = totalPages.value
+  }
+}
+
+// 切换筛选条件时重置页码
+watch([activeStatus, filterJob], () => {
+  currentPage.value = 1
+})
 
 function getScoreClass(score) {
   if (score >= 85) return 'score-high'
@@ -208,16 +249,17 @@ function viewReport(record) {
   }
 }
 
-function confirmDelete(record) {
-  deleteTarget.value = record
-}
-
 async function doDelete() {
   const record = deleteTarget.value
   if (!record) return
   try {
     await request.delete(`/interview/${record.id}`)
     records.value = records.value.filter(r => r.id !== record.id)
+    clampPage()
+    // 如果用户勾选了"不再提醒"，持久化偏好
+    if (skipConfirm.value) {
+      try { localStorage.setItem(SKIP_KEY, 'true') } catch {}
+    }
   } catch (e) {
     console.error('Delete failed:', e)
   } finally {
@@ -668,7 +710,24 @@ onMounted(async () => {
   font-size: var(--text-sm);
   color: var(--neutral-600);
   line-height: 1.6;
-  margin-bottom: var(--space-6);
+  margin-bottom: var(--space-4);
+}
+
+.modal-skip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--neutral-500);
+  cursor: pointer;
+  margin-bottom: var(--space-5);
+  user-select: none;
+}
+.modal-skip input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-primary);
+  cursor: pointer;
 }
 
 .modal-actions {

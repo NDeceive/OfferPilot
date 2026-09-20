@@ -27,6 +27,19 @@
     <!-- 报告正文 -->
     <template v-else-if="report">
 
+      <!-- 面试时间信息 -->
+      <div class="session-info-bar">
+        <span class="session-info-item">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          开始 {{ fmtDate(report.startTime) }}
+        </span>
+        <span class="session-info-divider">|</span>
+        <span class="session-info-item">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          时长 {{ fmtDuration(report.actualDurationSeconds ?? report.durationSeconds) }}
+        </span>
+      </div>
+
       <!-- ================================================================ -->
       <!-- 🆕 新版报告：匹配度+画像+双层雷达+模块卡片+提升路径               -->
       <!-- ================================================================ -->
@@ -364,6 +377,24 @@ const weakTagList = computed(() =>
 
 const formatScore = (s) => (s == null ? '—' : Number(s).toFixed(1))
 
+const fmtDate = (d) => {
+  if (!d) return '未记录'
+  const dt = new Date(d)
+  if (isNaN(dt.getTime())) return '未记录'
+  const y = dt.getFullYear()
+  const m = String(dt.getMonth() + 1).padStart(2, '0')
+  const day = String(dt.getDate()).padStart(2, '0')
+  const hh = String(dt.getHours()).padStart(2, '0')
+  const mm = String(dt.getMinutes()).padStart(2, '0')
+  return `${y}-${m}-${day} ${hh}:${mm}`
+}
+const fmtDuration = (s) => {
+  if (s == null) return '未记录'
+  const min = Math.floor(s / 60)
+  const sec = s % 60
+  return `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
+}
+
 const scoreBand = (s) => {
   const v = Number(s)
   if (v >= 85) return '优秀'
@@ -517,6 +548,26 @@ onBeforeUnmount(() => {
 .report-page {
   padding-top: 12px;
   padding-bottom: 24px;
+}
+
+.session-info-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  padding: var(--space-2) var(--space-4);
+  background: var(--neutral-50);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  color: var(--neutral-500);
+}
+.session-info-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.session-info-divider {
+  color: var(--neutral-300);
 }
 
 .state-card {

@@ -32,6 +32,7 @@ export const startInterview = (data) => request.post('/interview/start', data)
 export const submitAnswer = (sessionId, data) => request.post(`/interview/${sessionId}/answer`, data)
 export const getNextQuestion = (sessionId) => request.get(`/interview/${sessionId}/next`)
 export const finishInterview = (sessionId) => request.post(`/interview/${sessionId}/finish`)
+export const getReportStatus = (sessionId) => request.get(`/interview/${sessionId}/report-status`)
 export const getSessionMessages = (sessionId) => request.get(`/interview/${sessionId}/messages`)
 export const submitFollowUp = (data) => request.post('/interview/follow-up', data)
 
@@ -41,11 +42,16 @@ export const getFollowUpStats = () => request.get('/interview/follow-up-records/
 
 /* ==================== Reports ==================== */
 export const getReportDetail = (reportId) => request.get(`/report/${reportId}`)
+export const getImprovementPath = (reportId) => request.get(`/report/${reportId}/improvement-path`)
 export const exportReport = (reportId, format = 'pdf') =>
   downloadRequest.get(`/report/${reportId}/export`, {
     params: { format },
     responseType: 'blob',
   })
+
+/* ==================== AI 面试教练 ==================== */
+// 仅 /status 走 axios；话术流用 utils/sse.js 的 fetch 版 SSE（axios 拿不到流式响应体）
+export const getAiStatus = () => request.get('/ai/status')
 
 /* ==================== Modules & Dashboard ==================== */
 export const getModules = () => request.get('/modules')

@@ -17,6 +17,10 @@ public class ReportDetailResponse {
     private String jobName;
     private BigDecimal totalScore;
     private String summary;
+    private java.time.LocalDateTime startTime;
+    private java.time.LocalDateTime endTime;
+    private Integer durationSeconds;
+    private Long actualDurationSeconds;
     private List<String> strengths;
     private List<String> weaknesses;
     private List<String> suggestions;
