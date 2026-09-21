@@ -70,5 +70,9 @@ export const exportReport = (reportId, format = 'pdf') =>
 /* ==================== Training Modules ==================== */
 export const getModules = () => request.get('/modules')
 
+/* ==================== AI 面试教练 ==================== */
+// 仅 /status 走 axios；话术流用 utils/sse.js 的 fetch 版 SSE（axios 拿不到流式响应体）
+export const getAiStatus = () => request.get('/ai/status')
+
 /* ==================== Teacher ==================== */
 export const getTeacherOverview = () => request.get('/teacher/dashboard/overview')

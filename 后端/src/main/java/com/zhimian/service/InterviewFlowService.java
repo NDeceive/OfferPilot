@@ -33,16 +33,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -95,9 +96,6 @@ public class InterviewFlowService {
 
     // ============================ 体验式题目 ============================
 
-    /** 体验式题目内容前缀（测试阶段标记），上线后设为 "" 即可移除 */
-    private static final String EXPERIENCE_QUESTION_PREFIX = "[测试] ";
-
     /** 体验式题目块大小：每 N 题一个块，块内必含 1 道体验式题目 */
     private static final int EXPERIENCE_BLOCK_SIZE = 5;
 
@@ -133,8 +131,8 @@ public class InterviewFlowService {
         // 确保每个标签都有对应的题库题目（缺题则 AI 自动生成）
         questionBootstrapper.ensure(allTags, job.getFamily(), difficulty);
 
-        // 标签化选题：匹配画像标签 → 对应题库随机抽取
-        List<SkillQuestion> candidates = candidateQuestionsByTags(allTags, difficulty);
+        // 标签化选题：岗位标签优先，画像标签兜底
+        List<SkillQuestion> candidates = candidateQuestionsByTags(jobTags, userTags, difficulty);
         if (candidates.isEmpty()) {
             throw new BizException("未找到匹配的面试题目，请先完善个人简历画像或扩充题库");
         }
@@ -191,7 +189,6 @@ public class InterviewFlowService {
                         .eq(InterviewMessage::getQuestionId, req.getQuestionId())
                         .eq(InterviewMessage::getRole, ROLE_INTERVIEWER)
                         .eq(InterviewMessage::getMsgType, MSG_MAIN)
-                        .orderByDesc(InterviewMessage::getId)
                         .last("LIMIT 1"));
         if (parentMain == null) {
             throw new BizException("该题尚未提问，无法作答");
@@ -210,7 +207,7 @@ public class InterviewFlowService {
         boolean followupExists = messageMapper.selectCount(
                 new LambdaQueryWrapper<InterviewMessage>()
                         .eq(InterviewMessage::getSessionId, sessionId)
-                        .eq(InterviewMessage::getRoundNo, round)
+                        .eq(InterviewMessage::getQuestionId, req.getQuestionId())
                         .eq(InterviewMessage::getMsgType, MSG_FOLLOWUP)) > 0;
 
         InterviewStep step = new InterviewStep();
@@ -219,7 +216,7 @@ public class InterviewFlowService {
                     req.getAnswer(), questionContent, questionRefAnswer);
             if (followup == null) {
                 // AI 判定无需追问，直接进入下一题
-                step.setNextAction(hasRemainingQuestions(session) ? ACTION_NEXT : ACTION_FINISHABLE);
+                step.setNextAction(hasTimeLeft(session) ? ACTION_NEXT : ACTION_FINISHABLE);
                 return step;
             }
             saveMessage(sessionId, req.getQuestionId(), round, ROLE_INTERVIEWER, MSG_FOLLOWUP,
@@ -232,7 +229,7 @@ public class InterviewFlowService {
             return step;
         }
 
-        step.setNextAction(hasRemainingQuestions(session) ? ACTION_NEXT : ACTION_FINISHABLE);
+        step.setNextAction(hasTimeLeft(session) ? ACTION_NEXT : ACTION_FINISHABLE);
         return step;
     }
 
@@ -254,26 +251,21 @@ public class InterviewFlowService {
         List<String> userTags = extractTagsFromResume(resume);
         // 合并岗位标签，与start()保持一致，避免仅用用户标签导致候选不足
         List<String> jobTags = extractTagsFromJob(jobMapper.selectById(session.getJobId()));
-        Set<String> mergedTags = new LinkedHashSet<>();
-        mergedTags.addAll(userTags);
-        mergedTags.addAll(jobTags);
         List<SkillQuestion> candidates = candidateQuestionsByTags(
-                new ArrayList<>(mergedTags), session.getDifficulty());
+                jobTags, userTags, session.getDifficulty());
 
         SkillQuestion nextQuestion = candidates.stream()
                 .filter(q -> !asked.contains(q.getId()))
                 .findFirst()
                 .orElse(null);
 
-        int round = askedMainQuestionCount(sessionId) + 1;
-
-        // 题库已问完但面试仍有时间时，继续生成岗位/简历相关的体验题。
         if (nextQuestion == null) {
-            InterviewStep expStep = buildExperienceQuestionStep(session, round);
-            if (expStep != null) return expStep;
             step.setNextAction(ACTION_FINISHABLE);
             return step;
         }
+
+        // 题号按已出主问题条数递增（含体验题），保证体验题也占用一个题号
+        int round = askedMainMessages(sessionId).size() + 1;
 
         // 判断本轮是否为体验式题目槽位
         if (isExperienceQuestionSlot(sessionId, round)) {
@@ -361,32 +353,6 @@ public class InterviewFlowService {
         sessionMapper.deleteById(sessionId);
     }
 
-    /**
-     * 批量删除面试会话及其关联数据。逐条复用 {@link #delete}，单个会话删除失败不影响其余会话，
-     * 返回成功与失败的数量供前端提示。
-     */
-    @Transactional
-    public Map<String, Object> deleteBatch(List<Long> sessionIds) {
-        int deleted = 0;
-        int failed = 0;
-        if (sessionIds != null) {
-            for (Long id : sessionIds) {
-                if (id == null) {
-                    failed++;
-                    continue;
-                }
-                try {
-                    delete(id);
-                    deleted++;
-                } catch (BizException e) {
-                    log.warn("批量删除会话失败 sessionId={}, reason={}", id, e.getMessage());
-                    failed++;
-                }
-            }
-        }
-        return Map.of("deleted", deleted, "failed", failed);
-    }
-
     // ============================ 标签化出题 ============================
 
     /**
@@ -414,38 +380,52 @@ public class InterviewFlowService {
     }
 
     /**
-     * 根据用户标签匹配题目：优先匹配多标签重合题，然后随机排序。
+     * 根据岗位标签与画像标签匹配题目。
+     *
+     * 岗位题排在前、画像题排在后：next() 用 findFirst() 取未问过的题，所以顺序即优先级。
+     * 不加这个区分的话，简历里写了 Redis/Kafka/微服务的后端同学去面「产品经理」「数据分析」
+     * 也会被问到 Redis 持久化、缓存雪崩 —— 岗位形同虚设（实测过）。画像题保留在后面兜底，
+     * 岗位题池不足时仍然用得上。
      */
-    private List<SkillQuestion> candidateQuestionsByTags(List<String> userTags, int difficulty) {
-        // Step 1: 将用户标签名匹配到 skill_tag ID
-        List<Long> matchedTagIds = matchTagIds(userTags);
+    private List<SkillQuestion> candidateQuestionsByTags(List<String> jobTags,
+                                                        List<String> resumeTags,
+                                                        int difficulty) {
+        // Step 1: 分别匹配岗位标签与画像标签
+        List<Long> jobTagIds = matchTagIds(jobTags);
+        List<Long> resumeTagIds = matchTagIds(resumeTags);
 
-        // Step 2: 从关联表取出匹配标签的题目ID
-        List<Long> questionIds;
-        if (!matchedTagIds.isEmpty()) {
-            List<SkillQuestionTagRel> rels = skillQuestionTagRelMapper.selectList(
-                    new LambdaQueryWrapper<SkillQuestionTagRel>()
-                            .in(SkillQuestionTagRel::getTagId, matchedTagIds));
-            questionIds = rels.stream()
-                    .map(SkillQuestionTagRel::getQuestionId)
-                    .distinct()
-                    .collect(Collectors.toList());
-        } else {
-            // 没有匹配的标签 → 从全库随机取
+        List<Long> jobQuestionIds = questionIdsByTagIds(jobTagIds);
+        Set<Long> jobQuestionIdSet = new HashSet<>(jobQuestionIds);
+
+        // Step 2: 画像命中但不属于岗位题的，作为低优先级补充
+        List<Long> resumeQuestionIds = questionIdsByTagIds(resumeTagIds).stream()
+                .filter(id -> !jobQuestionIdSet.contains(id))
+                .collect(Collectors.toList());
+
+        if (jobQuestionIds.isEmpty() && resumeQuestionIds.isEmpty()) {
+            // 岗位标签和画像标签都没匹配上 → 从全库随机取，保证面试开得起来
             List<SkillQuestion> all = skillQuestionMapper.selectList(
                     new LambdaQueryWrapper<SkillQuestion>()
                             .le(SkillQuestion::getDifficulty, difficulty));
-            questionIds = all.stream().map(SkillQuestion::getId).collect(Collectors.toList());
+            resumeQuestionIds = all.stream().map(SkillQuestion::getId).collect(Collectors.toList());
         }
 
-        if (questionIds.isEmpty()) return Collections.emptyList();
+        // Step 3: 岗位题先占满候选池，剩余名额才给画像题。
+        // 不能先合并再统一截断：简历里写了 30 项技能时画像题动辄上百道，
+        // 混在一起随机截断会把岗位题挤掉，面试又变成问简历。
+        Collections.shuffle(jobQuestionIds);
+        Collections.shuffle(resumeQuestionIds);
 
-        // Step 3: 随机打乱后取足够候选，再按难度筛选
-        Collections.shuffle(questionIds);
-        int poolSize = Math.min(questionIds.size(), CANDIDATE_POOL_MAX);
-        List<Long> finalIds = questionIds.stream()
-                .limit(poolSize) // 多取一些再按难度筛选
-                .collect(Collectors.toList());
+        List<Long> finalIds = new ArrayList<>();
+        Set<Long> picked = new HashSet<>();
+        for (Long id : jobQuestionIds) {
+            if (finalIds.size() >= CANDIDATE_POOL_MAX) break;
+            if (picked.add(id)) finalIds.add(id);
+        }
+        for (Long id : resumeQuestionIds) {
+            if (finalIds.size() >= CANDIDATE_POOL_MAX) break;
+            if (picked.add(id)) finalIds.add(id);
+        }
 
         if (finalIds.isEmpty()) return Collections.emptyList();
 
@@ -456,9 +436,33 @@ public class InterviewFlowService {
                         .last("LIMIT " + CANDIDATE_POOL_MAX));
 
         // 二次随机打乱保证每次顺序不同
-        Collections.shuffle(result);
-        return result;
+        // 组内随机（每次面试顺序不同），组间保持岗位优先
+        Map<Boolean, List<SkillQuestion>> grouped = result.stream()
+                .collect(Collectors.partitioningBy(q -> jobQuestionIdSet.contains(q.getId())));
+        List<SkillQuestion> ordered = new ArrayList<>();
+        List<SkillQuestion> jobFirst = new ArrayList<>(grouped.get(true));
+        List<SkillQuestion> resumeLast = new ArrayList<>(grouped.get(false));
+        Collections.shuffle(jobFirst);
+        Collections.shuffle(resumeLast);
+        ordered.addAll(jobFirst);
+        ordered.addAll(resumeLast);
+        return ordered;
     }
+
+    /** 按标签 ID 集合取出关联的题目 ID（去重，无匹配返回空列表）。 */
+    private List<Long> questionIdsByTagIds(List<Long> tagIds) {
+        if (tagIds.isEmpty()) return Collections.emptyList();
+        return skillQuestionTagRelMapper.selectList(
+                        new LambdaQueryWrapper<SkillQuestionTagRel>()
+                                .in(SkillQuestionTagRel::getTagId, tagIds))
+                .stream()
+                .map(SkillQuestionTagRel::getQuestionId)
+                .distinct()
+                .collect(Collectors.toList());
+    }
+
+    /** 纯 ASCII 字符串（拉丁字母/数字/符号），用于决定要不要做词边界校验。 */
+    private static final Pattern ASCII_ONLY = Pattern.compile("^[\\x00-\\x7f]+$");
 
     /**
      * 将用户技能名匹配到数据库 skill_tag 表的 ID。
@@ -472,10 +476,11 @@ public class InterviewFlowService {
 
         for (String userTag : userTags) {
             String lower = userTag.toLowerCase().trim();
+            if (lower.isEmpty()) continue;
             for (SkillTag t : allTags) {
                 String tagName = t.getName().toLowerCase();
-                // 双向包含匹配：用户画像的 "SpringBoot" 匹配库里的 "Spring Boot"
-                if (lower.contains(tagName) || tagName.contains(lower) || tagName.equals(lower)) {
+                // 双向包含匹配：用户画像的 "Spring Boot" 匹配库里的 "Spring"
+                if (containsTag(lower, tagName) || containsTag(tagName, lower)) {
                     matched.add(t.getId());
                 }
             }
@@ -484,12 +489,35 @@ public class InterviewFlowService {
     }
 
     /**
+     * 判断 haystack 是否命中 needle。
+     *
+     * 中文照旧走子串匹配（「性能」命中「性能优化」），但**纯 ASCII 的 needle 要求整词命中**。
+     * 否则短标签会把无关内容一网打尽，实测踩过的坑：
+     * 标签 `C` 命中 "Spring Cloud"、标签 `Go` 命中 "django"、`java` 命中 "javascript"、
+     * `BI` 命中 "RabbitMQ"、`ROI` 命中 "android" —— Python 后端面试会问到 C 语言指针。
+     * 词边界只认 [a-z0-9]，所以 "node" 仍能命中 "node.js"、"vue" 命中 "vue.js"，
+     * 而 "spring" 不再命中 "springboot"（本来靠空格差异也没命中过）。
+     */
+    private static boolean containsTag(String haystack, String needle) {
+        if (needle.isEmpty() || haystack.isEmpty()) return false;
+        if (!haystack.contains(needle)) return false;
+        if (!ASCII_ONLY.matcher(needle).matches()) return true;
+        return Pattern.compile("(?<![a-z0-9])" + Pattern.quote(needle) + "(?![a-z0-9])")
+                .matcher(haystack).find();
+    }
+
+    /**
      * 解析题目所属的能力标签名（取第一个关联标签名）。
+     *
+     * 必须显式 orderByAsc(id)：不加 ORDER BY 时 MySQL 走 uk_qt(question_id, tag_id)
+     * 索引，返回的是 tag_id 顺序，主标签会变成「id 最小的那个标签」而不是录入时的第一个，
+     * 报告页的能力标签会串。
      */
     private String resolveAbilityTag(Long questionId) {
         List<SkillQuestionTagRel> rels = skillQuestionTagRelMapper.selectList(
                 new LambdaQueryWrapper<SkillQuestionTagRel>()
-                        .eq(SkillQuestionTagRel::getQuestionId, questionId));
+                        .eq(SkillQuestionTagRel::getQuestionId, questionId)
+                        .orderByAsc(SkillQuestionTagRel::getId));
         if (rels.isEmpty()) return "综合";
 
         SkillTag tag = skillTagMapper.selectById(rels.get(0).getTagId());
@@ -509,27 +537,37 @@ public class InterviewFlowService {
     // ============================ 共享辅助 ============================
 
     private Set<Long> askedMainQuestionIds(Long sessionId) {
-        List<InterviewMessage> mains = messageMapper.selectList(
-                new LambdaQueryWrapper<InterviewMessage>()
-                        .eq(InterviewMessage::getSessionId, sessionId)
-                        .eq(InterviewMessage::getRole, ROLE_INTERVIEWER)
-                        .eq(InterviewMessage::getMsgType, MSG_MAIN));
-        return mains.stream()
+        return askedMainMessages(sessionId).stream()
                 .map(InterviewMessage::getQuestionId)
                 .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
-    /** 已提问的主问题总轮数；体验题共享 questionId=0，因此不能按 ID 去重计数。 */
-    private int askedMainQuestionCount(Long sessionId) {
-        return Math.toIntExact(messageMapper.selectCount(
+    /**
+     * 已出的主问题消息（按顺序）。
+     *
+     * 题号必须按**消息条数**算，不能按 askedMainQuestionIds().size()：体验题的
+     * questionId 是占位值 0，会被 LinkedHashSet 去重，导致体验题出完后集合不增长
+     * → 题号原地踏步 → 同一槽位被反复判定命中，面试里连出两道一模一样的体验题
+     * （实测 session 239 出现两条 round_no=7）。
+     */
+    private List<InterviewMessage> askedMainMessages(Long sessionId) {
+        return messageMapper.selectList(
                 new LambdaQueryWrapper<InterviewMessage>()
                         .eq(InterviewMessage::getSessionId, sessionId)
                         .eq(InterviewMessage::getRole, ROLE_INTERVIEWER)
-                        .eq(InterviewMessage::getMsgType, MSG_MAIN)));
+                        .eq(InterviewMessage::getMsgType, MSG_MAIN)
+                        .orderByAsc(InterviewMessage::getId));
     }
 
-    private boolean hasRemainingQuestions(InterviewSession session) {
-        // 面试是否可继续只由用户选择的时长决定。
+    /**
+     * 面试是否还有剩余时间。
+     *
+     * 面试长度由用户选的时长驱动（前端默认 1800 秒），**不设题量上限**：
+     * 只要时间没到就继续出题。题目抽完了由 next() 返回 FINISHABLE 收口，
+     * 所以这里不需要再数题数。（原先有个 MAX_QUESTIONS=8 的上限，但它只在
+     * answer() 不触发追问的分支上检查，只要每题都产生追问就形同虚设。）
+     */
+    private boolean hasTimeLeft(InterviewSession session) {
         return !isTimeExceeded(session);
     }
 
@@ -537,12 +575,10 @@ public class InterviewFlowService {
      * 检查面试是否超时（基于 durationSeconds 与 startTime 计算）。
      */
     private boolean isTimeExceeded(InterviewSession session) {
-        return isTimeExceeded(session, LocalDateTime.now());
-    }
-
-    static boolean isTimeExceeded(InterviewSession session, LocalDateTime now) {
-        if (session.getDurationSeconds() == null || session.getStartTime() == null) return true;
-        long elapsed = java.time.Duration.between(session.getStartTime(), now).getSeconds();
+        if (session.getDurationSeconds() == null || session.getStartTime() == null) {
+            return true;
+        }
+        long elapsed = java.time.Duration.between(session.getStartTime(), LocalDateTime.now()).getSeconds();
         return elapsed >= session.getDurationSeconds();
     }
 
@@ -689,7 +725,11 @@ public class InterviewFlowService {
      */
     private InterviewStep buildExperienceQuestionStep(InterviewSession session, int roundNo) {
         Resume resume = resumeService.getMine();
-        String jobName = resolveJobName(session);
+        JobPosition job = jobMapper.selectById(session.getJobId());
+        String jobName = (job != null) ? job.getName() : null;
+        if (jobName == null || jobName.isBlank()) jobName = "该岗位";
+        // 岗位能力项，用来把体验题的焦点技能框在岗位域内（否则会照着简历报出跑题的技术栈）
+        List<String> jobTags = extractTagsFromJob(job);
 
         try {
             // 收集已问题目，传给 AI 以避免重复
@@ -700,12 +740,12 @@ public class InterviewFlowService {
                             .eq(InterviewMessage::getMsgType, MSG_MAIN)
                             .orderByAsc(InterviewMessage::getId))
                     .stream()
-                    .map(m -> m.getContent() != null ? m.getContent().replace(EXPERIENCE_QUESTION_PREFIX, "") : "")
+                    .map(m -> m.getContent() != null ? m.getContent() : "")
                     .collect(Collectors.toList());
 
             ExperienceQuestionService.ExperienceQuestionResult result =
-                    experienceQuestionService.generate(jobName, resume, askedContents);
-            String labeledContent = EXPERIENCE_QUESTION_PREFIX + result.getQuestion();
+                    experienceQuestionService.generate(jobName, resume, askedContents, jobTags);
+            String labeledContent = result.getQuestion();
 
             InterviewMessage msg = new InterviewMessage();
             msg.setSessionId(session.getId());

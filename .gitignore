@@ -24,6 +24,10 @@ tmp/
 .impeccable/live/
 *.inspect.ndjson
 
+# ===== Python 工具脚本 =====
+__pycache__/
+*.pyc
+
 # ===== 本地配置 / IDE =====
 .claude/settings.local.json
 .idea/

@@ -26,84 +26,174 @@
 
     <!-- 报告正文 -->
     <template v-else-if="report">
-      <!-- 总分 + 概览 -->
-      <div class="overview-grid">
-        <div class="score-card">
-          <span class="score-label">综合得分</span>
-          <div class="score-value">{{ formatScore(report.totalScore) }}<i>分</i></div>
-          <el-tag :type="scoreTagType(report.totalScore)" effect="light" size="large">
-            {{ scoreBand(report.totalScore) }}
-          </el-tag>
-          <p class="score-job">目标岗位：<strong>{{ report.jobName }}</strong></p>
-        </div>
 
-        <div class="summary-card glass-panel">
-          <h3><el-icon><Memo /></el-icon>综合评价</h3>
-          <p class="summary-text">{{ report.summary }}</p>
-          <div v-if="report.weakTags" class="weak-tags">
-            <span class="weak-tags-label">薄弱维度：</span>
-            <el-tag
-              v-for="tag in weakTagList"
-              :key="tag"
-              type="warning"
-              effect="plain"
-              size="small"
-              class="weak-tag"
-            >
-              {{ tag }}
+      <!-- 面试时间信息 -->
+      <div class="session-info-bar">
+        <span class="session-info-item">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          开始 {{ fmtDate(report.startTime) }}
+        </span>
+        <span class="session-info-divider">|</span>
+        <span class="session-info-item">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          时长 {{ fmtDuration(report.actualDurationSeconds ?? report.durationSeconds) }}
+        </span>
+      </div>
+
+      <!-- ================================================================ -->
+      <!-- 🆕 新版报告：匹配度+画像+双层雷达+模块卡片+提升路径               -->
+      <!-- ================================================================ -->
+      <template v-if="isNewReport">
+        <!-- 匹配度横幅 -->
+        <div class="match-hero">
+          <div class="match-hero__score">
+            <span class="match-hero__label">训练目标匹配度</span>
+            <div class="match-hero__num">{{ Math.round(report.overallMatchScore) }}<i>%</i></div>
+            <el-tag :type="matchTagType(report.displayLevel)" effect="light" size="large">
+              {{ report.displayLevel || '—' }}
             </el-tag>
           </div>
-        </div>
-      </div>
-
-      <!-- 雷达图 + 维度卡 -->
-      <div class="radar-grid">
-        <div class="radar-card glass-panel">
-          <h3><el-icon><Aim /></el-icon>五维能力雷达</h3>
-          <div ref="radarRef" class="radar-chart"></div>
-        </div>
-
-        <div class="dimension-list">
-          <div v-for="dim in report.dimensions" :key="dim.dimension" class="dimension-card">
-            <div class="dimension-head">
-              <span class="dimension-name">{{ dim.dimension }}</span>
-              <div class="dimension-score">
-                <strong>{{ formatScore(dim.score) }}</strong>
-                <el-tag :type="levelTagType(dim.level)" effect="light" size="small">{{ dim.level }}</el-tag>
-              </div>
-            </div>
-            <el-progress
-              :percentage="Number(dim.score)"
-              :stroke-width="8"
-              :color="barColor(dim.score)"
-              :show-text="false"
-            />
-            <p class="dimension-explain">{{ dim.explanation }}</p>
+          <div class="match-hero__info">
+            <span class="match-hero__job">目标岗位：<strong>{{ report.jobName }}</strong></span>
+            <span v-if="report.summary" class="match-hero__summary">{{ report.summary }}</span>
           </div>
         </div>
-      </div>
 
-      <!-- 优势 / 不足 / 建议 -->
-      <div class="insight-grid">
-        <div class="insight-card glass-panel strengths">
-          <h3><el-icon><CircleCheckFilled /></el-icon>表现优势</h3>
-          <ul>
-            <li v-for="(s, i) in report.strengths" :key="'s' + i">{{ s }}</li>
-          </ul>
+        <!-- 匹配画像标签 -->
+        <div class="profile-tags" v-if="report.profileLabel">
+          <span class="profile-tags__label">匹配画像</span>
+          <span v-for="tag in profileTagList" :key="tag" class="profile-tag-chip">{{ tag }}</span>
         </div>
-        <div class="insight-card glass-panel weaknesses">
-          <h3><el-icon><WarningFilled /></el-icon>待改进项</h3>
-          <ul>
-            <li v-for="(w, i) in report.weaknesses" :key="'w' + i">{{ w }}</li>
-          </ul>
+
+        <!-- 双层雷达 + 模块卡片 -->
+        <div class="module-radar-grid">
+          <div class="radar-panel glass-panel">
+            <h3>能力雷达</h3>
+            <RadarChart
+              :labels="moduleLabels"
+              :values="moduleValues"
+              :targetValues="moduleTargets"
+              :showDualLayer="true"
+              :size="340"
+            />
+          </div>
+
+          <div class="module-card-list">
+            <div
+              v-for="(ms, i) in report.moduleScores"
+              :key="ms.moduleCode"
+              class="module-detail-card"
+              :style="{ animationDelay: i * 0.06 + 's' }"
+            >
+              <div class="module-detail-card__head">
+                <span class="module-detail-card__name">{{ ms.moduleName }}</span>
+                <span class="module-detail-card__weight" v-if="ms.baseWeight">
+                  权重 {{ (ms.baseWeight * 100).toFixed(0) }}%
+                </span>
+              </div>
+              <div class="module-detail-card__bar-row">
+                <span class="module-detail-card__target">目标 {{ ms.targetScore }}分</span>
+                <div class="module-detail-card__track">
+                  <div
+                    class="module-detail-card__fill"
+                    :style="{ width: Math.min(ms.rawScore, 100) + '%', background: moduleBarColor(ms.rawScore) }"
+                  />
+                  <div
+                    class="module-detail-card__marker"
+                    :style="{ left: ms.targetScore + '%' }"
+                  />
+                </div>
+                <span class="module-detail-card__actual">{{ ms.rawScore }}分</span>
+              </div>
+              <div class="module-detail-card__meta">
+                <span class="module-detail-card__match">
+                  匹配度 <strong>{{ (ms.moduleMatch * 100).toFixed(0) }}%</strong>
+                </span>
+                <span v-if="ms.gapScore > 0" class="module-detail-card__gap">差距 {{ ms.gapScore }}分</span>
+                <span v-else class="module-detail-card__reached">✓ 已达标</span>
+              </div>
+              <div v-if="ms.evidence" class="module-detail-card__evidence">
+                📝 {{ ms.evidence }}
+              </div>
+              <div v-if="ms.suggestion" class="module-detail-card__suggestion">
+                💡 {{ ms.suggestion }}
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="insight-card glass-panel suggestions">
-          <h3><el-icon><MagicStick /></el-icon>提升建议</h3>
-          <ul>
-            <li v-for="(g, i) in report.suggestions" :key="'g' + i">{{ g }}</li>
-          </ul>
+
+        <!-- 提升路径 -->
+        <div class="improvement-path glass-panel" v-if="sortedPriorities.length">
+          <h3>提升路径</h3>
+          <div
+            v-for="(p, i) in sortedPriorities"
+            :key="p.moduleCode"
+            class="improvement-item"
+          >
+            <span class="improvement-item__idx">{{ i + 1 }}</span>
+            <span class="improvement-item__name">{{ p.moduleName }}</span>
+            <span class="improvement-item__gap">差距 {{ p.gapScore }}分</span>
+            <span class="improvement-item__priority">优先级 {{ (p.improvementPriority || 0).toFixed(1) }}</span>
+          </div>
         </div>
-      </div>
+      </template>
+
+      <!-- ================================================================ -->
+      <!-- 旧版报告（兼容历史）                                              -->
+      <!-- ================================================================ -->
+      <template v-else>
+        <div class="overview-grid">
+          <div class="score-card">
+            <span class="score-label">综合得分</span>
+            <div class="score-value">{{ formatScore(report.totalScore) }}<i>分</i></div>
+            <el-tag :type="scoreTagType(report.totalScore)" effect="light" size="large">
+              {{ scoreBand(report.totalScore) }}
+            </el-tag>
+            <p class="score-job">目标岗位：<strong>{{ report.jobName }}</strong></p>
+          </div>
+          <div class="summary-card glass-panel">
+            <h3><el-icon><Memo /></el-icon>综合评价</h3>
+            <p class="summary-text">{{ report.summary }}</p>
+            <div v-if="report.weakTags" class="weak-tags">
+              <span class="weak-tags-label">薄弱维度：</span>
+              <el-tag v-for="tag in weakTagList" :key="tag" type="warning" effect="plain" size="small" class="weak-tag">{{ tag }}</el-tag>
+            </div>
+          </div>
+        </div>
+        <div class="radar-grid">
+          <div class="radar-card glass-panel">
+            <h3><el-icon><Aim /></el-icon>五维能力雷达</h3>
+            <div ref="radarRef" class="radar-chart"></div>
+          </div>
+          <div class="dimension-list">
+            <div v-for="dim in report.dimensions" :key="dim.dimension" class="dimension-card">
+              <div class="dimension-head">
+                <span class="dimension-name">{{ dim.dimension }}</span>
+                <div class="dimension-score">
+                  <strong>{{ formatScore(dim.score) }}</strong>
+                  <el-tag :type="levelTagType(dim.level)" effect="light" size="small">{{ dim.level }}</el-tag>
+                </div>
+              </div>
+              <el-progress :percentage="Number(dim.score)" :stroke-width="8" :color="barColor(dim.score)" :show-text="false" />
+              <p class="dimension-explain">{{ dim.explanation }}</p>
+            </div>
+          </div>
+        </div>
+        <div class="insight-grid">
+          <div class="insight-card glass-panel strengths">
+            <h3><el-icon><CircleCheckFilled /></el-icon>表现优势</h3>
+            <ul><li v-for="(s, i) in report.strengths" :key="'s' + i">{{ s }}</li></ul>
+          </div>
+          <div class="insight-card glass-panel weaknesses">
+            <h3><el-icon><WarningFilled /></el-icon>待改进项</h3>
+            <ul><li v-for="(w, i) in report.weaknesses" :key="'w' + i">{{ w }}</li></ul>
+          </div>
+          <div class="insight-card glass-panel suggestions">
+            <h3><el-icon><MagicStick /></el-icon>提升建议</h3>
+            <ul><li v-for="(g, i) in report.suggestions" :key="'g' + i">{{ g }}</li></ul>
+          </div>
+        </div>
+      </template>
 
       <!-- 问答记录 -->
       <div class="qa-section" v-if="report?.sessionId">
@@ -112,7 +202,7 @@
           <div v-loading="qaLoading">
             <div v-if="qaRounds.length" class="qa-rounds">
               <el-collapse v-model="activeRounds">
-                <el-collapse-item v-for="r in qaRounds" :key="r.roundNo" :name="String(r.roundNo)">
+                <el-collapse-item v-for="(r, i) in qaRounds" :key="r.roundNo" :name="String(r.roundNo)">
                   <template #title>
                     <div class="round-header">
                       <strong>第 {{ r.roundNo }} 题</strong>
@@ -126,9 +216,13 @@
                       <span class="round-msg-label">面试官提问</span>
                       <p>{{ r.question?.content }}</p>
                     </div>
-                    <div v-if="r.mainAnswer" class="round-msg candidate">
+                    <div v-if="r.mainAnswer?.content" class="round-msg candidate">
                       <span class="round-msg-label">你的回答</span>
                       <p>{{ r.mainAnswer.content }}</p>
+                    </div>
+                    <div v-else class="round-msg candidate skipped">
+                      <span class="round-msg-label">你的回答</span>
+                      <p>{{ i === qaRounds.length - 1 ? '（此题已跳过，面试已结束）' : '（此题已跳过，直接进入下一题）' }}</p>
                     </div>
                     <template v-if="r.followup">
                       <div class="round-msg interviewer followup">
@@ -184,6 +278,7 @@ import {
   WarningFilled
 } from '@element-plus/icons-vue'
 import { getReportDetail, getInterviewRecords, exportReport, getSessionMessages } from '@/api'
+import RadarChart from '@/components/ui/RadarChart.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -191,6 +286,49 @@ const router = useRouter()
 const loading = ref(true)
 const error = ref('')
 const report = ref(null)
+
+/* ---------------------------------------------------------------- */
+/*  🆕 New report helpers                                           */
+/* ---------------------------------------------------------------- */
+const isNewReport = computed(() => report.value?.moduleScores?.length > 0)
+
+const moduleLabels = computed(() =>
+  (report.value?.moduleScores || []).map(m => m.moduleName || m.moduleCode)
+)
+const moduleValues = computed(() =>
+  (report.value?.moduleScores || []).map(m => Number(m.rawScore) || 0)
+)
+const moduleTargets = computed(() =>
+  (report.value?.moduleScores || []).map(m => Number(m.targetScore) || 75)
+)
+
+const profileTagList = computed(() => {
+  if (!report.value?.profileLabel) return []
+  return report.value.profileLabel.split(',').filter(Boolean)
+})
+
+const sortedPriorities = computed(() => {
+  const list = (report.value?.moduleScores || [])
+    .filter(m => Number(m.gapScore) > 0)
+    .sort((a, b) => (Number(b.improvementPriority) || 0) - (Number(a.improvementPriority) || 0))
+  return list
+})
+
+function matchTagType(level) {
+  if (!level) return ''
+  if (level.includes('已达')) return 'success'
+  if (level.includes('接近')) return ''
+  if (level.includes('部分')) return 'warning'
+  return 'danger'
+}
+
+function moduleBarColor(score) {
+  const v = Number(score)
+  if (v >= 85) return '#16a76a'
+  if (v >= 70) return '#2563eb'
+  if (v >= 60) return '#f59e0b'
+  return '#ef4444'
+}
 
 // Q&A 历史
 const qaMessages = ref([])
@@ -238,6 +376,24 @@ const weakTagList = computed(() =>
 )
 
 const formatScore = (s) => (s == null ? '—' : Number(s).toFixed(1))
+
+const fmtDate = (d) => {
+  if (!d) return '未记录'
+  const dt = new Date(d)
+  if (isNaN(dt.getTime())) return '未记录'
+  const y = dt.getFullYear()
+  const m = String(dt.getMonth() + 1).padStart(2, '0')
+  const day = String(dt.getDate()).padStart(2, '0')
+  const hh = String(dt.getHours()).padStart(2, '0')
+  const mm = String(dt.getMinutes()).padStart(2, '0')
+  return `${y}-${m}-${day} ${hh}:${mm}`
+}
+const fmtDuration = (s) => {
+  if (s == null) return '未记录'
+  const min = Math.floor(s / 60)
+  const sec = s % 60
+  return `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
+}
 
 const scoreBand = (s) => {
   const v = Number(s)
@@ -392,6 +548,26 @@ onBeforeUnmount(() => {
 .report-page {
   padding-top: 12px;
   padding-bottom: 24px;
+}
+
+.session-info-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  padding: var(--space-2) var(--space-4);
+  background: var(--neutral-50);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  color: var(--neutral-500);
+}
+.session-info-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.session-info-divider {
+  color: var(--neutral-300);
 }
 
 .state-card {
@@ -614,8 +790,7 @@ onBeforeUnmount(() => {
 }
 
 .qa-rounds {
-  max-height: 600px;
-  overflow-y: auto;
+  /* 不设 max-height，让页面自身滚动，避免截断长内容 */
 }
 
 /* 折叠项悬浮效果 */
@@ -707,6 +882,17 @@ onBeforeUnmount(() => {
   font-size: 14px;
   line-height: 1.8;
   white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.round-msg.skipped {
+  opacity: 0.55;
+  border-style: dashed;
+}
+
+.round-msg.skipped p {
+  color: var(--text-muted);
+  font-style: italic;
 }
 
 /* 操作 */
@@ -717,7 +903,313 @@ onBeforeUnmount(() => {
   margin-top: 28px;
 }
 
+/* ===================================================================
+   🆕 NEW REPORT STYLES (v2 matching evaluation)
+   =================================================================== */
+
+/* Match Hero */
+.match-hero {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.match-hero__score {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 28px 22px;
+  color: #fff;
+  background: linear-gradient(135deg, #10b981, #059669);
+  border-radius: 14px;
+  box-shadow: 0 16px 36px rgba(16, 185, 129, 0.28);
+}
+
+.match-hero__label {
+  font-size: 13px;
+  font-weight: 700;
+  opacity: 0.9;
+}
+
+.match-hero__num {
+  font-size: 56px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.match-hero__num i {
+  margin-left: 2px;
+  font-size: 18px;
+  font-style: normal;
+  opacity: 0.85;
+}
+
+.match-hero__info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px 24px;
+  background: var(--surface-elevated);
+  border-radius: 14px;
+  border: 1px solid var(--neutral-200);
+}
+
+.match-hero__job {
+  font-size: 15px;
+  color: var(--neutral-700);
+}
+
+.match-hero__summary {
+  font-size: 14px;
+  color: var(--neutral-500);
+  line-height: 1.7;
+}
+
+/* Profile Tags */
+.profile-tags {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 14px 20px;
+  background: var(--surface-elevated);
+  border-radius: 12px;
+  border: 1px solid var(--neutral-200);
+  flex-wrap: wrap;
+}
+
+.profile-tags__label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--neutral-500);
+  margin-right: 6px;
+}
+
+.profile-tag-chip {
+  font-size: 13px;
+  font-weight: 500;
+  padding: 4px 14px;
+  border-radius: 20px;
+  background: var(--accent-50);
+  border: 1px solid var(--accent-200);
+  color: var(--accent-700);
+}
+
+/* Module Radar Grid */
+.module-radar-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.radar-panel {
+  padding: 22px 24px;
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.radar-panel h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--neutral-800);
+  margin-bottom: 8px;
+  align-self: flex-start;
+}
+
+/* Module Detail Cards */
+.module-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 520px;
+  overflow-y: auto;
+}
+
+.module-detail-card {
+  padding: 16px 18px;
+  background: var(--surface-elevated);
+  border: 1px solid var(--neutral-200);
+  border-radius: 12px;
+  animation: card-fade-in 0.4s var(--ease-out) backwards;
+}
+
+@keyframes card-fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.module-detail-card__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.module-detail-card__name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--neutral-900);
+}
+
+.module-detail-card__weight {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--accent-600);
+  background: var(--accent-50);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.module-detail-card__bar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.module-detail-card__target {
+  font-size: 11px;
+  color: var(--neutral-400);
+  min-width: 60px;
+}
+
+.module-detail-card__track {
+  flex: 1;
+  height: 8px;
+  background: var(--neutral-100);
+  border-radius: 4px;
+  position: relative;
+  overflow: visible;
+}
+
+.module-detail-card__fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 1s var(--ease-out-expo);
+}
+
+.module-detail-card__marker {
+  position: absolute;
+  top: -4px;
+  width: 3px;
+  height: 16px;
+  background: #f59e0b;
+  border-radius: 2px;
+}
+
+.module-detail-card__actual {
+  font-size: 14px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--neutral-900);
+  min-width: 40px;
+  text-align: right;
+}
+
+.module-detail-card__meta {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 6px;
+}
+
+.module-detail-card__match {
+  font-size: 13px;
+  color: var(--neutral-600);
+}
+
+.module-detail-card__match strong {
+  color: var(--accent-600);
+}
+
+.module-detail-card__gap {
+  font-size: 13px;
+  color: #f59e0b;
+}
+
+.module-detail-card__reached {
+  font-size: 13px;
+  color: var(--accent-600);
+  font-weight: 600;
+}
+
+.module-detail-card__evidence,
+.module-detail-card__suggestion {
+  font-size: 12px;
+  color: var(--neutral-500);
+  line-height: 1.6;
+  margin-top: 4px;
+}
+
+/* Improvement Path */
+.improvement-path {
+  margin-top: 20px;
+  padding: 22px 24px;
+  border-radius: 14px;
+}
+
+.improvement-path h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--neutral-800);
+  margin-bottom: 14px;
+}
+
+.improvement-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--neutral-100);
+}
+
+.improvement-item:first-child { border-top: none; }
+
+.improvement-item__idx {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent-50);
+  color: var(--accent-700);
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.improvement-item__name {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--neutral-800);
+}
+
+.improvement-item__gap {
+  font-size: 12px;
+  color: #f59e0b;
+  font-family: var(--font-mono);
+}
+
+.improvement-item__priority {
+  font-size: 12px;
+  color: var(--neutral-400);
+  font-family: var(--font-mono);
+}
+
 @media (max-width: 980px) {
+  .module-radar-grid {
+    grid-template-columns: 1fr;
+  }
+  .match-hero {
+    grid-template-columns: 1fr;
+  }
   .overview-grid,
   .radar-grid,
   .insight-grid {

@@ -17,6 +17,8 @@ const routes = [
 
   // Student portal
   { path: '/home', name: 'Dashboard', component: () => import('../views/Dashboard.vue') },
+  // AI 对话式面试入口（默认）：只覆盖「选岗位 + 传简历」，之后接力到 /jobs
+  { path: '/interview/ai', name: 'AiPrep', component: () => import('../views/AiPrep.vue') },
   { path: '/jobs', name: 'JobSelect', component: () => import('../views/JobSelect.vue') },
   { path: '/resume', name: 'Resume', component: () => import('../views/JobSelect.vue') },
   { path: '/interview', name: 'Interview', component: () => import('../views/Interview.vue') },

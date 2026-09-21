@@ -1,6 +1,7 @@
 package com.zhimian.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zhimian.config.UserContext;
 import com.zhimian.dto.ResumeAnalysis;
@@ -10,7 +11,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 简历服务：保存简历并分析生成个人画像，查询当前用户简历。
@@ -57,8 +60,31 @@ public class ResumeService {
         Resume resume = resumeMapper.selectOne(
                 new LambdaQueryWrapper<Resume>().eq(Resume::getUserId, userId).last("LIMIT 1"));
         if (resume == null) return;
-        resume.setSkills(toJson(tags));
+        List<String> safeTags = (tags == null) ? Collections.emptyList() : tags;
+
+        resume.setSkills(toJson(safeTags));
+        // keywords 必须跟着一起收窄。出题读的是 skills + keywords 的并集
+        // （InterviewFlowService#extractTagsFromResume），只改 skills 的话，
+        // 用户删掉的标签会从 keywords 里原样"复活"——删了等于没删。
+        // 这里取交集而不是直接覆盖成 tags：万一将来分析器往 keywords 里放 skill 之外的东西，
+        // 也不至于因为用户点了一下标签就把它整片抹掉。
+        resume.setKeywords(toJson(intersect(parseJsonList(resume.getKeywords()), safeTags)));
+
         resumeMapper.updateById(resume);
+    }
+
+    /** 保留 to 里也有的项，顺序沿用 from */
+    private List<String> intersect(List<String> from, List<String> to) {
+        return from.stream().filter(to::contains).collect(Collectors.toList());
+    }
+
+    private List<String> parseJsonList(String json) {
+        if (json == null || json.isBlank()) return Collections.emptyList();
+        try {
+            return objectMapper.readValue(json, new TypeReference<List<String>>() {});
+        } catch (Exception e) {
+            return Collections.emptyList();
+        }
     }
 
     /** 查询当前用户简历，没有则返回 null */
