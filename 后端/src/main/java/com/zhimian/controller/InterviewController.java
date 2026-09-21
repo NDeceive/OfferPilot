@@ -5,6 +5,7 @@ import com.zhimian.common.BizException;
 import com.zhimian.common.Result;
 import com.zhimian.config.UserContext;
 import com.zhimian.dto.AnswerRequest;
+import com.zhimian.dto.BatchDeleteRequest;
 import com.zhimian.dto.FollowUpRequest;
 import com.zhimian.dto.FollowUpResponse;
 import com.zhimian.dto.InterviewRecord;
@@ -71,10 +72,18 @@ public class InterviewController {
         return Result.success(flowService.next(sessionId));
     }
 
-    /** 结束面试：会话置为 FINISHED（幂等），并生成规则化报告，返回 reportId */
+    /** 结束面试：会话置为 FINISHED，异步生成报告，立即返回 sessionId */
     @PostMapping("/{sessionId}/finish")
     public Result<Long> finish(@PathVariable Long sessionId) {
         return Result.success(flowService.finish(sessionId));
+    }
+
+    /** 查询报告生成状态：前端轮询此接口，ready=true 时拿到 reportId 跳转 */
+    @GetMapping("/{sessionId}/report-status")
+    public Result<java.util.Map<String, Object>> reportStatus(@PathVariable Long sessionId) {
+        boolean ready = flowService.isReportReady(sessionId);
+        Long reportId = ready ? flowService.getReadyReportId(sessionId) : null;
+        return Result.success(java.util.Map.of("ready", ready, "reportId", reportId != null ? reportId : 0));
     }
 
     /**
@@ -125,5 +134,11 @@ public class InterviewController {
     public Result<Void> delete(@PathVariable Long sessionId) {
         flowService.delete(sessionId);
         return Result.success(null);
+    }
+
+    /** 批量删除面试会话及其关联数据。返回删除成功与失败的数量。 */
+    @PostMapping("/batch-delete")
+    public Result<java.util.Map<String, Object>> batchDelete(@Valid @RequestBody BatchDeleteRequest req) {
+        return Result.success(flowService.deleteBatch(req.getSessionIds()));
     }
 }

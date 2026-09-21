@@ -27,6 +27,8 @@ public class InterviewSession {
     private String weakTags;
     /** 面试时长（秒），默认 1800（30分钟） */
     private Integer durationSeconds;
+    /** 是否已配置模块偏好: 0否 1是 */
+    private Integer hasModulePreference;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
 }

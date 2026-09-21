@@ -1,5 +1,7 @@
 envs/
 .venv/
+.venv*/
+.venv-broken-*/
 __pycache__/
 **/__pycache__/
 *.py[cod]

@@ -12,29 +12,16 @@
       <div class="brand-content">
         <router-link to="/" class="brand-logo">
           <LogoIcon :size="36" />
-          <span class="brand-name">OfferPilot</span>
+          <span class="brand-name">
+            <span class="brand-cn">智面幻境</span>
+            <span class="brand-en">OfferPilot</span>
+          </span>
         </router-link>
 
-        <h1 class="brand-title">
-          开启你的<br />
-          <span class="title-accent">面试训练之旅</span>
-        </h1>
-        <p class="brand-desc">注册后即可体验 AI 模拟面试、智能简历分析、多维能力评估等全部功能</p>
+        <h1 class="brand-title">从一次完整练习<br /><span class="title-accent">开始准备</span></h1>
+        <p class="brand-desc">建立岗位、简历与回答之间的联系，让每一步准备都有记录可循。</p>
+        <AuthShowcase :initial-slide="1" />
 
-        <!-- Feature Steps -->
-        <div class="feature-steps">
-          <div v-for="(step, i) in featureSteps" :key="i" class="fstep"
-            @mouseenter="activeStep = i"
-            :class="{ active: activeStep === i }"
-          >
-            <div class="fstep-num">{{ String(i + 1).padStart(2, '0') }}</div>
-            <div class="fstep-text">
-              <span class="fstep-title">{{ step.title }}</span>
-              <span class="fstep-desc">{{ step.desc }}</span>
-            </div>
-            <div class="fstep-line"></div>
-          </div>
-        </div>
       </div>
     </div>
 
@@ -50,7 +37,7 @@
 
         <div class="form-header">
           <h1 class="form-title">创建账号</h1>
-          <p class="form-sub">注册 OfferPilot，开始 AI 面试训练</p>
+          <p class="form-sub">创建账号，保存每次练习与复盘</p>
         </div>
 
         <form class="auth-form" @submit.prevent="handleRegister">
@@ -137,20 +124,13 @@ import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { register as registerApi } from '../api'
 import LogoIcon from '../components/ui/LogoIcon.vue'
+import AuthShowcase from '../components/auth/AuthShowcase.vue'
 
 const router = useRouter()
 const showPwd = ref(false)
-const activeStep = ref(0)
 const errorMsg = ref('')
 const loading = ref(false)
 const mouse = reactive({ x: -200, y: -200 })
-
-const featureSteps = [
-  { title: '上传简历', desc: 'AI 自动提取技能标签' },
-  { title: '匹配岗位', desc: '智能推荐目标职位' },
-  { title: '模拟面试', desc: 'AI 实时追问评估' },
-  { title: '获取报告', desc: '多维能力分析提升' },
-]
 
 const form = reactive({
   username: '',
@@ -224,10 +204,12 @@ async function handleRegister() {
 .bg-glow { position: fixed; width: 400px; height: 400px; border-radius: 50%; background: radial-gradient(circle, rgba(16, 185, 129, 0.08) 0%, transparent 70%); transform: translate(-50%, -50%); transition: left 0.3s ease-out, top 0.3s ease-out; pointer-events: none; }
 
 /* Brand Panel */
-.brand-panel { position: relative; z-index: 1; flex: 0 0 45%; display: flex; align-items: center; padding: var(--space-10); }
-.brand-content { max-width: 440px; width: 100%; }
+.brand-panel { position: relative; z-index: 1; flex: 0 0 52%; display: flex; align-items: center; padding: var(--space-10); }
+.brand-content { max-width: 580px; width: 100%; }
 .brand-logo { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-10); text-decoration: none; }
-.brand-name { font-family: var(--font-display); font-size: var(--text-lg); font-weight: 700; color: var(--neutral-800); }
+.brand-name { display: flex; flex-direction: column; font-family: var(--font-display); color: var(--neutral-800); line-height: 1; }
+.brand-name .brand-cn { font-size: 1.25rem; font-weight: 750; letter-spacing: -0.02em; }
+.brand-name .brand-en { margin-top: 4px; font-size: 0.625rem; font-weight: 600; letter-spacing: 0.1em; color: var(--neutral-500); }
 .brand-title { font-family: var(--font-display); font-size: clamp(1.75rem, 3.5vw, 2.5rem); font-weight: 700; color: var(--neutral-900); line-height: 1.25; letter-spacing: -0.03em; margin-bottom: var(--space-4); }
 .title-accent { color: var(--accent-600); }
 .brand-desc { font-size: var(--text-base); color: var(--neutral-500); line-height: 1.7; margin-bottom: var(--space-10); }

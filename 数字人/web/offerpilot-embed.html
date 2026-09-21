@@ -38,7 +38,7 @@
         video {
             width: 100%;
             height: 100%;
-            object-fit: contain;
+            object-fit: cover;
             object-position: center center;
             background: transparent;
         }
@@ -158,6 +158,9 @@
         let latestSpeech = null;
         let playbackUnlocked = false;
         let pendingPlayback = false;
+        let remoteVideoTrackReceived = false;
+        let videoReadyNotified = false;
+        let firstFrameRequested = false;
 
         const statusEl = document.getElementById('status');
         const connectBtn = document.getElementById('connectBtn');
@@ -165,6 +168,38 @@
         const audioEl = document.getElementById('audio');
         const unlockOverlayEl = document.getElementById('unlockOverlay');
         const unlockBtnEl = document.getElementById('unlockBtn');
+
+        function checkVideoReady() {
+            if (videoReadyNotified || firstFrameRequested || !remoteVideoTrackReceived ||
+                !pc || pc.connectionState !== 'connected' ||
+                videoEl.readyState < HTMLMediaElement.HAVE_CURRENT_DATA ||
+                !videoEl.videoWidth || !videoEl.videoHeight) {
+                return;
+            }
+
+            firstFrameRequested = true;
+            if (typeof videoEl.requestVideoFrameCallback === 'function') {
+                videoEl.requestVideoFrameCallback(() => {
+                    firstFrameRequested = false;
+                    if (pc && pc.connectionState === 'connected' && !videoReadyNotified) {
+                        videoReadyNotified = true;
+                        notifyParent('offerpilot.embed.videoReady', {});
+                    }
+                });
+            } else {
+                requestAnimationFrame(() => {
+                    firstFrameRequested = false;
+                    if (pc && pc.connectionState === 'connected' && !videoReadyNotified) {
+                        videoReadyNotified = true;
+                        notifyParent('offerpilot.embed.videoReady', {});
+                    }
+                });
+            }
+        }
+
+        ['loadeddata', 'canplay', 'playing'].forEach((eventName) => {
+            videoEl.addEventListener(eventName, checkVideoReady);
+        });
 
         function setUnlockOverlay(visible) {
             unlockOverlayEl.hidden = !visible;
@@ -215,6 +250,7 @@
             element.srcObject = stream;
 
             const started = await tryPlay(element);
+            if (element === videoEl) checkVideoReady();
             if (!started && element === audioEl) {
                 updateStatus('Click avatar to enable audio', '');
             }
@@ -332,6 +368,9 @@
             }
 
             isConnecting = true;
+            remoteVideoTrackReceived = false;
+            videoReadyNotified = false;
+            firstFrameRequested = false;
             connectBtn.disabled = true;
             updateStatus('Connecting...', '');
 
@@ -339,12 +378,14 @@
                 pc = new RTCPeerConnection({ sdpSemantics: 'unified-plan' });
                 pc.addEventListener('track', (event) => {
                     if (event.track.kind === 'video') {
+                        remoteVideoTrackReceived = true;
                         void bindRemoteMedia(videoEl, event.streams[0]);
                     } else {
                         void bindRemoteMedia(audioEl, event.streams[0]);
                     }
                 });
                 pc.addEventListener('connectionstatechange', () => {
+                    if (pc.connectionState === 'connected') checkVideoReady();
                     if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected' || pc.connectionState === 'closed') {
                         isConnected = false;
                         connectBtn.disabled = false;
@@ -369,6 +410,7 @@
                 updateStatus('Connect failed', 'error');
                 connectBtn.disabled = false;
                 connectBtn.textContent = 'Reconnect';
+                notifyParent('offerpilot.embed.disconnected', {});
             } finally {
                 isConnecting = false;
             }

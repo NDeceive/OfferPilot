@@ -12,31 +12,16 @@
       <div class="brand-content">
         <router-link to="/" class="brand-logo">
           <LogoIcon :size="36" />
-          <span class="brand-name">OfferPilot</span>
+          <span class="brand-name">
+            <span class="brand-cn">智面幻境</span>
+            <span class="brand-en">OfferPilot</span>
+          </span>
         </router-link>
 
-        <h1 class="brand-title">
-          别担心<br />
-          <span class="title-accent">我们帮你找回</span>
-        </h1>
-        <p class="brand-desc">输入注册时使用的邮箱，我们将向你发送密码重置链接</p>
+        <h1 class="brand-title">找回账号<br /><span class="title-accent">继续准备</span></h1>
+        <p class="brand-desc">验证注册邮箱后即可重设密码，你的练习记录不会受到影响。</p>
+        <AuthShowcase :initial-slide="2" />
 
-        <!-- Animated Lock -->
-        <div class="lock-scene" @mouseenter="lockOpen = true" @mouseleave="lockOpen = false">
-          <div class="lock-body">
-            <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" class="lock-base"/>
-              <path d="M7 11V7a5 5 0 0 1 9.9-1" class="lock-shackle" :class="{ open: lockOpen }"/>
-            </svg>
-            <div class="lock-sparkles" :class="{ active: lockOpen }">
-              <span class="sparkle s1"></span>
-              <span class="sparkle s2"></span>
-              <span class="sparkle s3"></span>
-              <span class="sparkle s4"></span>
-            </div>
-          </div>
-          <span class="lock-hint">{{ lockOpen ? '即将解锁' : '悬停试试' }}</span>
-        </div>
       </div>
     </div>
 
@@ -54,7 +39,7 @@
         <div v-if="step === 1">
           <div class="form-header">
             <h1 class="form-title">忘记密码</h1>
-            <p class="form-sub">输入你的注册邮箱，我们将发送重置链接</p>
+            <p class="form-sub">输入注册邮箱，我们会向该地址发送重置链接</p>
           </div>
 
           <form class="auth-form" @submit.prevent="handleSend">
@@ -112,10 +97,10 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import LogoIcon from '../components/ui/LogoIcon.vue'
+import AuthShowcase from '../components/auth/AuthShowcase.vue'
 
 const step = ref(1)
 const email = ref('')
-const lockOpen = ref(false)
 const mouse = reactive({ x: -200, y: -200 })
 
 function onMouseMove(e) {
@@ -138,10 +123,12 @@ function handleSend() {
 .bg-glow { position: fixed; width: 400px; height: 400px; border-radius: 50%; background: radial-gradient(circle, rgba(16, 185, 129, 0.08) 0%, transparent 70%); transform: translate(-50%, -50%); transition: left 0.3s ease-out, top 0.3s ease-out; pointer-events: none; }
 
 /* Brand Panel */
-.brand-panel { position: relative; z-index: 1; flex: 0 0 45%; display: flex; align-items: center; padding: var(--space-10); }
-.brand-content { max-width: 440px; width: 100%; }
+.brand-panel { position: relative; z-index: 1; flex: 0 0 52%; display: flex; align-items: center; padding: var(--space-10); }
+.brand-content { max-width: 580px; width: 100%; }
 .brand-logo { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-10); text-decoration: none; }
-.brand-name { font-family: var(--font-display); font-size: var(--text-lg); font-weight: 700; color: var(--neutral-800); }
+.brand-name { display: flex; flex-direction: column; font-family: var(--font-display); color: var(--neutral-800); line-height: 1; }
+.brand-name .brand-cn { font-size: 1.25rem; font-weight: 750; letter-spacing: -0.02em; }
+.brand-name .brand-en { margin-top: 4px; font-size: 0.625rem; font-weight: 600; letter-spacing: 0.1em; color: var(--neutral-500); }
 .brand-title { font-family: var(--font-display); font-size: clamp(1.75rem, 3.5vw, 2.5rem); font-weight: 700; color: var(--neutral-900); line-height: 1.25; letter-spacing: -0.03em; margin-bottom: var(--space-4); }
 .title-accent { color: var(--accent-600); }
 .brand-desc { font-size: var(--text-base); color: var(--neutral-500); line-height: 1.7; margin-bottom: var(--space-10); }
@@ -160,7 +147,7 @@ function handleSend() {
 /* Sparkles */
 .lock-sparkles { position: absolute; inset: -10px; pointer-events: none; }
 .sparkle { position: absolute; width: 4px; height: 4px; border-radius: 50%; background: var(--accent-400); opacity: 0; transition: opacity 0.3s; }
-.lock-sparkles.active .sparkle { animation: sparkle-pop 0.6s var(--ease-spring) forwards; }
+.lock-sparkles.active .sparkle { animation: sparkle-pop 0.6s var(--ease-out-expo) forwards; }
 .s1 { top: 0; left: 50%; animation-delay: 0s; }
 .s2 { top: 30%; right: 0; animation-delay: 0.1s; }
 .s3 { bottom: 20%; left: 0; animation-delay: 0.2s; }
@@ -191,7 +178,7 @@ function handleSend() {
 .field-input input:focus { border-color: var(--accent-400); box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1); }
 
 /* Success Icon */
-.success-icon { width: 72px; height: 72px; border-radius: 50%; background: var(--accent-50); display: flex; align-items: center; justify-content: center; margin: 0 auto; animation: scale-in 0.4s var(--ease-spring); }
+.success-icon { width: 72px; height: 72px; border-radius: 50%; background: var(--accent-50); display: flex; align-items: center; justify-content: center; margin: 0 auto; animation: scale-in 0.4s var(--ease-out-expo); }
 @keyframes scale-in { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
 /* Info Box */

@@ -18,4 +18,8 @@ public class InterviewRecord {
     private Long reportId;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
+    /** 面试时长（秒），旧数据可能为空 */
+    private Integer durationSeconds;
+    /** 面试实际时长（秒，完成时由 endTime - startTime 计算） */
+    private Long actualDurationSeconds;
 }

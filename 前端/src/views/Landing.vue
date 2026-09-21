@@ -1,14 +1,25 @@
 <template>
-  <div class="landing" @mousemove="onGlobalMouseMove">
+  <div
+    class="landing"
+    :style="{
+      '--journey-shift': `${ambientShift}px`,
+      '--journey-shift-reverse': `${ambientShift * -0.65}px`,
+      '--journey-shift-soft': `${ambientShift * 0.45}px`,
+    }"
+    @mousemove="onGlobalMouseMove"
+  >
     <!-- Scroll Progress -->
-    <div class="scroll-progress"><div class="scroll-progress-bar" :style="{ width: scrollPercent + '%' }"></div></div>
+    <div class="scroll-progress"><div class="scroll-progress-bar" :style="{ transform: `scaleX(${scrollPercent / 100})` }"></div></div>
 
     <!-- Navbar -->
-    <nav class="nav">
+    <nav class="nav" :class="{ 'nav-hidden': !navVisible, 'nav-scrolled': isScrolled }">
       <div class="nav-inner">
         <div class="nav-logo">
           <LogoIcon :size="26" />
-          <span class="nav-brand">OfferPilot</span>
+          <span class="nav-brand">
+            <span class="brand-cn">智面幻境</span>
+            <span class="brand-en">OfferPilot</span>
+          </span>
         </div>
         <div class="nav-links">
           <a href="#features">功能</a>
@@ -23,10 +34,71 @@
     </nav>
 
     <!-- Hero -->
-    <section class="hero">
+    <section
+      ref="heroRef"
+      class="hero"
+      @pointermove="onHeroPointerMove"
+      @pointerenter="onHeroPointerEnter"
+      @pointerleave="onHeroPointerLeave"
+    >
       <div class="hero-bg">
         <div class="hero-gradient"></div>
         <div class="hero-dots"></div>
+      </div>
+
+      <div class="hero-insight-layer" :class="{ visible: spotlightVisible }" :style="spotlightMaskStyle" aria-hidden="true">
+        <div class="hero-insight-wash"></div>
+        <svg class="hero-insight-map" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
+          <g class="insight-links">
+            <path d="M90 650 C260 510 360 600 505 430 S770 260 925 380 S1170 590 1370 280"/>
+            <path d="M160 250 C350 330 410 190 590 300 S870 560 1060 480 S1250 300 1390 420"/>
+            <path d="M310 820 C430 700 575 760 700 620 S920 700 1100 610"/>
+          </g>
+
+          <g class="insight-blueprint" transform="translate(930 150)">
+            <rect width="360" height="214" rx="18"/>
+            <line x1="0" y1="48" x2="360" y2="48"/>
+            <circle cx="24" cy="24" r="4"/>
+            <circle cx="40" cy="24" r="4"/>
+            <circle cx="56" cy="24" r="4"/>
+            <rect x="28" y="75" width="198" height="11" rx="5.5"/>
+            <rect x="28" y="98" width="272" height="7" rx="3.5"/>
+            <rect x="28" y="116" width="238" height="7" rx="3.5"/>
+            <rect x="28" y="153" width="82" height="34" rx="9"/>
+            <rect x="120" y="153" width="82" height="34" rx="9"/>
+            <rect x="212" y="153" width="116" height="34" rx="9"/>
+          </g>
+
+          <g class="insight-blueprint insight-blueprint-report" transform="translate(130 460)">
+            <rect width="300" height="176" rx="16"/>
+            <circle cx="83" cy="88" r="45"/>
+            <path d="M83 45 L112 78 L102 120 L61 124 L39 82 Z"/>
+            <rect x="154" y="48" width="112" height="7" rx="3.5"/>
+            <rect x="154" y="74" width="92" height="7" rx="3.5"/>
+            <rect x="154" y="100" width="124" height="7" rx="3.5"/>
+            <rect x="154" y="126" width="78" height="7" rx="3.5"/>
+          </g>
+
+          <g class="insight-node" transform="translate(215 280)">
+            <circle r="9"/><circle r="3"/><text x="18" y="5">简历技能</text>
+          </g>
+          <g class="insight-node" transform="translate(505 430)">
+            <circle r="11"/><circle r="3.5"/><text x="20" y="5">项目表达</text>
+          </g>
+          <g class="insight-node" transform="translate(700 620)">
+            <circle r="9"/><circle r="3"/><text x="18" y="5">逻辑结构</text>
+          </g>
+          <g class="insight-node" transform="translate(925 380)">
+            <circle r="12"/><circle r="4"/><text x="22" y="5">追问路径</text>
+          </g>
+          <g class="insight-node insight-node-warm" transform="translate(1100 610)">
+            <circle r="12"/><circle r="4"/><text x="22" y="5">岗位匹配</text>
+          </g>
+          <g class="insight-node" transform="translate(1290 320)">
+            <circle r="9"/><circle r="3"/><text x="-98" y="5">能力反馈</text>
+          </g>
+        </svg>
+        <span class="insight-hint">移动光标，查看回答背后的能力结构</span>
       </div>
 
       <div class="hero-wrap">
@@ -135,6 +207,40 @@
       </div>
     </section>
 
+    <!-- Scroll-linked interview journey -->
+    <div class="journey-layer" aria-hidden="true">
+      <div class="ambient-orb ambient-orb-one"></div>
+      <div class="ambient-orb ambient-orb-two"></div>
+      <div class="ambient-orb ambient-orb-three"></div>
+
+      <svg class="journey-path" viewBox="0 0 1200 2400" preserveAspectRatio="none">
+        <path class="journey-path-base" pathLength="1" d="M1060 0 C940 260 1100 430 900 650 C690 880 1010 1030 780 1270 C570 1490 870 1690 650 1890 C520 2010 620 2220 470 2400"/>
+        <path class="journey-path-active" pathLength="1" :style="{ strokeDashoffset: 1 - journeyProgress }" d="M1060 0 C940 260 1100 430 900 650 C690 880 1010 1030 780 1270 C570 1490 870 1690 650 1890 C520 2010 620 2220 470 2400"/>
+        <g class="journey-node" :class="{ active: journeyProgress > 0.18 }" transform="translate(916 630)">
+          <circle r="13"/><circle r="4"/>
+        </g>
+        <g class="journey-node" :class="{ active: journeyProgress > 0.42 }" transform="translate(806 1250)">
+          <circle r="13"/><circle r="4"/>
+        </g>
+        <g class="journey-node" :class="{ active: journeyProgress > 0.68 }" transform="translate(668 1870)">
+          <circle r="13"/><circle r="4"/>
+        </g>
+        <g class="journey-node journey-node-final" :class="{ active: journeyProgress > 0.88 }" transform="translate(470 2390)">
+          <circle r="17"/><circle r="5"/>
+        </g>
+      </svg>
+
+      <div class="journey-fragment fragment-role" :class="{ visible: journeyProgress > 0.14 }">
+        <span>目标岗位</span><strong>Java 后端</strong>
+      </div>
+      <div class="journey-fragment fragment-skill" :class="{ visible: journeyProgress > 0.4 }">
+        <span>技能画像</span><strong>项目表达 · 已识别</strong>
+      </div>
+      <div class="journey-fragment fragment-report" :class="{ visible: journeyProgress > 0.66 }">
+        <span>训练反馈</span><strong>提升建议已生成</strong>
+      </div>
+    </div>
+
     <!-- Features (Bento) -->
     <section id="features" class="features-section">
       <div class="section-inner">
@@ -147,7 +253,7 @@
           <div class="bento-left">
             <div class="bento-card bento-card-ai" data-reveal @mousemove="onCardSpotlight" @mouseleave="onCardLeave">
               <div class="bento-icon bento-icon-ai">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-600)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                <svg aria-hidden="true"><use href="/icons.svg#offerpilot-interview"></use></svg>
               </div>
               <h3 class="bento-title">AI 追问引擎</h3>
               <p class="bento-desc">不是简单的一问一答。AI 实时分析你的回答, 动态生成深度追问, 帮你训练临场应变能力。</p>
@@ -159,7 +265,7 @@
 
             <div class="bento-card bento-card-resume" data-reveal @mousemove="onCardSpotlight" @mouseleave="onCardLeave">
               <div class="bento-icon bento-icon-resume">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-600)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                <svg aria-hidden="true"><use href="/icons.svg#offerpilot-resume"></use></svg>
               </div>
               <h3 class="bento-title">智能简历分析</h3>
               <p class="bento-desc">上传简历, AI 自动提取技能标签和项目经历, 为你生成个性化面试方案。</p>
@@ -167,29 +273,46 @@
           </div>
 
           <div class="bento-card bento-card-report" data-reveal @mousemove="onCardSpotlight" @mouseleave="onCardLeave">
-            <div class="bento-icon bento-icon-report">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-600)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"/><path d="M6 20V4"/><path d="M18 20v-6"/></svg>
+            <div class="report-card-head">
+              <div>
+                <div class="bento-icon bento-icon-report">
+                  <svg aria-hidden="true"><use href="/icons.svg#offerpilot-report"></use></svg>
+                </div>
+                <h3 class="bento-title">多维能力报告</h3>
+                <p class="bento-desc">五维评估不只给出分数，更帮你看清优势与下一步提升方向。</p>
+              </div>
+              <span class="report-demo-badge">报告示意</span>
             </div>
-            <h3 class="bento-title">多维能力报告</h3>
-            <p class="bento-desc">五维雷达图、优劣势分析、提升建议, 用数据驱动你的成长。</p>
-            <div class="bento-chart">
-              <div class="bento-chart-ring"></div>
-              <div class="bento-chart-ring bento-chart-ring-2"></div>
-              <div class="bento-chart-ring bento-chart-ring-3"></div>
-            </div>
-            <div class="bento-img-wrap">
-              <svg viewBox="0 0 160 160" class="bento-radar" xmlns="http://www.w3.org/2000/svg">
+
+            <div class="report-preview">
+              <div class="bento-img-wrap">
+                <svg viewBox="0 0 160 160" class="bento-radar" role="img" aria-label="五维能力雷达图示意">
                 <!-- Grid -->
-                <polygon v-for="s in [0.3,0.55,0.8]" :key="s" :points="radarGridPoints(s)" fill="none" :stroke="s===0.8?'var(--accent-300)':'var(--accent-100)'" stroke-width="1"/>
+                  <polygon v-for="s in [0.3,0.55,0.8]" :key="s" :points="radarGridPoints(s)" fill="none" :stroke="s===0.8?'#84cbb0':'#b9dfd0'" stroke-width="1"/>
                 <!-- Axis -->
-                <line v-for="(_, i) in 5" :key="i" :x1="80" :y1="80" :x2="radarAngles[i].x*60+80" :y2="radarAngles[i].y*60+80" stroke="var(--accent-100)" stroke-width="0.8"/>
+                  <line v-for="(_, i) in 5" :key="i" :x1="80" :y1="80" :x2="radarAngles[i].x*60+80" :y2="radarAngles[i].y*60+80" stroke="#b9dfd0" stroke-width="0.8"/>
                 <!-- Data -->
-                <polygon :points="landingRadarData" fill="rgba(16,185,129,0.12)" stroke="var(--accent-500)" stroke-width="1.5" stroke-linejoin="round"/>
+                  <polygon :points="landingRadarData" fill="rgba(11,107,82,0.18)" stroke="#0b6b52" stroke-width="2" stroke-linejoin="round"/>
                 <!-- Dots -->
-                <circle v-for="(p, i) in landingRadarDots" :key="i" :cx="p.x" :cy="p.y" r="3" fill="var(--accent-500)"/>
+                  <circle v-for="(p, i) in landingRadarDots" :key="i" :cx="p.x" :cy="p.y" r="3.5" fill="#0b6b52"/>
                 <!-- Labels -->
-                <text v-for="(l, i) in ['表达','逻辑','技术','匹配','抗压']" :key="i" :x="radarAngles[i].x*78+80" :y="radarAngles[i].y*78+80+4" text-anchor="middle" font-size="11" fill="var(--neutral-400)" font-family="var(--font-body)">{{ l }}</text>
-              </svg>
+                  <text v-for="(l, i) in ['表达','逻辑','技术','匹配','抗压']" :key="i" :x="radarAngles[i].x*78+80" :y="radarAngles[i].y*78+80+4" text-anchor="middle" font-size="10" font-weight="600" fill="#426c60" font-family="var(--font-body)">{{ l }}</text>
+                </svg>
+              </div>
+
+              <div class="report-summary">
+                <div class="report-dimensions">
+                  <div v-for="item in reportDimensions" :key="item.label" class="report-dimension">
+                    <div><span>{{ item.label }}</span><strong>{{ item.value }}</strong></div>
+                    <div class="report-bar"><i :style="{ width: `${item.value}%` }"></i></div>
+                  </div>
+                </div>
+                <div class="report-insight">
+                  <span>本轮洞察</span>
+                  <strong>技术表达是你的优势</strong>
+                  <p>继续补充岗位场景与结果量化，回答会更有说服力。</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -231,13 +354,54 @@
     <!-- CTA -->
     <section class="cta-section">
       <div class="section-inner">
-        <div class="cta-card">
-          <h2 class="cta-title">准备好开启你的面试之旅了吗?</h2>
-          <p class="cta-desc">免费注册, 立即体验 AI 模拟面试</p>
-          <router-link to="/login" class="btn btn-primary btn-lg magnetic-btn" ref="ctaRef" @mousemove="onCtaMouseMove" @mouseleave="onCtaMouseLeave" :style="ctaMagnetStyle">
-            立即开始, 免费体验
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-          </router-link>
+        <div class="cta-card" :class="{ 'journey-arrived': journeyProgress > 0.88 }">
+          <div class="cta-copy">
+            <span class="cta-kicker">下一场面试，从这里预演</span>
+            <h2 class="cta-title">把每一次练习，变成更有把握的回答</h2>
+            <p class="cta-desc">从简历出发，经历一次真实追问，再带走一份清晰的能力报告。</p>
+            <router-link to="/login" class="btn btn-primary btn-lg magnetic-btn" ref="ctaRef" @mousemove="onCtaMouseMove" @mouseleave="onCtaMouseLeave" :style="ctaMagnetStyle">
+              立即开始，免费体验
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </router-link>
+          </div>
+
+          <div class="cta-stage" aria-label="OfferPilot 面试训练流程预览">
+            <div class="cta-flow">
+              <div v-for="(item, i) in ctaFlow" :key="item.title" class="cta-flow-item">
+                <span class="cta-flow-num">{{ i + 1 }}</span>
+                <span>
+                  <strong>{{ item.title }}</strong>
+                  <small>{{ item.desc }}</small>
+                </span>
+              </div>
+            </div>
+
+            <div class="cta-preview">
+              <div class="cta-preview-head">
+                <span class="cta-preview-status"><i></i> AI 面试进行中</span>
+                <span>08:42</span>
+              </div>
+              <p class="cta-question">请结合你的项目经历，说明一次你如何定位并解决性能问题。</p>
+              <div class="cta-answer-lines"><span></span><span></span><span></span></div>
+              <div class="cta-feedback">
+                <div>
+                  <small>表达完整度</small>
+                  <strong>清晰</strong>
+                </div>
+                <div>
+                  <small>追问方向</small>
+                  <strong>技术决策</strong>
+                </div>
+              </div>
+            </div>
+
+            <div class="cta-score-card">
+              <span>本轮表现</span>
+              <strong>稳步提升</strong>
+              <div><i style="width: 78%"></i></div>
+            </div>
+            <div class="cta-role-chip">目标岗位 · Java 后端</div>
+          </div>
         </div>
       </div>
     </section>
@@ -247,14 +411,17 @@
       <div class="footer-inner">
         <div class="footer-brand">
           <LogoIcon :size="22" />
-          <span>OfferPilot</span>
+          <span class="footer-brand-name">
+            <span class="brand-cn">智面幻境</span>
+            <span class="brand-en">OfferPilot</span>
+          </span>
         </div>
         <div class="footer-links">
           <a href="#">隐私政策</a>
           <a href="#">使用条款</a>
           <a href="#">联系我们</a>
         </div>
-        <span class="footer-copy">&copy; 2026 OfferPilot. Built with AI.</span>
+        <span class="footer-copy">&copy; 2026 OfferPilot.</span>
       </div>
     </footer>
   </div>
@@ -271,6 +438,13 @@ const radarAngles = [0, 1, 2, 3, 4].map(i => {
 })
 
 const radarValues = [85, 72, 88, 68, 79]
+const reportDimensions = [
+  { label: '技术深度', value: 88 },
+  { label: '表达结构', value: 85 },
+  { label: '逻辑分析', value: 72 },
+  { label: '岗位匹配', value: 68 },
+  { label: '临场应变', value: 79 },
+]
 
 const radarGridPoints = (scale) =>
   radarValues.map((_, i) => {
@@ -289,6 +463,67 @@ const landingRadarData = computed(() =>
   landingRadarDots.value.map(p => `${p.x},${p.y}`).join(' ')
 )
 
+// === Hero insight spotlight ===
+const heroRef = ref(null)
+const spotlightVisible = ref(false)
+const spotlightRaw = reactive({ x: 0, y: 0 })
+const spotlightSmooth = reactive({ x: 0, y: 0 })
+let spotlightRaf = null
+
+const spotlightMaskStyle = computed(() => {
+  const mask = `radial-gradient(circle 260px at ${spotlightSmooth.x}px ${spotlightSmooth.y}px, #000 0%, #000 38%, rgba(0,0,0,.86) 56%, rgba(0,0,0,.42) 74%, rgba(0,0,0,.1) 88%, transparent 100%)`
+  return {
+    maskImage: mask,
+    WebkitMaskImage: mask,
+  }
+})
+
+function animateSpotlight() {
+  spotlightSmooth.x += (spotlightRaw.x - spotlightSmooth.x) * 0.11
+  spotlightSmooth.y += (spotlightRaw.y - spotlightSmooth.y) * 0.11
+
+  const settled =
+    Math.abs(spotlightRaw.x - spotlightSmooth.x) < 0.25 &&
+    Math.abs(spotlightRaw.y - spotlightSmooth.y) < 0.25
+
+  if (settled) {
+    spotlightSmooth.x = spotlightRaw.x
+    spotlightSmooth.y = spotlightRaw.y
+    spotlightRaf = null
+    return
+  }
+
+  spotlightRaf = requestAnimationFrame(animateSpotlight)
+}
+
+function onHeroPointerEnter() {
+  if (!window.matchMedia('(hover: hover)').matches) return
+  spotlightVisible.value = true
+}
+
+function onHeroPointerMove(event) {
+  if (!window.matchMedia('(hover: hover)').matches) return
+  const rect = heroRef.value?.getBoundingClientRect()
+  if (!rect) return
+
+  spotlightRaw.x = event.clientX - rect.left
+  spotlightRaw.y = event.clientY - rect.top
+  spotlightVisible.value = true
+
+  if (spotlightSmooth.x === 0 && spotlightSmooth.y === 0) {
+    spotlightSmooth.x = spotlightRaw.x
+    spotlightSmooth.y = spotlightRaw.y
+  }
+  if (!spotlightRaf) spotlightRaf = requestAnimationFrame(animateSpotlight)
+}
+
+function onHeroPointerLeave() {
+  if (!window.matchMedia('(hover: hover)').matches) return
+  spotlightVisible.value = false
+  if (spotlightRaf) cancelAnimationFrame(spotlightRaf)
+  spotlightRaf = null
+}
+
 const features = [
   { title: 'AI 追问引擎', desc: '不是简单的一问一答。AI 实时分析你的回答, 动态生成深度追问, 帮你训练临场应变能力。' },
   { title: '智能简历分析', desc: '上传简历, AI 自动提取技能标签和项目经历, 为你生成个性化面试方案。' },
@@ -302,6 +537,12 @@ const steps = [
   { title: '获得报告', desc: '五维评估 + 精准提升建议' },
 ]
 
+const ctaFlow = [
+  { title: '上传简历', desc: '识别经历与技能' },
+  { title: '进入面试', desc: '根据回答实时追问' },
+  { title: '获得报告', desc: '找到下一步提升方向' },
+]
+
 const stats = [
   { value: '10,000+', target: 10000, suffix: '+', label: '模拟面试完成' },
   { value: '50+', target: 50, suffix: '+', label: '覆盖岗位' },
@@ -311,9 +552,37 @@ const stats = [
 
 // === Scroll Progress ===
 const scrollPercent = ref(0)
+const navVisible = ref(true)
+const isScrolled = ref(false)
+const journeyProgress = ref(0)
+const ambientShift = ref(0)
+let lastScrollY = 0
+let journeyStart = 0
+let journeyEnd = 1
+
+function updateJourneyMetrics() {
+  const featuresEl = document.querySelector('.features-section')
+  const ctaEl = document.querySelector('.cta-section')
+  if (!featuresEl || !ctaEl) return
+  journeyStart = featuresEl.offsetTop - window.innerHeight * 0.7
+  journeyEnd = ctaEl.offsetTop + ctaEl.offsetHeight - window.innerHeight * 0.45
+}
+
 function onScroll() {
   const h = document.documentElement
   scrollPercent.value = (h.scrollTop / (h.scrollHeight - h.clientHeight)) * 100
+  const currentY = Math.max(window.scrollY, 0)
+  const delta = currentY - lastScrollY
+
+  isScrolled.value = currentY > 24
+  if (currentY < 24 || delta < -4) navVisible.value = true
+  if (currentY > 96 && delta > 4) navVisible.value = false
+
+  const progress = Math.min(Math.max((currentY - journeyStart) / (journeyEnd - journeyStart), 0), 1)
+  journeyProgress.value = progress
+  ambientShift.value = (progress - 0.5) * 90
+
+  lastScrollY = currentY
 }
 
 // === Typewriter ===
@@ -445,8 +714,18 @@ const observerRef = ref(null)
 const statsObserverRef = ref(null)
 
 onMounted(() => {
+  if (!window.matchMedia('(hover: hover)').matches && heroRef.value) {
+    spotlightSmooth.x = heroRef.value.clientWidth * 0.68
+    spotlightSmooth.y = heroRef.value.clientHeight * 0.52
+    spotlightVisible.value = true
+  }
+
   // Scroll listener
+  updateJourneyMetrics()
+  lastScrollY = Math.max(window.scrollY, 0)
+  onScroll()
   window.addEventListener('scroll', onScroll, { passive: true })
+  window.addEventListener('resize', updateJourneyMetrics, { passive: true })
 
   // Typewriter
   setTimeout(startTypewriter, 500)
@@ -491,13 +770,179 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('scroll', onScroll)
+  window.removeEventListener('resize', updateJourneyMetrics)
   clearInterval(twTimer)
+  if (spotlightRaf) cancelAnimationFrame(spotlightRaf)
   observerRef.value?.disconnect()
   statsObserverRef.value?.disconnect()
 })
 </script>
 
 <style scoped>
+.landing {
+  position: relative;
+  overflow: clip;
+  background: #0d2b24;
+}
+
+/* === Interview journey atmosphere === */
+.journey-layer {
+  position: absolute;
+  z-index: 0;
+  top: 100dvh;
+  right: 0;
+  bottom: 74px;
+  left: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.journey-path {
+  position: absolute;
+  inset: 2% max(1rem, calc((100vw - var(--container-max)) / 2)) 3% auto;
+  width: min(84vw, 1180px);
+  height: 94%;
+  opacity: 0.78;
+}
+
+.journey-path-base,
+.journey-path-active {
+  fill: none;
+  vector-effect: non-scaling-stroke;
+  stroke-linecap: round;
+}
+
+.journey-path-base {
+  stroke: rgba(167, 243, 208, 0.1);
+  stroke-width: 1;
+}
+
+.journey-path-active {
+  stroke: #53c896;
+  stroke-width: 1.6;
+  stroke-dasharray: 1;
+  transition: stroke-dashoffset 180ms linear;
+  filter: drop-shadow(0 5px 9px rgba(44, 190, 132, 0.16));
+}
+
+.journey-node circle:first-child {
+  fill: #123d33;
+  stroke: rgba(167, 243, 208, 0.2);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  transition:
+    fill 420ms var(--ease-out-expo),
+    stroke 420ms var(--ease-out-expo);
+}
+
+.journey-node circle:last-child {
+  fill: #668b7f;
+  transition: fill 420ms var(--ease-out-expo);
+}
+
+.journey-node.active circle:first-child {
+  fill: #1b5b49;
+  stroke: #77dbb1;
+}
+
+.journey-node.active circle:last-child {
+  fill: #b8f1d8;
+}
+
+.journey-node.active {
+  filter: drop-shadow(0 6px 10px rgba(44, 190, 132, 0.24));
+}
+
+.ambient-orb {
+  position: absolute;
+  width: clamp(360px, 46vw, 680px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  opacity: 0.2;
+  transform: translate3d(0, var(--journey-shift), 0);
+  transition: transform 220ms linear;
+  will-change: transform;
+}
+
+.ambient-orb-one {
+  top: 15%;
+  right: -18%;
+  background: radial-gradient(circle, rgba(73, 183, 137, 0.24), rgba(73, 183, 137, 0) 68%);
+}
+
+.ambient-orb-two {
+  top: 48%;
+  left: -20%;
+  background: radial-gradient(circle, rgba(104, 160, 140, 0.2), rgba(104, 160, 140, 0) 70%);
+  transform: translate3d(0, var(--journey-shift-reverse), 0);
+}
+
+.ambient-orb-three {
+  right: -14%;
+  bottom: 2%;
+  background: radial-gradient(circle, rgba(225, 164, 81, 0.14), rgba(225, 164, 81, 0) 66%);
+  transform: translate3d(0, var(--journey-shift-soft), 0);
+}
+
+.journey-fragment {
+  position: absolute;
+  min-width: 156px;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid rgba(183, 242, 215, 0.13);
+  border-radius: var(--radius-md);
+  background: rgba(18, 61, 51, 0.88);
+  box-shadow: 0 14px 30px rgba(3, 20, 16, 0.2);
+  opacity: 0;
+  transform: translate3d(0, 18px, 0);
+  transition:
+    opacity 520ms var(--ease-out-expo),
+    transform 520ms var(--ease-out-expo);
+}
+
+.journey-fragment.visible {
+  opacity: 0.82;
+  transform: translate3d(0, 0, 0);
+}
+
+.journey-fragment span,
+.journey-fragment strong {
+  display: block;
+}
+
+.journey-fragment span {
+  color: #83aa9d;
+  font-size: 0.66rem;
+}
+
+.journey-fragment strong {
+  margin-top: 2px;
+  color: #d9f5e8;
+  font-size: var(--text-xs);
+}
+
+.fragment-role {
+  top: 24%;
+  right: max(2rem, calc((100vw - var(--container-max)) / 2 - 4rem));
+}
+
+.fragment-skill {
+  top: 48%;
+  left: max(1.5rem, calc((100vw - var(--container-max)) / 2 - 5rem));
+}
+
+.fragment-report {
+  top: 69%;
+  right: max(1.5rem, calc((100vw - var(--container-max)) / 2 - 3rem));
+}
+
+.features-section,
+.process-section,
+.stats-section,
+.cta-section {
+  position: relative;
+  z-index: 1;
+}
+
 /* === Scroll Progress === */
 .scroll-progress {
   position: fixed;
@@ -511,7 +956,8 @@ onUnmounted(() => {
 .scroll-progress-bar {
   height: 100%;
   background: linear-gradient(90deg, var(--accent-400), var(--accent-600));
-  transition: width 0.1s linear;
+  transform-origin: left center;
+  transition: transform 0.1s linear;
   border-radius: 0 2px 2px 0;
 }
 
@@ -566,10 +1012,25 @@ onUnmounted(() => {
   left: 0;
   right: 0;
   z-index: 100;
-  background: rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(16px) saturate(1.6);
-  -webkit-backdrop-filter: blur(16px) saturate(1.6);
-  border-bottom: 1px solid var(--neutral-200);
+  background: rgba(9, 30, 26, 0.34);
+  border-bottom: 1px solid rgba(209, 250, 229, 0.1);
+  transition:
+    transform 420ms var(--ease-out-expo),
+    background 280ms var(--ease-out-expo),
+    border-color 280ms var(--ease-out-expo),
+    box-shadow 280ms var(--ease-out-expo);
+}
+
+.nav.nav-scrolled {
+  background: rgba(10, 43, 36, 0.9);
+  backdrop-filter: blur(18px) saturate(1.25);
+  -webkit-backdrop-filter: blur(18px) saturate(1.25);
+  border-bottom-color: rgba(209, 250, 229, 0.14);
+  box-shadow: 0 12px 34px rgba(4, 24, 20, 0.16);
+}
+
+.nav.nav-hidden {
+  transform: translateY(calc(-100% - 4px));
 }
 
 .nav-inner {
@@ -586,14 +1047,30 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  color: #f0fdf8;
 }
 
 .nav-brand {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   font-family: var(--font-display);
-  font-size: var(--text-base);
-  font-weight: 700;
-  color: var(--neutral-900);
+  color: inherit;
+  line-height: 1;
+}
+
+.nav-brand .brand-cn {
+  font-size: 1.0625rem;
+  font-weight: 750;
   letter-spacing: -0.02em;
+}
+
+.nav-brand .brand-en {
+  margin-top: 3px;
+  font-size: 0.5625rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  opacity: 0.68;
 }
 
 .nav-links {
@@ -604,12 +1081,12 @@ onUnmounted(() => {
 .nav-links a {
   font-size: var(--text-sm);
   font-weight: 500;
-  color: var(--neutral-500);
+  color: rgba(236, 253, 245, 0.72);
   transition: color var(--duration-fast) var(--ease-out-expo);
 }
 
 .nav-links a:hover {
-  color: var(--neutral-900);
+  color: #fff;
 }
 
 .nav-actions {
@@ -621,21 +1098,21 @@ onUnmounted(() => {
 .btn-nav-ghost {
   font-size: var(--text-sm);
   font-weight: 500;
-  color: var(--neutral-600);
+  color: rgba(236, 253, 245, 0.84);
   padding: var(--space-2) var(--space-4);
   transition: color var(--duration-fast) var(--ease-out-expo);
 }
 
 .btn-nav-ghost:hover {
-  color: var(--neutral-900);
+  color: #fff;
 }
 
 .btn-nav-accent {
   font-size: var(--text-sm);
   font-weight: 600;
-  color: white;
+  color: #073d31;
   padding: var(--space-2) var(--space-5);
-  background: var(--accent-500);
+  background: #b7f2d7;
   border-radius: var(--radius-sm);
   transition:
     background var(--duration-normal) var(--ease-out-expo),
@@ -644,10 +1121,10 @@ onUnmounted(() => {
 }
 
 .btn-nav-accent:hover {
-  background: var(--accent-600);
-  box-shadow: var(--shadow-accent);
+  background: #d9faea;
+  box-shadow: 0 8px 24px rgba(4, 24, 20, 0.22);
   transform: translateY(-1px);
-  color: white;
+  color: #052e25;
 }
 
 /* === Hero === */
@@ -662,6 +1139,7 @@ onUnmounted(() => {
 
 .hero-bg {
   position: absolute;
+  z-index: 0;
   inset: 0;
   pointer-events: none;
 }
@@ -669,21 +1147,124 @@ onUnmounted(() => {
 .hero-gradient {
   position: absolute;
   inset: 0;
-  background: linear-gradient(155deg, var(--neutral-950) 0%, #1a2e2a 45%, var(--neutral-900) 100%);
+  background: #0d2b24;
 }
 
 .hero-dots {
   position: absolute;
   inset: 0;
-  opacity: 0.18;
-  background-image:
-    radial-gradient(circle, var(--accent-400) 1px, transparent 1px);
-  background-size: 48px 48px;
+  opacity: 0.38;
+  background:
+    radial-gradient(circle at 78% 42%, rgba(52, 211, 153, 0.15), transparent 28%),
+    radial-gradient(circle at 14% 82%, rgba(16, 185, 129, 0.08), transparent 24%);
+}
+
+.hero-insight-layer {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 320ms var(--ease-out-expo);
+}
+
+.hero-insight-layer.visible {
+  opacity: 1;
+}
+
+.hero-insight-wash {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 62% 42%, rgba(46, 153, 111, 0.26), transparent 36%),
+    linear-gradient(145deg, #123c32, #0f352c 54%, #183d33);
+}
+
+.hero-insight-map {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.insight-links path {
+  fill: none;
+  stroke: rgba(139, 224, 186, 0.42);
+  stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
+}
+
+.insight-blueprint {
+  fill: rgba(7, 31, 26, 0.34);
+  stroke: rgba(183, 242, 215, 0.38);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.insight-blueprint line {
+  stroke: rgba(183, 242, 215, 0.24);
+}
+
+.insight-blueprint:not(.insight-blueprint-report) circle {
+  fill: #5ad49f;
+  stroke: none;
+}
+
+.insight-blueprint rect:not(:first-child) {
+  fill: rgba(183, 242, 215, 0.14);
+  stroke: none;
+}
+
+.insight-blueprint-report path {
+  fill: rgba(77, 207, 151, 0.12);
+  stroke: rgba(126, 224, 182, 0.52);
+}
+
+.insight-blueprint-report > circle {
+  fill: rgba(77, 207, 151, 0.06);
+  stroke: rgba(126, 224, 182, 0.38);
+}
+
+.insight-node > circle:first-child {
+  fill: #164c3e;
+  stroke: #71d8ad;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.insight-node > circle:nth-child(2) {
+  fill: #b7f2d7;
+}
+
+.insight-node text {
+  fill: rgba(229, 250, 241, 0.78);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.insight-node-warm > circle:first-child {
+  fill: #5c441f;
+  stroke: #f0b85d;
+}
+
+.insight-node-warm > circle:nth-child(2) {
+  fill: #ffd28a;
+}
+
+.insight-hint {
+  position: absolute;
+  right: var(--space-10);
+  bottom: var(--space-8);
+  color: rgba(220, 246, 235, 0.62);
+  font-size: var(--text-xs);
+  letter-spacing: 0.02em;
 }
 
 .hero-wrap {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   max-width: var(--container-max);
   margin: 0 auto;
   padding: var(--space-16) var(--space-8);
@@ -1055,7 +1636,7 @@ onUnmounted(() => {
   font-family: var(--font-display);
   font-size: clamp(1.75rem, 3.5vw, var(--text-3xl));
   font-weight: 700;
-  color: var(--neutral-900);
+  color: #f1faf6;
   letter-spacing: -0.02em;
   margin-bottom: var(--space-3);
 }
@@ -1066,7 +1647,7 @@ onUnmounted(() => {
 
 .section-desc {
   font-size: var(--text-lg);
-  color: var(--neutral-500);
+  color: #9dbbb1;
   max-width: 540px;
   margin: 0 auto;
 }
@@ -1074,7 +1655,7 @@ onUnmounted(() => {
 /* === Features (Bento) === */
 .features-section {
   padding: var(--space-32) 0 var(--space-24);
-  background: var(--surface-primary);
+  background: transparent;
 }
 
 .bento-grid {
@@ -1091,8 +1672,8 @@ onUnmounted(() => {
 }
 
 .bento-card {
-  background: var(--surface-elevated);
-  border: 1px solid var(--neutral-200);
+  background: #f5f1e9;
+  border: 1px solid rgba(236, 253, 245, 0.08);
   border-radius: var(--radius-lg);
   padding: var(--space-8);
   position: relative;
@@ -1105,63 +1686,62 @@ onUnmounted(() => {
 
 .bento-card:hover {
   transform: translateY(-4px) scale(1.005);
-  box-shadow: var(--shadow-lg);
-  border-color: var(--accent-200);
+  box-shadow: 0 20px 42px rgba(2, 18, 15, 0.24);
+  border-color: rgba(183, 242, 215, 0.22);
 }
 
 .bento-card-ai {
   flex: 1;
 }
 
-.bento-card-ai::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, var(--accent-400), var(--accent-500));
-}
-
 .bento-card-resume {
   flex: 1;
-}
-
-.bento-card-resume::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, var(--accent-500), var(--accent-300));
 }
 
 .bento-card-report {
   display: flex;
   flex-direction: column;
+  background: #234c41;
 }
 
-.bento-card-report::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, var(--accent-600), var(--accent-400));
+.report-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-5);
+}
+
+.report-card-head > div {
+  max-width: 31rem;
+}
+
+.report-card-head .bento-icon {
+  margin-bottom: var(--space-4);
+}
+
+.report-demo-badge {
+  flex: 0 0 auto;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-full);
+  background: rgba(214, 235, 225, 0.12);
+  color: #b9ded0;
+  font-size: var(--text-xs);
+  font-weight: 600;
 }
 
 .bento-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: var(--radius-sm);
+  width: 58px;
+  height: 58px;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: var(--space-5);
-  background: var(--accent-50);
-  border: 1px solid var(--accent-100);
+}
+
+.bento-icon svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 7px 10px rgba(11, 107, 82, 0.12));
 }
 
 .bento-title {
@@ -1175,8 +1755,16 @@ onUnmounted(() => {
 
 .bento-desc {
   font-size: var(--text-sm);
-  color: var(--neutral-500);
+  color: #58736b;
   line-height: 1.7;
+}
+
+.bento-card-report .bento-title {
+  color: #f1faf6;
+}
+
+.bento-card-report .bento-desc {
+  color: #a9c8bd;
 }
 
 .bento-tag-row {
@@ -1196,58 +1784,104 @@ onUnmounted(() => {
   border-radius: var(--radius-full);
 }
 
-/* Report card chart decoration */
-.bento-chart {
-  position: absolute;
-  top: var(--space-8);
-  right: var(--space-8);
-  width: 80px;
-  height: 80px;
-  opacity: 0.12;
-  pointer-events: none;
-}
-
-.bento-chart-ring {
-  position: absolute;
-  inset: 0;
-  border: 2px solid var(--accent-500);
-  border-radius: 50%;
-}
-
-.bento-chart-ring-2 {
-  inset: 12px;
-  border-color: var(--accent-400);
-}
-
-.bento-chart-ring-3 {
-  inset: 24px;
-  border-color: var(--accent-300);
+.report-preview {
+  min-height: 300px;
+  margin-top: var(--space-8);
+  padding: var(--space-5);
+  display: grid;
+  grid-template-columns: minmax(230px, 1.08fr) minmax(190px, 0.92fr);
+  align-items: center;
+  gap: var(--space-5);
+  background: #d6e3dc;
+  border-radius: var(--radius-md);
 }
 
 .bento-img-wrap {
-  margin-top: auto;
-  padding-top: var(--space-6);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .bento-radar {
-  width: 160px;
-  height: 160px;
+  width: min(100%, 280px);
+  height: auto;
+  overflow: visible;
 }
 
-.bento-img {
-  width: 100%;
-  height: 160px;
-  object-fit: cover;
+.report-summary {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.report-dimensions {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.report-dimension > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 5px;
+  color: #4b7066;
+  font-size: var(--text-xs);
+}
+
+.report-dimension strong {
+  color: #164d3e;
+  font-size: var(--text-xs);
+}
+
+.report-bar {
+  height: 5px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: #d3e7de;
+}
+
+.report-bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #269a70;
+}
+
+.report-insight {
+  padding: var(--space-4);
+  background: #0f5b47;
   border-radius: var(--radius-sm);
+  color: #eaf9f2;
+}
+
+.report-insight span,
+.report-insight strong {
+  display: block;
+}
+
+.report-insight span {
+  color: #9ed7c1;
+  font-size: var(--text-xs);
+}
+
+.report-insight strong {
+  margin: 3px 0 var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.report-insight p {
+  color: #c6e5d9;
+  font-size: 0.7rem;
+  line-height: 1.6;
 }
 
 /* === Process === */
 .process-section {
   padding: var(--space-24) 0;
-  background: var(--surface-sunken);
+  background: transparent;
+}
+
+.process-section .section-title {
+  color: #effcf6;
 }
 
 .process-grid {
@@ -1259,8 +1893,8 @@ onUnmounted(() => {
 .step-card {
   position: relative;
   padding: var(--space-8) var(--space-6);
-  background: var(--surface-elevated);
-  border: 1px solid var(--neutral-200);
+  background: rgba(243, 252, 247, 0.08);
+  border: 1px solid rgba(209, 250, 229, 0.13);
   border-radius: var(--radius-lg);
   text-align: center;
   transition:
@@ -1271,15 +1905,15 @@ onUnmounted(() => {
 
 .step-card:hover {
   transform: translateY(-3px);
-  box-shadow: var(--shadow-md);
-  border-color: var(--accent-200);
+  box-shadow: 0 16px 28px rgba(3, 24, 19, 0.18);
+  border-color: rgba(167, 243, 208, 0.3);
 }
 
 .step-num {
   font-family: var(--font-mono);
   font-size: var(--text-3xl);
   font-weight: 700;
-  color: var(--accent-100);
+  color: #65d6a7;
   line-height: 1;
   margin-bottom: var(--space-4);
   letter-spacing: -0.04em;
@@ -1298,22 +1932,20 @@ onUnmounted(() => {
   font-family: var(--font-display);
   font-size: var(--text-base);
   font-weight: 600;
-  color: var(--neutral-800);
+  color: #effcf6;
   margin-bottom: var(--space-2);
 }
 
 .step-desc {
   font-size: var(--text-sm);
-  color: var(--neutral-500);
+  color: #a8c8bd;
   line-height: 1.6;
 }
 
 /* === Stats === */
 .stats-section {
   padding: var(--space-20) 0;
-  background: var(--surface-elevated);
-  border-top: 1px solid var(--neutral-200);
-  border-bottom: 1px solid var(--neutral-200);
+  background: transparent;
 }
 
 .stats-grid {
@@ -1333,55 +1965,85 @@ onUnmounted(() => {
   font-family: var(--font-mono);
   font-size: clamp(var(--text-3xl), 4vw, var(--text-4xl));
   font-weight: 700;
-  color: var(--accent-500);
+  color: #73d8ae;
   line-height: 1.1;
   letter-spacing: -0.03em;
 }
 
 .stat-label {
   font-size: var(--text-sm);
-  color: var(--neutral-500);
+  color: #a3c0b6;
 }
 
 /* === CTA === */
 .cta-section {
-  padding: var(--space-24) 0;
-  background: var(--surface-primary);
+  padding: var(--space-24) 0 var(--space-32);
+  background: transparent;
 }
 
 .cta-card {
-  background: linear-gradient(145deg, var(--neutral-950), #1a2e2a, var(--neutral-900));
+  min-height: 560px;
+  background: #071f1a;
   border-radius: var(--radius-xl);
-  padding: var(--space-16) var(--space-8);
-  text-align: center;
+  padding: clamp(2rem, 5vw, 4.5rem);
   position: relative;
   overflow: hidden;
+  display: grid;
+  grid-template-columns: minmax(0, 0.82fr) minmax(420px, 1.18fr);
+  align-items: center;
+  gap: clamp(2rem, 5vw, 5rem);
+  box-shadow: 0 30px 70px rgba(9, 48, 40, 0.16);
+  transition: box-shadow 700ms var(--ease-out-expo);
+}
+
+.cta-card.journey-arrived {
+  box-shadow:
+    0 34px 76px rgba(2, 17, 14, 0.36),
+    0 12px 38px rgba(45, 183, 129, 0.12);
 }
 
 .cta-card::before {
   content: '';
   position: absolute;
   inset: 0;
-  opacity: 0.1;
-  background-image:
-    radial-gradient(circle, var(--accent-400) 1px, transparent 1px);
-  background-size: 36px 36px;
+  width: 480px;
+  height: 480px;
+  inset: auto -160px -220px auto;
+  border: 100px solid rgba(102, 215, 170, 0.07);
+  border-radius: 50%;
   pointer-events: none;
+}
+
+.cta-copy {
+  position: relative;
+  z-index: 2;
+}
+
+.cta-kicker {
+  display: inline-block;
+  margin-bottom: var(--space-5);
+  color: #7ee0b8;
+  font-size: var(--text-sm);
+  font-weight: 600;
 }
 
 .cta-title {
   font-family: var(--font-display);
-  font-size: clamp(var(--text-2xl), 3.5vw, var(--text-3xl));
+  font-size: clamp(2rem, 4vw, 3.6rem);
   font-weight: 700;
   color: var(--neutral-50);
-  margin-bottom: var(--space-4);
-  letter-spacing: -0.02em;
+  max-width: 9.5em;
+  margin-bottom: var(--space-5);
+  letter-spacing: -0.035em;
+  line-height: 1.12;
   position: relative;
 }
 
 .cta-desc {
-  font-size: var(--text-lg);
-  color: var(--neutral-400);
+  max-width: 36rem;
+  font-size: var(--text-base);
+  color: #a8c8bd;
+  line-height: 1.8;
   margin-bottom: var(--space-8);
   position: relative;
 }
@@ -1390,11 +2052,212 @@ onUnmounted(() => {
   position: relative;
 }
 
+.cta-stage {
+  position: relative;
+  min-height: 430px;
+  z-index: 1;
+}
+
+.cta-flow {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 158px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-4);
+  z-index: 3;
+}
+
+.cta-flow-item {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-3);
+  background: #e7e5dc;
+  color: #16483b;
+  border-radius: var(--radius-md);
+  box-shadow: 0 14px 30px rgba(3, 27, 22, 0.24);
+}
+
+.cta-flow-num {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #0b6b52;
+  color: #fff;
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+.cta-flow-item strong,
+.cta-flow-item small {
+  display: block;
+}
+
+.cta-flow-item strong {
+  font-size: var(--text-sm);
+}
+
+.cta-flow-item small {
+  margin-top: 2px;
+  color: #66857c;
+  font-size: 0.66rem;
+}
+
+.cta-preview {
+  position: absolute;
+  top: 34px;
+  left: 112px;
+  right: 0;
+  padding: var(--space-6);
+  background: #e7e9e2;
+  color: #173e34;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 28px 54px rgba(2, 23, 18, 0.3);
+  transform: rotate(1.6deg);
+}
+
+.cta-preview-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid #dcebe4;
+  color: #718c84;
+  font-size: var(--text-xs);
+}
+
+.cta-preview-status {
+  color: #225c4c;
+  font-weight: 600;
+}
+
+.cta-preview-status i {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 7px;
+  border-radius: 50%;
+  background: #24b77e;
+}
+
+.cta-question {
+  max-width: 31rem;
+  padding: var(--space-6) 0;
+  font-size: var(--text-base);
+  font-weight: 600;
+  line-height: 1.75;
+}
+
+.cta-answer-lines {
+  display: grid;
+  gap: 9px;
+}
+
+.cta-answer-lines span {
+  height: 8px;
+  border-radius: 4px;
+  background: #cfddd6;
+}
+
+.cta-answer-lines span:nth-child(2) { width: 88%; }
+.cta-answer-lines span:nth-child(3) { width: 64%; }
+
+.cta-feedback {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}
+
+.cta-feedback > div {
+  padding: var(--space-4);
+  background: #d5e2dc;
+  border-radius: var(--radius-sm);
+}
+
+.cta-feedback small,
+.cta-feedback strong {
+  display: block;
+}
+
+.cta-feedback small {
+  color: #6d8b81;
+  font-size: var(--text-xs);
+}
+
+.cta-feedback strong {
+  margin-top: var(--space-1);
+  color: #0b6b52;
+  font-size: var(--text-sm);
+}
+
+.cta-score-card {
+  position: absolute;
+  right: -18px;
+  bottom: 24px;
+  width: 180px;
+  padding: var(--space-4);
+  background: #ffc66f;
+  color: #50330c;
+  border-radius: var(--radius-md);
+  box-shadow: 0 18px 34px rgba(3, 27, 22, 0.24);
+  transform: rotate(-3deg);
+  z-index: 3;
+}
+
+.cta-score-card span,
+.cta-score-card strong {
+  display: block;
+}
+
+.cta-score-card span {
+  font-size: var(--text-xs);
+  opacity: 0.72;
+}
+
+.cta-score-card strong {
+  margin: 2px 0 var(--space-3);
+  font-size: var(--text-lg);
+}
+
+.cta-score-card > div {
+  height: 5px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: rgba(80, 51, 12, 0.16);
+}
+
+.cta-score-card i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #67420f;
+}
+
+.cta-role-chip {
+  position: absolute;
+  top: 10px;
+  right: 24px;
+  z-index: 3;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-full);
+  background: #d3e4da;
+  color: #155944;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  box-shadow: 0 10px 24px rgba(3, 27, 22, 0.2);
+}
+
 /* === Footer === */
 .site-footer {
   padding: var(--space-8) 0;
-  background: var(--surface-elevated);
-  border-top: 1px solid var(--neutral-200);
+  background: #061914;
+  border-top: 1px solid rgba(209, 250, 229, 0.1);
 }
 
 .footer-inner {
@@ -1411,9 +2274,27 @@ onUnmounted(() => {
   align-items: center;
   gap: var(--space-2);
   font-family: var(--font-display);
-  font-weight: 700;
+  color: #effcf6;
+}
+
+.footer-brand-name {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+}
+
+.footer-brand .brand-cn {
   font-size: var(--text-sm);
-  color: var(--neutral-700);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.footer-brand .brand-en {
+  margin-top: 3px;
+  font-size: 0.5rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  opacity: 0.62;
 }
 
 .footer-links {
@@ -1423,17 +2304,17 @@ onUnmounted(() => {
 
 .footer-links a {
   font-size: var(--text-sm);
-  color: var(--neutral-500);
+  color: #9cbbb1;
   transition: color var(--duration-fast) var(--ease-out-expo);
 }
 
 .footer-links a:hover {
-  color: var(--neutral-700);
+  color: #fff;
 }
 
 .footer-copy {
   font-size: var(--text-xs);
-  color: var(--neutral-400);
+  color: #799d91;
   font-family: var(--font-mono);
 }
 
@@ -1453,6 +2334,29 @@ onUnmounted(() => {
 
 /* === Responsive === */
 @media (max-width: 1024px) {
+  .hero-insight-map {
+    width: 126%;
+    transform: translateX(-12%);
+  }
+
+  .insight-hint {
+    display: none;
+  }
+
+  .journey-fragment {
+    display: none;
+  }
+
+  .journey-path {
+    right: -12%;
+    width: 108%;
+    opacity: 0.5;
+  }
+
+  .ambient-orb {
+    opacity: 0.14;
+  }
+
   .hero-content {
     grid-template-columns: 1fr;
     text-align: center;
@@ -1509,15 +2413,59 @@ onUnmounted(() => {
     grid-template-columns: repeat(2, 1fr);
     gap: var(--space-6);
   }
+
+  .cta-card {
+    min-height: auto;
+    grid-template-columns: 1fr;
+  }
+
+  .cta-title {
+    max-width: 14em;
+  }
+
+  .cta-stage {
+    width: min(100%, 680px);
+    margin: 0 auto;
+  }
 }
 
 @media (max-width: 640px) {
+  .hero-insight-layer {
+    mask-image: radial-gradient(circle 165px at 72% 68%, #000 0%, #000 40%, rgba(0,0,0,.62) 68%, transparent 100%) !important;
+    -webkit-mask-image: radial-gradient(circle 165px at 72% 68%, #000 0%, #000 40%, rgba(0,0,0,.62) 68%, transparent 100%) !important;
+    opacity: 0.46;
+  }
+
+  .hero-insight-map {
+    width: 190%;
+    transform: translateX(-42%);
+  }
+
+  .journey-path {
+    right: -52%;
+    width: 140%;
+    opacity: 0.34;
+  }
+
+  .ambient-orb {
+    width: 430px;
+    opacity: 0.1;
+  }
+
   .nav-links {
     display: none;
   }
 
   .nav-inner {
     padding: 0 var(--space-4);
+  }
+
+  .btn-nav-ghost {
+    display: none;
+  }
+
+  .btn-nav-accent {
+    padding-inline: var(--space-4);
   }
 
   .hero-wrap {
@@ -1550,12 +2498,77 @@ onUnmounted(() => {
     padding: 0 var(--space-4);
   }
 
+  .report-card-head {
+    display: block;
+  }
+
+  .report-demo-badge {
+    display: inline-block;
+    margin-top: var(--space-4);
+  }
+
+  .report-preview {
+    grid-template-columns: 1fr;
+    padding: var(--space-4);
+  }
+
+  .bento-radar {
+    width: min(100%, 250px);
+  }
+
   .process-grid {
     grid-template-columns: 1fr;
   }
 
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .cta-section {
+    padding: var(--space-16) 0 var(--space-20);
+  }
+
+  .cta-card {
+    padding: var(--space-8) var(--space-5);
+    border-radius: var(--radius-lg);
+  }
+
+  .cta-title {
+    font-size: var(--text-3xl);
+  }
+
+  .cta-stage {
+    min-height: 540px;
+  }
+
+  .cta-flow {
+    inset: auto 0 0;
+    width: auto;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
+  }
+
+  .cta-flow-item {
+    box-shadow: none;
+  }
+
+  .cta-preview {
+    top: 28px;
+    left: 0;
+    padding: var(--space-5);
+    transform: none;
+  }
+
+  .cta-score-card {
+    right: 8px;
+    bottom: 190px;
+  }
+
+  .cta-role-chip {
+    top: 8px;
+    right: 8px;
+    transform: translateY(-50%);
   }
 
   .footer-inner {
@@ -1567,6 +2580,34 @@ onUnmounted(() => {
 
 /* === Reduced Motion === */
 @media (prefers-reduced-motion: reduce) {
+  .hero-insight-layer {
+    mask-image: radial-gradient(circle 240px at 68% 52%, #000 0%, rgba(0,0,0,.72) 64%, transparent 100%) !important;
+    -webkit-mask-image: radial-gradient(circle 240px at 68% 52%, #000 0%, rgba(0,0,0,.72) 64%, transparent 100%) !important;
+    opacity: 0.5;
+    transition: none;
+  }
+
+  .journey-path-active {
+    display: none;
+  }
+
+  .journey-node {
+    filter: none !important;
+  }
+
+  .ambient-orb {
+    transform: none !important;
+    transition: none;
+  }
+
+  .journey-fragment {
+    display: none;
+  }
+
+  .cta-card.journey-arrived {
+    box-shadow: 0 30px 70px rgba(9, 48, 40, 0.16);
+  }
+
   [data-reveal] {
     opacity: 1;
     transform: none;
@@ -1586,5 +2627,7 @@ onUnmounted(() => {
   .mock-window { transition: none !important; transform: translateY(16px) !important; }
   .magnetic-btn { transition: background var(--duration-normal), box-shadow var(--duration-normal) !important; }
   .bento-card.spotlight::before { display: none; }
+  .nav { transition: background var(--duration-normal), border-color var(--duration-normal); }
+  .nav.nav-hidden { transform: none; }
 }
 </style>

@@ -4,7 +4,7 @@ REM 切换到脚本所在目录
 cd /d "%~dp0"
 
 REM 启动 LiveTalking 服务
-start "LiveTalking" ".\envs\nerfstream\python.exe" ".\app.py" --transport webrtc --model wav2lip --avatar_id wav2lip256_avatar1
+start "LiveTalking" ".\envs\nerfstream\python.exe" ".\app.py" --transport webrtc --model wav2lip
 
 REM 延迟 5 秒让服务启动
 ping 127.0.0.1 -n 6 > nul

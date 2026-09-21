@@ -32,7 +32,15 @@ def parse_args():
     # ─── 数字人模型 ────────────────────────────────────────────────────
     parser.add_argument('--model', type=str, default='wav2lip',
                         help="avatar model: musetalk/wav2lip/ultralight")
-    parser.add_argument('--avatar_id', type=str, default='wav2lip256_avatar1',
+    # V3 面试官源视频预处理完成后优先使用；未生成时自动回退到 V2。
+    preferred_avatars = ['offerpilot_interviewer_v3', 'offerpilot_interviewer_v2']
+    default_avatar = next(
+        (avatar for avatar in preferred_avatars
+         if all(os.path.exists(os.path.join('data', 'avatars', avatar, name))
+                for name in ('coords.pkl', 'full_imgs', 'face_imgs'))),
+        'wav2lip256_avatar1',
+    )
+    parser.add_argument('--avatar_id', type=str, default=default_avatar,
                         help="avatar id in data/avatars")
     parser.add_argument('--batch_size', type=int, default=16, help="infer batch")
     parser.add_argument('--modelres', type=int, default=192)

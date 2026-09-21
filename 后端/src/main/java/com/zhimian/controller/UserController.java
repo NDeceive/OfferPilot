@@ -8,6 +8,7 @@ import com.zhimian.dto.UserStats;
 import com.zhimian.entity.SysUser;
 import com.zhimian.mapper.SysUserMapper;
 import com.zhimian.service.StatsService;
+import com.zhimian.service.StatsService.RadarProfile;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
@@ -65,5 +66,11 @@ public class UserController {
         userMapper.updateById(user);
         user.setPassword(null);
         return Result.success(user);
+    }
+
+    /** 首页能力雷达数据（最新一次面试的模块得分） */
+    @GetMapping("/dashboard/profile")
+    public Result<RadarProfile> dashboardProfile() {
+        return Result.success(statsService.getRadarProfile());
     }
 }

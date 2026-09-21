@@ -17,11 +17,25 @@
         </div>
         <select v-model="filterJob" class="filter-select">
           <option value="all">全部岗位</option>
-          <option value="frontend">前端开发</option>
-          <option value="backend">后端开发</option>
-          <option value="product">产品经理</option>
+          <option v-for="category in jobCategories" :key="category" :value="category">{{ category }}</option>
         </select>
       </div>
+    </div>
+
+    <!-- Batch Management Toolbar -->
+    <div v-if="records.length > 0" class="batch-toolbar">
+      <button v-if="!batchMode" class="batch-manage-btn" @click="enterBatch">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+        </svg>
+        批量管理
+      </button>
+      <template v-else>
+        <span class="batch-count">已选 {{ selectedCount }} 项</span>
+        <button class="batch-btn" @click="toggleSelectAll">{{ allSelected ? '取消全选' : '全选' }}</button>
+        <button class="batch-btn batch-btn-danger" :disabled="selectedCount === 0" @click="confirmBatchDelete">删除所选</button>
+        <button class="batch-btn batch-btn-plain" @click="exitBatch">完成</button>
+      </template>
     </div>
 
     <!-- Records List -->
@@ -30,12 +44,22 @@
         v-for="(record, i) in filteredRecords"
         :key="record.id"
         class="record-card"
+        :class="{ 'is-batch': batchMode, 'is-selected': isSelected(record.id) }"
         :style="{ '--reveal-delay': i * 60 + 'ms' }"
       >
-        <div class="record-main" @click="viewReport(record)">
-          <div class="record-icon" :class="'icon-' + record.status">
-            {{ record.position.charAt(0) }}
-          </div>
+        <button
+          v-if="batchMode"
+          class="check-box"
+          :class="{ checked: isSelected(record.id) }"
+          :aria-pressed="isSelected(record.id)"
+          @click.stop="toggleSelect(record.id)"
+        >
+          <svg v-if="isSelected(record.id)" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+        </button>
+        <div class="record-main" @click="batchMode ? toggleSelect(record.id) : viewReport(record)">
+          <JobLogo :icon-key="record.iconKey" :tone="record.themeKey" />
           <div class="record-info">
             <div class="record-top">
               <span class="record-position">{{ record.position }}</span>
@@ -58,15 +82,16 @@
             <span class="score-value" :class="getScoreClass(record.score)">{{ record.score }}</span>
             <span class="score-unit">分</span>
           </div>
-          <span class="record-action">
+          <span v-if="!batchMode" class="record-action">
             查看详情
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M5 12h14M12 5l7 7-7 7"/>
             </svg>
           </span>
         </div>
-        <!-- Delete button - only for records with score -->
+        <!-- Delete button - hidden in batch mode -->
         <button
+          v-if="!batchMode"
           class="delete-btn"
           title="删除此记录"
           @click.stop="confirmDelete(record)"
@@ -117,16 +142,36 @@
         </div>
       </div>
     </Transition>
+
+    <!-- Batch Delete Confirmation Modal -->
+    <Transition name="modal">
+      <div v-if="batchDeleteConfirm" class="modal-overlay" @click.self="batchDeleteConfirm = false">
+        <div class="modal-card">
+          <h3 class="modal-title">确认删除</h3>
+          <p class="modal-body">确定要删除选中的 {{ selectedCount }} 条面试记录吗？此操作不可撤销。</p>
+          <div class="modal-actions">
+            <button class="modal-btn modal-btn-cancel" @click="batchDeleteConfirm = false">取消</button>
+            <button class="modal-btn modal-btn-danger" @click="doBatchDelete">确认删除</button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <!-- Toast -->
+    <Transition name="toast">
+      <div v-if="toast.visible" class="toast" :class="`toast-${toast.type}`">{{ toast.text }}</div>
+    </Transition>
     </div>
   </AppLayout>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AppLayout from '../components/layout/AppLayout.vue'
-import { getInterviewRecords } from '../api'
-import request from '../utils/request'
+import JobLogo from '../components/jobs/JobLogo.vue'
+import { batchDeleteInterview, deleteInterview, getInterviewRecords, getJobList } from '../api'
+import { getJobPresentation } from '../utils/jobPresentation'
 
 const router = useRouter()
 const activeStatus = ref('全部')
@@ -140,6 +185,19 @@ const records = ref([])
 const loading = ref(true)
 const loadError = ref(false)
 const deleteTarget = ref(null)
+const batchMode = ref(false)
+const selectedIds = reactive(new Set())
+const batchDeleteConfirm = ref(false)
+const toast = ref({ visible: false, type: 'success', text: '' })
+let toastTimer = null
+
+function showToast(type, text) {
+  if (toastTimer) clearTimeout(toastTimer)
+  toast.value = { visible: true, type, text }
+  toastTimer = setTimeout(() => {
+    toast.value.visible = false
+  }, 2500)
+}
 
 function formatDuration(seconds) {
   if (!seconds) return ''
@@ -161,14 +219,18 @@ async function fetchRecords() {
   loading.value = true
   loadError.value = false
   try {
-    const data = await getInterviewRecords()
+    const [data, jobs] = await Promise.all([getInterviewRecords(), getJobList()])
+    const jobsById = new Map((jobs || []).map(job => [String(job.id), job]))
     records.value = (data || []).map(item => ({
+      ...getJobPresentation(jobsById.get(String(item.jobId))),
       id: item.sessionId,
       reportId: item.reportId,
-      date: formatDate(item.createTime),
+      date: formatDate(item.startTime),
       position: item.jobName || '未知岗位',
+      category: item.category || '其他岗位',
+      directionCode: item.directionCode || '',
       score: item.totalScore,
-      duration: formatDuration(item.durationSeconds),
+      duration: formatDuration(item.actualDurationSeconds || item.durationSeconds),
       status: statusApiMap[item.status] || 'completed',
     }))
   } catch (e) {
@@ -186,13 +248,12 @@ const filteredRecords = computed(() => {
       (activeStatus.value === '已完成' && r.status === 'completed') ||
       (activeStatus.value === '进行中' && r.status === 'in_progress') ||
       (activeStatus.value === '已中断' && r.status === 'interrupted')
-    const matchJob = filterJob.value === 'all' ||
-      (filterJob.value === 'frontend' && r.position.includes('前端')) ||
-      (filterJob.value === 'backend' && r.position.includes('后端')) ||
-      (filterJob.value === 'product' && r.position.includes('产品'))
+    const matchJob = filterJob.value === 'all' || r.category === filterJob.value
     return matchStatus && matchJob
   })
 })
+
+const jobCategories = computed(() => [...new Set(records.value.map(record => record.category))])
 
 const totalPages = computed(() => Math.max(1, Math.ceil(filteredRecords.value.length / 10)))
 
@@ -216,12 +277,76 @@ async function doDelete() {
   const record = deleteTarget.value
   if (!record) return
   try {
-    await request.delete(`/interview/${record.id}`)
+    await deleteInterview(record.id)
     records.value = records.value.filter(r => r.id !== record.id)
   } catch (e) {
     console.error('Delete failed:', e)
   } finally {
     deleteTarget.value = null
+  }
+}
+
+/* ==================== 批量管理 ==================== */
+const selectedCount = computed(() => selectedIds.size)
+const allSelected = computed(() =>
+  filteredRecords.value.length > 0 && filteredRecords.value.every(r => selectedIds.has(r.id))
+)
+
+function isSelected(id) {
+  return selectedIds.has(id)
+}
+
+function enterBatch() {
+  batchMode.value = true
+  selectedIds.clear()
+}
+
+function exitBatch() {
+  batchMode.value = false
+  selectedIds.clear()
+}
+
+function toggleSelect(id) {
+  if (selectedIds.has(id)) {
+    selectedIds.delete(id)
+  } else {
+    selectedIds.add(id)
+  }
+}
+
+function toggleSelectAll() {
+  if (allSelected.value) {
+    selectedIds.clear()
+  } else {
+    filteredRecords.value.forEach(r => selectedIds.add(r.id))
+  }
+}
+
+function confirmBatchDelete() {
+  if (selectedCount.value === 0) return
+  batchDeleteConfirm.value = true
+}
+
+async function doBatchDelete() {
+  const ids = [...selectedIds]
+  if (ids.length === 0) return
+  try {
+    const res = await batchDeleteInterview(ids)
+    const failed = res?.failed ?? 0
+    const deleted = res?.deleted ?? ids.length
+    if (failed === 0) {
+      records.value = records.value.filter(r => !selectedIds.has(r.id))
+      showToast('success', `已删除 ${deleted} 条记录`)
+    } else {
+      await fetchRecords()
+      showToast('warning', `已删除 ${deleted} 条，${failed} 条删除失败`)
+    }
+  } catch (e) {
+    console.error('Batch delete failed:', e)
+    showToast('error', '批量删除失败，请稍后重试')
+  } finally {
+    batchDeleteConfirm.value = false
+    exitBatch()
   }
 }
 
@@ -313,6 +438,88 @@ onMounted(async () => {
   border-color: var(--accent-500);
 }
 
+/* Batch Management Toolbar */
+.batch-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-2);
+  margin: -var(--space-4) 0 var(--space-4);
+  animation: fade-in-up 0.5s var(--ease-out-expo);
+}
+
+.batch-manage-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: var(--space-2) var(--space-4);
+  background: var(--surface-elevated);
+  border: 1.5px solid var(--neutral-200);
+  border-radius: var(--radius-md);
+  color: var(--neutral-600);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out-expo);
+}
+
+.batch-manage-btn:hover {
+  border-color: var(--accent-400);
+  color: var(--accent-600);
+  background: var(--accent-50);
+}
+
+.batch-count {
+  font-size: var(--text-sm);
+  color: var(--neutral-500);
+  margin-right: var(--space-1);
+}
+
+.batch-btn {
+  padding: var(--space-2) var(--space-4);
+  background: var(--surface-elevated);
+  border: 1.5px solid var(--neutral-200);
+  border-radius: var(--radius-md);
+  color: var(--neutral-600);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out-expo);
+}
+
+.batch-btn:hover:not(:disabled) {
+  border-color: var(--accent-400);
+  color: var(--accent-600);
+}
+
+.batch-btn-danger {
+  border-color: rgba(239, 68, 68, 0.3);
+  color: var(--color-error);
+  background: var(--color-error-bg);
+}
+
+.batch-btn-danger:hover:not(:disabled) {
+  border-color: var(--color-error);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.batch-btn-plain {
+  border-color: transparent;
+  background: transparent;
+  color: var(--neutral-500);
+}
+
+.batch-btn-plain:hover:not(:disabled) {
+  color: var(--neutral-700);
+}
+
+.batch-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 /* Records List */
 .records-list {
   display: flex;
@@ -373,10 +580,44 @@ onMounted(async () => {
   border-color: rgba(239, 68, 68, 0.2);
 }
 
+.check-box {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid var(--neutral-300);
+  background: var(--surface-elevated);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: all var(--duration-fast);
+}
+
+.check-box.checked {
+  border-color: var(--accent-500);
+  background: var(--accent-500);
+}
+
+.record-card.is-batch .record-main {
+  cursor: pointer;
+}
+
+.record-card.is-selected {
+  border-color: var(--accent-400);
+  background: var(--accent-50);
+}
+
 .record-card:hover {
   box-shadow: var(--shadow-lg);
   transform: translateY(-2px);
   border-color: var(--accent-200);
+}
+
+.record-card.is-selected:hover {
+  border-color: var(--accent-400);
 }
 
 .record-icon {
@@ -703,4 +944,29 @@ onMounted(async () => {
 .modal-leave-active { transition: opacity 0.2s; }
 .modal-enter-from,
 .modal-leave-to { opacity: 0; }
+
+/* === Toast === */
+.toast {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 300;
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: white;
+  box-shadow: var(--shadow-lg);
+  white-space: nowrap;
+}
+
+.toast-success { background: var(--accent-500); }
+.toast-warning { background: #d97706; }
+.toast-error { background: var(--color-error); }
+
+.toast-enter-active,
+.toast-leave-active { transition: opacity 0.25s var(--ease-out-expo), transform 0.25s var(--ease-out-expo); }
+.toast-enter-from,
+.toast-leave-to { opacity: 0; transform: translateX(-50%) translateY(-12px); }
 </style>

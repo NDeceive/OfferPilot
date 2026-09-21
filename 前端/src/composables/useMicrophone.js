@@ -41,6 +41,7 @@ export function useMicrophone({ onSegment } = {}) {
     status.value = 'requesting'
     errorMessage.value = ''
     const currentRequestId = ++requestId
+    let mediaGranted = false
 
     try {
       const newStream = await navigator.mediaDevices.getUserMedia({
@@ -52,6 +53,7 @@ export function useMicrophone({ onSegment } = {}) {
         },
         video: false,
       })
+      mediaGranted = true
 
       if (disposed || currentRequestId !== requestId) {
         newStream.getTracks().forEach((track) => track.stop())
@@ -76,7 +78,9 @@ export function useMicrophone({ onSegment } = {}) {
     } catch (error) {
       cleanupAudioGraph()
       status.value = 'error'
-      if (error?.name === 'NotAllowedError' || error?.name === 'SecurityError') {
+      if (mediaGranted) {
+        errorMessage.value = '录音组件初始化失败，请刷新页面后重试。'
+      } else if (error?.name === 'NotAllowedError' || error?.name === 'SecurityError') {
         errorMessage.value = '麦克风权限被拒绝，请在浏览器地址栏中允许访问。'
       } else if (error?.name === 'NotFoundError') {
         errorMessage.value = '没有找到可用的麦克风设备。'

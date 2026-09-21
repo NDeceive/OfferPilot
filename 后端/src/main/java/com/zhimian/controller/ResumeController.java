@@ -8,6 +8,9 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+import java.util.Map;
+
 /**
  * 简历接口：保存并分析、查询当前用户简历
  */
@@ -28,5 +31,13 @@ public class ResumeController {
     @GetMapping("/mine")
     public Result<Resume> mine() {
         return Result.success(resumeService.getMine());
+    }
+
+    /** 更新当前用户的技能标签（前端增删标签后同步回简历画像） */
+    @PutMapping("/tags")
+    public Result<Void> updateTags(@RequestBody Map<String, List<String>> body) {
+        List<String> tags = body.get("tags");
+        resumeService.updateTags(tags != null ? tags : List.of());
+        return Result.success(null);
     }
 }

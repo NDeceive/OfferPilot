@@ -4,20 +4,25 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zhimian.common.BizException;
 import com.zhimian.config.UserContext;
+import com.zhimian.dto.ModuleScoreView;
 import com.zhimian.dto.ReportDetailResponse;
 import com.zhimian.dto.ReportDimensionView;
 import com.zhimian.entity.InterviewMessage;
+import com.zhimian.entity.InterviewModuleScore;
 import com.zhimian.entity.InterviewReport;
 import com.zhimian.entity.InterviewSession;
 import com.zhimian.entity.JobPosition;
 import com.zhimian.entity.ReportDimension;
+import com.zhimian.entity.ScoreModule;
 import com.zhimian.entity.SkillQuestion;
 import com.zhimian.mapper.InterviewMessageMapper;
+import com.zhimian.mapper.InterviewModuleScoreMapper;
 import com.zhimian.mapper.InterviewReportMapper;
 import com.zhimian.mapper.InterviewSessionMapper;
 import com.zhimian.mapper.JobPositionMapper;
-import com.zhimian.mapper.SkillQuestionMapper;
 import com.zhimian.mapper.ReportDimensionMapper;
+import com.zhimian.mapper.ScoreModuleMapper;
+import com.zhimian.mapper.SkillQuestionMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -48,6 +53,8 @@ public class ReportService {
     private final ReportDimensionMapper dimensionMapper;
     private final SkillQuestionMapper skillQuestionMapper;
     private final JobPositionMapper jobMapper;
+    private final InterviewModuleScoreMapper moduleScoreMapper;
+    private final ScoreModuleMapper scoreModuleMapper;
 
     private static final ObjectMapper JSON = new ObjectMapper();
 
@@ -99,12 +106,14 @@ public class ReportService {
         JobPosition job = jobMapper.selectById(session.getJobId());
         Metrics m = collectMetrics(messages, job);
 
+        double quality = m.contentQuality();
+
         Map<String, BigDecimal> scores = new HashMap<>();
-        scores.put(DIM_KNOWLEDGE, scoreKnowledge(m));
-        scores.put(DIM_PROJECT, scoreProject(m));
-        scores.put(DIM_LOGIC, scoreLogic(m));
-        scores.put(DIM_MATCH, scoreMatch(m));
-        scores.put(DIM_FOLLOWUP, scoreFollowup(m));
+        scores.put(DIM_KNOWLEDGE, clamp(scoreKnowledge(m).doubleValue() * quality));
+        scores.put(DIM_PROJECT, clamp(scoreProject(m).doubleValue() * quality));
+        scores.put(DIM_LOGIC, clamp(scoreLogic(m).doubleValue() * quality));
+        scores.put(DIM_MATCH, clamp(scoreMatch(m).doubleValue() * quality));
+        scores.put(DIM_FOLLOWUP, clamp(scoreFollowup(m).doubleValue() * quality));
 
         BigDecimal total = weightedTotal(scores);
 
@@ -190,7 +199,18 @@ public class ReportService {
         ReportDetailResponse resp = new ReportDetailResponse();
         resp.setReportId(report.getId());
         resp.setSessionId(report.getSessionId());
+        resp.setJobId(session == null ? null : session.getJobId());
         resp.setJobName(jobName);
+        // 注入会话时间信息
+        if (session != null) {
+            resp.setStartTime(session.getStartTime());
+            resp.setEndTime(session.getEndTime());
+            resp.setDurationSeconds(session.getDurationSeconds());
+            if (session.getEndTime() != null && session.getStartTime() != null) {
+                resp.setActualDurationSeconds(
+                    java.time.Duration.between(session.getStartTime(), session.getEndTime()).toSeconds());
+            }
+        }
         resp.setTotalScore(report.getTotalScore());
         resp.setSummary(report.getSummary());
         resp.setStrengths(fromJson(report.getStrengths()));
@@ -198,6 +218,42 @@ public class ReportService {
         resp.setSuggestions(fromJson(report.getSuggestions()));
         resp.setWeakTags(report.getWeakTags());
         resp.setDimensions(dimViews);
+
+        // 评分系统改造：加载模块评分明细
+        resp.setOverallMatchScore(report.getOverallMatchScore());
+        resp.setDisplayLevel(report.getDisplayLevel());
+        resp.setProfileLabel(report.getProfileLabel());
+
+        List<InterviewModuleScore> moduleScores = moduleScoreMapper.selectList(
+                new LambdaQueryWrapper<InterviewModuleScore>()
+                        .eq(InterviewModuleScore::getReportId, reportId)
+                        .orderByAsc(InterviewModuleScore::getId));
+        if (!moduleScores.isEmpty()) {
+            // 加载模块名映射
+            List<ScoreModule> allModules = scoreModuleMapper.selectList(new LambdaQueryWrapper<>());
+            Map<String, String> nameMap = new HashMap<>();
+            for (ScoreModule sm : allModules) {
+                nameMap.put(sm.getCode(), sm.getName());
+            }
+            List<ModuleScoreView> moduleViews = new ArrayList<>();
+            for (InterviewModuleScore ms : moduleScores) {
+                ModuleScoreView mv = new ModuleScoreView();
+                mv.setModuleCode(ms.getModuleCode());
+                mv.setModuleName(nameMap.getOrDefault(ms.getModuleCode(), ms.getModuleCode()));
+                mv.setRawScore(ms.getRawScore());
+                mv.setTargetScore(ms.getTargetScore());
+                mv.setModuleMatch(ms.getModuleMatch());
+                mv.setBaseWeight(ms.getBaseWeight());
+                mv.setGapScore(ms.getGapScore());
+                mv.setImprovementPriority(ms.getImprovementPriority());
+                mv.setEvidence(ms.getEvidence());
+                mv.setSuggestion(ms.getSuggestion());
+                mv.setAiConfidence(ms.getAiConfidence());
+                mv.setScoreSource(ms.getScoreSource());
+                moduleViews.add(mv);
+            }
+            resp.setModuleScores(moduleViews);
+        }
         return resp;
     }
 
@@ -215,10 +271,88 @@ public class ReportService {
         int logicHits;            // 命中逻辑连接词次数
         int jobHits;              // 命中岗位关键词的去重数
         int shortAnswers;         // 过短回答(<15字)条数
+        int garbageHits;          // 🆕 垃圾/乱敲回答数
+        int totalAnswers;         // 🆕 总回答数（含追问）
 
         double avgLength() {
             return answerCount == 0 ? 0 : (double) totalLength / answerCount;
         }
+
+        /** 🆕 内容质量评分 0-1，与 ModuleScoreService 保持一致的逻辑 */
+        double contentQuality() {
+            if (totalAnswers == 0) return 0;
+            double garbageRate = (double) garbageHits / totalAnswers;
+            double shortRate = (double) shortAnswers / Math.max(totalAnswers, 1);
+            double vagueRate = (double) vagueHits / Math.max(totalAnswers, 1);
+            double avgLen = avgLength();
+
+            if (garbageRate >= 0.6) return 0.0;
+            if (garbageRate >= 0.4) return 0.04;
+            if (garbageRate >= 0.2) return 0.10;
+
+            boolean hasAnySignal = techHits > 0 || projectHits > 0 || logicHits > 0
+                    || jobHits > 0;
+            if (answerCount > 0 && !hasAnySignal) {
+                if (garbageRate > 0) return 0.0;
+                if (answerCount <= 2) return 0.0;
+                if (shortRate >= 0.5) return 0.04;
+                if (avgLen < 20 && avgLen > 0) return 0.04;
+                return 0.08;
+            }
+
+            double quality = 1.0;
+            quality -= garbageRate * 2.0;
+            quality -= shortRate * 0.8;
+            quality -= vagueRate * 0.5;
+            if (avgLen < 10 && avgLen > 0) quality -= 0.6;
+            else if (avgLen < 20 && avgLen > 0) quality -= 0.4;
+            else if (avgLen < 30 && avgLen > 0) quality -= 0.2;
+            if (techHits == 0 && answerCount > 0) quality -= 0.15;
+            if (logicHits == 0 && answerCount > 0) quality -= 0.1;
+            return Math.max(0, Math.min(1.0, quality));
+        }
+    }
+
+    // 🆕 垃圾检测（与 ModuleScoreService 共用同一套规则）
+    private static final List<String> GARBAGE_PATTERNS = List.of(
+            "asdf", "qwer", "zxcv", "uiop", "jkl;", "hhhh", "aaaa", "ssss", "dddd",
+            "ffff", "gggg", "jjjj", "kkkk", "llll", "tyui", "ghjk", "bnm,",
+            "测试测试", "随便", "乱打", "凑字数", "灌水", "12345", "abcd",
+            "。。。", "......", "哈哈哈哈", "呵呵呵呵", "啦啦啦啦", "哦哦哦哦",
+            "嗯嗯嗯嗯", "啊啊啊啊", "无语", "不知道说啥", "不想写", "懒得写",
+            "随便写写", "凑合", "将就", "打发", "糊弄", "应付", "敷衍",
+            "字数补丁", "占位", "填充", "充数", "打酱油", "路过",
+            "没什么可说", "无话可说", "无话");
+
+    private static final List<String> BRUSH_OFF_PHRASES = List.of(
+            "不会", "不知道", "不清楚", "不了解", "嗯", "哦", "好", "行", "可以", "还行",
+            "差不多", "就这样", "没什么好说的", "随便", "你猜",
+            "算了", "不会做", "太难了", "放弃", "跳过", "过", "pass", "skip",
+            "不想回答", "拒绝回答", "无可奉告");
+
+    private boolean isGarbage(String text) {
+        if (text == null || text.trim().isEmpty()) return true;
+        String t = text.trim().toLowerCase();
+        for (String bp : BRUSH_OFF_PHRASES) {
+            if (t.equals(bp) || t.replaceAll("[\\s.,;!?，。；！？…、\"']", "").equals(bp)) return true;
+        }
+        if (t.length() < 5 && t.matches("[a-z0-9\\s.,;!?，。；！？…]+")) return true;
+        int hits = 0;
+        for (String gp : GARBAGE_PATTERNS) { if (t.contains(gp)) hits++; }
+        // 短文本只需1个模式，长文本需2个
+        if (t.length() < 25 && hits >= 1) return true;
+        if (hits >= 2) return true;
+        if (t.matches(".*([a-zA-Z])\\1{4,}.*")) return true;
+        if (t.length() < 8 && t.matches("[一-鿿]+")) {
+            if (t.replaceAll("[不不知知道道会清清懂解了了没没用过忘随随便便算算了了]", "").length() < 3) return true;
+        }
+        if (t.replaceAll("[\\s.,;!?，。；！？…、\"'0-9]", "").length() < 3) return true;
+        if (t.length() > 10 && t.matches("[a-z]+") && !t.contains(" ")) {
+            int vowels = 0;
+            for (char c : t.toCharArray()) { if ("aeiou".indexOf(c) >= 0) vowels++; }
+            if ((double) vowels / t.length() < 0.15) return true;
+        }
+        return false;
     }
 
     /**
@@ -257,16 +391,20 @@ public class ReportService {
             boolean isFollowupAnswer = seen >= 1 && qId != null && followedUpQuestionIds.contains(qId);
 
             if (isFollowupAnswer) {
+                m.totalAnswers++;
                 if (isMeaningful(text)) {
                     m.followupAnswered++;
                 }
+                if (isGarbage(text)) m.garbageHits++;
                 // 追问回答只计入追问应对，不重复污染主问指标
                 continue;
             }
 
             // 主问回答：计入各项主指标
             m.answerCount++;
+            m.totalAnswers++;
             m.totalLength += text.length();
+            if (isGarbage(text)) m.garbageHits++;
             if (text.length() < 15) {
                 m.shortAnswers++;
             }
@@ -357,7 +495,8 @@ public class ReportService {
 
     /** 项目实践表达：项目信号词越多越好。 */
     private BigDecimal scoreProject(Metrics m) {
-        double score = 48;
+        // 未涉及项目内容时给中性分而非低分（可能面试官没问项目）
+        double score = m.projectHits > 0 ? 48 : 60;
         score += Math.min(42, m.projectHits * 7.0);
         score -= m.shortAnswers * 5.0;
         score -= m.vagueHits * 4.0;
@@ -367,15 +506,20 @@ public class ReportService {
         return clamp(score);
     }
 
-    /** 逻辑表达能力：逻辑连接词 + 回答篇幅（表达是否展开）。 */
+    /** 逻辑表达能力：逻辑连接词 + 回答篇幅（仅在有实质内容时给长度加分）。 */
     private BigDecimal scoreLogic(Metrics m) {
         double score = 50;
         score += Math.min(30, m.logicHits * 8.0);
-        if (m.avgLength() >= 60) {
-            score += 14;
-        } else if (m.avgLength() >= 30) {
-            score += 8;
-        } else if (m.avgLength() > 0 && m.avgLength() < 15) {
+        // 长度加分仅在回答有实质内容时才给（至少有逻辑/技术/项目任一信号）
+        boolean hasSubstance = m.logicHits > 0 || m.techHits > 0 || m.projectHits > 0;
+        if (hasSubstance) {
+            if (m.avgLength() >= 60) {
+                score += 14;
+            } else if (m.avgLength() >= 30) {
+                score += 8;
+            }
+        }
+        if (m.avgLength() > 0 && m.avgLength() < 15) {
             score -= 10;
         }
         score -= m.vagueHits * 4.0;
@@ -402,7 +546,7 @@ public class ReportService {
             return clamp(0);
         }
         if (m.followupAsked == 0) {
-            return clamp(75); // 全程无需追问，视为应答稳定
+            return clamp(95); // 全程无需追问，说明回答完整全面
         }
         double ratio = (double) m.followupAnswered / m.followupAsked;
         double score = 45 + ratio * 45;                 // 实质回应比例越高越好

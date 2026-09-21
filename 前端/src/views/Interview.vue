@@ -65,8 +65,8 @@
 
             <div v-if="answer" class="conversation-entry user draft">
               <div class="conversation-meta">
-                <span>当前语音回答</span>
-                <span class="draft-pill">识别中</span>
+                <span>当前回答</span>
+                <span class="draft-pill">{{ isSpeechProcessing ? '识别中' : '待提交' }}</span>
               </div>
               <p>{{ answer }}</p>
             </div>
@@ -101,7 +101,7 @@
         <div class="info-card">
           <div class="q-head">
             <span class="q-num">第 {{ currentQuestion }} 题</span>
-            <span class="q-of">/ {{ totalQuestions }}</span>
+            <span class="q-of">{{ formatTime(timeLeft) }}</span>
           </div>
           <div class="q-progress">
             <div class="q-bar" :style="{ width: progressPercent + '%' }"></div>
@@ -133,9 +133,9 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { startInterview, submitAnswer, getNextQuestion, finishInterview } from '../api'
+import { startInterview, submitAnswer, getNextQuestion, finishInterview, getReportStatus, getSessionMessages } from '../api'
 import CameraPreview from '../components/interview/CameraPreview.vue'
 import DigitalHumanStage from '../components/interview/DigitalHumanStage.vue'
 import MicrophoneControl from '../components/interview/MicrophoneControl.vue'
@@ -148,7 +148,7 @@ const sessionId = ref(null)
 const currentQuestionId = ref(null)
 const jobTitle = ref('前端开发工程师')
 const currentQuestion = ref(1)
-const totalQuestions = ref(8)
+const totalDuration = ref(1800)
 const timeLeft = ref(1800)
 const answer = ref('')
 const isAiTyping = ref(false)
@@ -161,7 +161,6 @@ const microphoneRef = ref(null)
 const digitalHumanRef = ref(null)
 const digitalHumanText = ref('')
 const digitalHumanSpeechKey = ref(0)
-const MAX_QUESTIONS = 8
 
 const questionTypes = ref([])
 const questionDifficulties = ref([])
@@ -177,9 +176,19 @@ const evalItems = ref([
   { name: '技术深度', value: 0, color: '#8b5cf6' },
 ])
 
-const progressPercent = computed(() => (currentQuestion.value / totalQuestions.value) * 100)
+const progressPercent = computed(() => totalDuration.value > 0
+  ? ((totalDuration.value - timeLeft.value) / totalDuration.value) * 100
+  : 0)
 
 let timerInterval = null
+let autoFinished = false
+
+watch([timeLeft, isSubmitting], ([seconds, submitting]) => {
+  if (seconds <= 0 && sessionId.value && !submitting && !autoFinished) {
+    autoFinished = true
+    autoFinishInterview()
+  }
+})
 
 // --- Initialize interview on mount ---
 onMounted(async () => {
@@ -188,11 +197,39 @@ onMounted(async () => {
     if (timeLeft.value > 0 && !isPaused.value) timeLeft.value--
   }, 1000)
 
-  // Get jobId from query param, default to 1
+  // Keep the duration selected on the preparation page.
   const jobId = Number(route.query.jobId) || 1
+  const durationSeconds = Math.min(7200, Math.max(300, Number(route.query.durationSeconds) || 1800))
+  totalDuration.value = durationSeconds
+  timeLeft.value = durationSeconds
 
   try {
-    const res = await startInterview({ jobId })
+    const existingSessionId = Number(route.query.sessionId) || 0
+    if (existingSessionId) {
+      sessionId.value = existingSessionId
+      jobTitle.value = String(route.query.jobName || '模拟面试')
+      const routeQuestion = String(route.query.question || '').trim()
+      if (routeQuestion) {
+        currentQuestionId.value = Number(route.query.questionId) || null
+        questionTypes.value.push(mapQuestionType(route.query.questionType))
+        questionDifficulties.value.push(difficultyLabels[route.query.questionDifficulty] || '中等')
+        questionSkills.value.push(String(route.query.questionSkill || '综合能力'))
+        messages.value.push({ role: 'ai', text: routeQuestion, followup: false })
+        speakQuestion(routeQuestion)
+      } else {
+        const history = await getSessionMessages(existingSessionId)
+        const records = Array.isArray(history) ? history : []
+        const firstQuestion = records.find(item => item.role === 'INTERVIEWER' && item.msgType === 'MAIN')
+        if (firstQuestion) {
+          currentQuestionId.value = firstQuestion.questionId
+          messages.value.push({ role: 'ai', text: firstQuestion.content, followup: false })
+          speakQuestion(firstQuestion.content)
+        }
+      }
+      return
+    }
+
+    const res = await startInterview({ jobId, durationSeconds })
     sessionId.value = res.sessionId
     jobTitle.value = res.jobName || '模拟面试'
 
@@ -259,14 +296,15 @@ async function submitAnswerFn() {
     isAiTyping.value = false
 
     if (res.nextAction === 'FOLLOWUP' && res.followupQuestion) {
-      // res.followupQuestion is a plain string, use it directly as text
+      const followupText = normalizeFollowupQuestion(res.followupQuestion)
+      if (!followupText) throw new Error('追问响应缺少问题内容')
       // questionId stays the same (followup is to the same main question)
       messages.value.push({
         role: 'ai',
-        text: res.followupQuestion,
+        text: followupText,
         followup: true,
       })
-      speakQuestion(res.followupQuestion)
+      speakQuestion(followupText)
     } else if (res.nextAction === 'NEXT') {
       // Fetch the next question from the server
       try {
@@ -293,10 +331,6 @@ async function submitAnswerFn() {
         })
       }
 
-      // Auto-finish when max questions reached
-      if (currentQuestion.value >= MAX_QUESTIONS) {
-        return await autoFinishInterview()
-      }
     } else if (res.nextAction === 'FINISHABLE') {
       // Interview can be finished - call finish
       try {
@@ -308,8 +342,7 @@ async function submitAnswerFn() {
           followup: false,
         })
         scrollToBottom()
-        const reportId = finishRes || 1
-        setTimeout(() => router.push(`/history/${reportId}`), 2000)
+        await waitForReport(sessionId.value)
         return
       } catch (finishErr) {
         console.error('Failed to finish interview:', finishErr)
@@ -367,9 +400,8 @@ async function skipQuestion() {
       messages.value.push({ role: 'ai', text: res.question.content, followup: false })
       speakQuestion(res.question.content)
     } else if (res.nextAction === 'FOLLOWUP' && res.followupQuestion) {
-      const followupText = typeof res.followupQuestion === 'string'
-        ? res.followupQuestion
-        : res.followupQuestion.content
+      const followupText = normalizeFollowupQuestion(res.followupQuestion)
+      if (!followupText) throw new Error('追问响应缺少问题内容')
       if (typeof res.followupQuestion !== 'string' && res.followupQuestion.id) {
         currentQuestionId.value = res.followupQuestion.id
       }
@@ -386,10 +418,6 @@ async function skipQuestion() {
       setTimeout(() => router.push(`/history/${reportId}`), 2000)
     }
 
-    // Auto-finish when max questions reached
-    if (currentQuestion.value >= MAX_QUESTIONS) {
-      return await autoFinishInterview()
-    }
   } catch (e) {
     console.error('Failed to skip question:', e)
     isAiTyping.value = false
@@ -409,6 +437,11 @@ function appendSpeechTranscript(text) {
   scrollToBottom()
 }
 
+function normalizeFollowupQuestion(value) {
+  if (typeof value === 'string') return value.trim()
+  return String(value?.content || value?.followUpQuestion || value?.question || '').trim()
+}
+
 function togglePause() {
   isPaused.value = !isPaused.value
   if (isPaused.value) digitalHumanRef.value?.stop()
@@ -419,15 +452,14 @@ async function endInterview() {
   if (sessionId.value) {
     try {
       const res = await finishInterview(sessionId.value)
-      const reportId = res || 1
-      router.push(`/history/${reportId}`)
+      await waitForReport(sessionId.value)
       return
     } catch (e) {
       console.error('Failed to finish interview:', e)
     }
   }
   // Fallback navigation
-  router.push('/history/1')
+  router.push('/history')
 }
 
 function scrollToBottom() {
@@ -443,12 +475,11 @@ async function autoFinishInterview() {
     const finishRes = await finishInterview(sessionId.value)
     messages.value.push({
       role: 'ai',
-      text: `已达到 ${MAX_QUESTIONS} 道题目，面试自动结束。正在生成你的能力报告...`,
+      text: '面试时间已到，正在生成你的能力报告…',
       followup: false,
     })
     scrollToBottom()
-    const reportId = finishRes || 1
-    setTimeout(() => router.push(`/history/${reportId}`), 2000)
+    await waitForReport(sessionId.value)
   } catch (e) {
     console.error('Auto-finish failed:', e)
     messages.value.push({
@@ -473,6 +504,22 @@ function releaseMediaDevices() {
   cameraPreviewRef.value?.stopCamera()
   microphoneRef.value?.stopMicrophone()
   digitalHumanRef.value?.close()
+}
+
+async function waitForReport(sid) {
+  for (let attempt = 0; attempt < 60; attempt++) {
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    try {
+      const status = await getReportStatus(sid)
+      if (status?.ready && status.reportId) {
+        router.push(`/history/${status.reportId}`)
+        return
+      }
+    } catch (error) {
+      console.warn('Report is not ready yet:', error)
+    }
+  }
+  router.push('/history')
 }
 </script>
 
@@ -515,7 +562,7 @@ function releaseMediaDevices() {
 
 /* Progress */
 .progress-track { position: fixed; top: 56px; left: 0; right: 0; height: 3px; background: var(--neutral-200); z-index: 49; }
-.progress-fill { height: 100%; background: var(--accent-500); transition: width 0.5s var(--ease-out-expo); }
+.progress-fill { height: 100%; background: var(--accent-500); }
 
 /* Body */
 .interview-body {
@@ -552,7 +599,7 @@ function releaseMediaDevices() {
 
 /* Scrollable conversation and bottom controls */
 .input-bar {
-  height: clamp(220px, 27vh, 280px);
+  height: clamp(300px, 36vh, 370px);
   border-top: 1px solid var(--neutral-200);
   background: var(--surface-elevated);
   padding: var(--space-3) var(--space-5);
@@ -649,7 +696,7 @@ function releaseMediaDevices() {
 .q-num { font-family: var(--font-mono); font-size: var(--text-lg); font-weight: 700; color: var(--accent-600); }
 .q-of { font-size: var(--text-sm); color: var(--neutral-500); }
 .q-progress { height: 4px; background: var(--neutral-200); border-radius: 2px; margin-bottom: var(--space-3); overflow: hidden; }
-.q-bar { height: 100%; background: var(--accent-500); border-radius: 2px; transition: width 0.5s var(--ease-out-expo); }
+.q-bar { height: 100%; background: var(--accent-500); border-radius: 2px; }
 .q-rows { display: flex; flex-direction: column; gap: var(--space-2); }
 .q-row { display: flex; justify-content: space-between; }
 .ql { font-size: var(--text-sm); color: var(--neutral-500); }
@@ -658,7 +705,7 @@ function releaseMediaDevices() {
 .eval-row { display: flex; align-items: center; gap: var(--space-3); }
 .eval-label { width: 60px; font-size: var(--text-xs); color: var(--neutral-600); flex-shrink: 0; }
 .eval-track { flex: 1; height: 6px; background: var(--neutral-200); border-radius: 3px; overflow: hidden; }
-.eval-fill { height: 100%; border-radius: 3px; transition: width 0.8s var(--ease-out-expo); }
+.eval-fill { height: 100%; border-radius: 3px; }
 .eval-val { width: 34px; text-align: right; font-family: var(--font-mono); font-size: 11px; font-weight: 600; color: var(--neutral-600); }
 .eval-footnote { font-size: var(--text-xs); color: var(--neutral-400); text-align: center; margin-top: var(--space-3); }
 
@@ -683,6 +730,9 @@ function releaseMediaDevices() {
   }
   .vr-card { width: 200px; }
   .info-card { flex: 1; min-width: 200px; }
+}
+@media (max-width: 640px) {
+  .input-bar { height: auto; min-height: 340px; padding-inline: var(--space-3); }
 }
 @media (prefers-reduced-motion: reduce) {
   .conversation-scroll { scroll-behavior: auto; }

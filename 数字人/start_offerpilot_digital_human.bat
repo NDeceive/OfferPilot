@@ -38,4 +38,4 @@ for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":8010" ^| findstr "LISTENING
 
 timeout /t 2 /nobreak >nul
 
-"%PYTHON_EXE%" ".\app.py" --transport webrtc --model wav2lip --avatar_id wav2lip256_avatar1 --listenport 8010
+"%PYTHON_EXE%" ".\app.py" --transport webrtc --model wav2lip --listenport 8010

@@ -6,7 +6,10 @@
         <!-- Logo -->
         <router-link to="/" class="nav-logo">
           <LogoIcon :size="28" />
-          <span class="nav-logo-text">OfferPilot</span>
+          <span class="nav-logo-text">
+            <span class="brand-cn">智面幻境</span>
+            <span class="brand-en">OfferPilot</span>
+          </span>
         </router-link>
 
         <!-- Main Nav Links -->
@@ -32,29 +35,25 @@
             </svg>
             Pro
           </router-link>
-          <button class="nav-icon-btn" title="搜索">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
-            </svg>
-          </button>
-          <button class="nav-icon-btn notification" title="通知">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-            </svg>
-            <span class="notif-dot"></span>
-          </button>
-
           <!-- User Menu -->
-          <div class="user-trigger" @click="toggleUserMenu" ref="userTriggerRef">
+          <button
+            ref="userTriggerRef"
+            type="button"
+            class="user-trigger"
+            aria-label="打开账户菜单"
+            aria-haspopup="menu"
+            :aria-expanded="userMenuOpen"
+            aria-controls="user-menu"
+            @click="toggleUserMenu"
+          >
             <div class="user-avatar-sm">
               <span>{{ userName.charAt(0) }}</span>
             </div>
-          </div>
+          </button>
 
           <!-- Dropdown -->
           <Transition name="dropdown">
-            <div v-if="userMenuOpen" class="user-dropdown" ref="dropdownRef">
+            <div v-if="userMenuOpen" id="user-menu" class="user-dropdown" ref="dropdownRef" role="menu">
               <div class="dropdown-header">
                 <div class="user-avatar-md"><span>{{ userName.charAt(0) }}</span></div>
                 <div>
@@ -80,7 +79,14 @@
           </Transition>
 
           <!-- Mobile Hamburger -->
-          <button class="mobile-menu-btn" @click="mobileOpen = !mobileOpen">
+          <button
+            type="button"
+            class="mobile-menu-btn"
+            :aria-label="mobileOpen ? '关闭导航菜单' : '打开导航菜单'"
+            :aria-expanded="mobileOpen"
+            aria-controls="mobile-navigation"
+            @click="mobileOpen = !mobileOpen"
+          >
             <svg v-if="!mobileOpen" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
             </svg>
@@ -93,7 +99,7 @@
 
       <!-- Mobile Nav -->
       <Transition name="mobile-nav">
-        <div v-if="mobileOpen" class="mobile-nav">
+        <div v-if="mobileOpen" id="mobile-navigation" class="mobile-nav">
           <router-link
             v-for="item in allNav"
             :key="item.path"
@@ -196,6 +202,15 @@ const handleScroll = () => {
   isScrolled.value = window.scrollY > 8
 }
 
+const handleKeydown = (event) => {
+  if (event.key !== 'Escape') return
+  if (userMenuOpen.value) {
+    userMenuOpen.value = false
+    userTriggerRef.value?.focus()
+  }
+  mobileOpen.value = false
+}
+
 function handleLogout() {
   userStore.logout()
   userMenuOpen.value = false
@@ -204,11 +219,13 @@ function handleLogout() {
 
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
+  document.addEventListener('keydown', handleKeydown)
   window.addEventListener('scroll', handleScroll, { passive: true })
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
+  document.removeEventListener('keydown', handleKeydown)
   window.removeEventListener('scroll', handleScroll)
 })
 </script>
@@ -258,11 +275,26 @@ onUnmounted(() => {
 }
 
 .nav-logo-text {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   font-family: var(--font-display);
-  font-size: var(--text-lg);
-  font-weight: 700;
   color: var(--neutral-900);
+  line-height: 1;
+}
+
+.nav-logo-text .brand-cn {
+  font-size: 1.0625rem;
+  font-weight: 750;
   letter-spacing: -0.02em;
+}
+
+.nav-logo-text .brand-en {
+  margin-top: 3px;
+  font-size: 0.5625rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--neutral-500);
 }
 
 /* Nav Links */
@@ -349,44 +381,16 @@ onUnmounted(() => {
   box-shadow: var(--shadow-accent);
 }
 
-.nav-icon-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-sm);
-  border: none;
-  background: transparent;
-  color: var(--neutral-500);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all var(--duration-fast);
-  position: relative;
-}
-
-.nav-icon-btn:hover {
-  background: var(--neutral-100);
-  color: var(--neutral-700);
-}
-
-.nav-icon-btn.notification {
-  position: relative;
-}
-
-.notif-dot {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 7px;
-  height: 7px;
-  background: var(--color-error);
-  border-radius: 50%;
-  border: 2px solid var(--surface-elevated);
-}
-
 /* User Trigger */
 .user-trigger {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
   cursor: pointer;
-  padding: 2px;
+  padding: 0;
+  border: 0;
+  background: transparent;
   border-radius: var(--radius-full);
   transition: all var(--duration-fast);
   margin-left: var(--space-1);
@@ -452,7 +456,7 @@ onUnmounted(() => {
 
 .dropdown-email {
   font-size: 12px;
-  color: var(--neutral-400);
+  color: var(--neutral-600);
 }
 
 .dropdown-divider {
@@ -504,8 +508,8 @@ onUnmounted(() => {
 /* Mobile */
 .mobile-menu-btn {
   display: none;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: var(--radius-sm);
   border: none;
   background: transparent;
@@ -561,6 +565,10 @@ onUnmounted(() => {
 }
 
 @media (max-width: 768px) {
+  .topnav-inner {
+    padding-inline: 16px;
+    gap: 12px;
+  }
   .nav-links {
     display: none;
   }
@@ -572,6 +580,22 @@ onUnmounted(() => {
   }
   .mobile-nav {
     display: block;
+  }
+}
+
+@media (max-width: 340px) {
+  .topnav-inner {
+    padding-inline: 10px;
+    gap: 8px;
+  }
+  .nav-logo {
+    gap: 5px;
+  }
+  .nav-logo-text .brand-cn {
+    font-size: .94rem;
+  }
+  .user-trigger {
+    margin-left: 0;
   }
 }
 </style>
