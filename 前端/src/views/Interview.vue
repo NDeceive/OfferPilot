@@ -1,6 +1,5 @@
 <template>
   <div class="interview-page">
-    <!-- Topbar -->
     <header class="topbar">
       <div class="topbar-left">
         <router-link to="/home" class="back-btn">
@@ -31,16 +30,13 @@
       </div>
     </header>
 
-    <!-- Progress -->
     <div class="progress-track">
       <div class="progress-fill" :style="{ width: progressPercent + '%' }"></div>
     </div>
 
-    <!-- Body -->
     <div class="interview-body">
-      <!-- Digital Human + Conversation Panel -->
       <div class="chat-panel">
-        <div class="digital-human-stage">
+        <div class="digital-human-stage" aria-label="AI 面试官视频">
           <DigitalHumanStage
             ref="digitalHumanRef"
             :text="digitalHumanText"
@@ -48,9 +44,18 @@
           />
         </div>
 
-        <!-- Scrollable conversation and voice controls -->
-        <div class="input-bar">
-          <div class="conversation-scroll" ref="messagesRef">
+        <section class="question-strip">
+          <div>
+            <strong>面试题</strong>
+            <p>{{ currentPrompt || '正在准备面试问题…' }}</p>
+          </div>
+          <button type="button" :aria-expanded="showTranscript" @click="showTranscript = !showTranscript">
+            {{ showTranscript ? '收起记录' : '展开回答记录' }}
+          </button>
+        </section>
+
+        <Transition name="transcript">
+          <div v-if="showTranscript" class="conversation-scroll" ref="messagesRef">
             <div
               v-for="(msg, i) in messages"
               :key="i"
@@ -76,7 +81,9 @@
               <p>正在思考下一步问题……</p>
             </div>
           </div>
+        </Transition>
 
+        <div class="input-bar">
           <MicrophoneControl
             ref="microphoneRef"
             :session-id="sessionId"
@@ -90,14 +97,11 @@
         </div>
       </div>
 
-      <!-- Info Panel -->
       <aside class="info-panel">
-        <!-- VR Card -->
         <div class="vr-card">
           <CameraPreview ref="cameraPreviewRef" />
         </div>
 
-        <!-- Question Card -->
         <div class="info-card">
           <div class="q-head">
             <span class="q-num">第 {{ currentQuestion }} 题</span>
@@ -113,19 +117,18 @@
           </div>
         </div>
 
-        <!-- Eval Card -->
         <div class="info-card">
           <h3 class="info-card-title">实时评估</h3>
           <div class="eval-list">
             <div v-for="(e, i) in evalItems" :key="i" class="eval-row">
               <span class="eval-label">{{ e.name }}</span>
               <div class="eval-track">
-                <div class="eval-fill" :style="{ width: e.value + '%', background: e.color }"></div>
+                <div class="eval-fill" :style="{ width: (evaluationReady ? e.value : 0) + '%', background: e.color }"></div>
               </div>
-              <span class="eval-val">{{ e.value }}%</span>
+              <span class="eval-val">{{ evaluationReady ? `${e.value}%` : '--' }}</span>
             </div>
           </div>
-          <p class="eval-footnote">面试结束后查看完整报告</p>
+          <p class="eval-footnote">{{ evaluationReady ? '评估随回答持续更新' : '回答提交后生成实时反馈' }}</p>
         </div>
       </aside>
     </div>
@@ -155,6 +158,8 @@ const isAiTyping = ref(false)
 const isPaused = ref(false)
 const isSubmitting = ref(false)
 const isSpeechProcessing = ref(false)
+const showTranscript = ref(false)
+const evaluationReady = ref(false)
 const messagesRef = ref(null)
 const cameraPreviewRef = ref(null)
 const microphoneRef = ref(null)
@@ -179,6 +184,12 @@ const evalItems = ref([
 const progressPercent = computed(() => totalDuration.value > 0
   ? ((totalDuration.value - timeLeft.value) / totalDuration.value) * 100
   : 0)
+const currentPrompt = computed(() => {
+  for (let index = messages.value.length - 1; index >= 0; index--) {
+    if (messages.value[index].role === 'ai') return messages.value[index].text
+  }
+  return ''
+})
 
 let timerInterval = null
 let autoFinished = false
@@ -357,11 +368,7 @@ async function submitAnswerFn() {
     // Update eval items if server provides them
     if (res.evalItems && Array.isArray(res.evalItems)) {
       evalItems.value = res.evalItems
-    } else {
-      // Keep local incremental eval as a fallback
-      evalItems.value[0].value = Math.min(100, evalItems.value[0].value + Math.floor(Math.random() * 15 + 5))
-      evalItems.value[1].value = Math.min(100, evalItems.value[1].value + Math.floor(Math.random() * 12 + 3))
-      evalItems.value[2].value = Math.min(100, evalItems.value[2].value + Math.floor(Math.random() * 10 + 5))
+      evaluationReady.value = true
     }
   } catch (e) {
     console.error('Failed to submit answer:', e)
@@ -737,4 +744,11 @@ async function waitForReport(sid) {
 @media (prefers-reduced-motion: reduce) {
   .conversation-scroll { scroll-behavior: auto; }
 }
+
+/* Interview V2 — video-first execution workspace */
+.topbar{height:58px;padding:0 28px}.progress-track{top:58px;height:2px}.interview-body{grid-template-columns:minmax(0,1fr) 310px;margin-top:60px;height:calc(100dvh - 60px);background:#fff}.chat-panel{position:relative;padding:14px 16px 10px;gap:10px;background:#fff}.digital-human-stage{min-height:0;flex:1;padding:0;border-radius:16px;background:#e3ebf6}.digital-human-stage :deep(.digital-human){border-radius:16px}.question-strip{display:flex;min-height:76px;flex:0 0 76px;align-items:center;justify-content:space-between;gap:20px;padding:11px 16px;border-radius:13px;background:#f8faf9}.question-strip>div{min-width:0}.question-strip strong{display:block;margin-bottom:4px;color:var(--accent-700);font-size:11px}.question-strip p{display:-webkit-box;margin:0;overflow:hidden;color:var(--neutral-800);font-size:13px;line-height:1.45;-webkit-box-orient:vertical;-webkit-line-clamp:2}.question-strip button{flex:0 0 auto;padding:6px 9px;border:1px solid var(--neutral-200);border-radius:7px;background:#fff;color:var(--neutral-600);font:inherit;font-size:10px;cursor:pointer}.input-bar{height:68px;flex:0 0 68px;padding:5px 4px 0;border-top:1px solid var(--neutral-200);background:#fff}.conversation-scroll{position:absolute;z-index:12;right:16px;bottom:82px;left:16px;max-height:220px;overflow-y:auto;padding:10px 12px;border:1px solid var(--neutral-200);border-radius:12px;background:rgba(255,255,255,.97);box-shadow:0 16px 38px rgba(25,55,45,.12);backdrop-filter:blur(8px)}.conversation-entry{padding:8px 10px}.conversation-entry p{margin:0;font-size:12px}.transcript-enter-active,.transcript-leave-active{transition:opacity 180ms ease,transform 240ms cubic-bezier(.16,1,.3,1)}.transcript-enter-from,.transcript-leave-to{opacity:0;transform:translateY(8px)}.info-panel{height:100%;padding:14px;gap:12px;background:#fbfcfb}.vr-card{position:relative;top:auto;width:100%;aspect-ratio:16/9;border:0;border-radius:14px;background:#f4f5f6}.info-card{padding:16px;border:1px solid rgba(25,80,60,.06);border-radius:14px;background:#f8faf9}.q-num{font-family:inherit;font-size:18px}.q-progress{height:2px}.q-row{padding:4px 0}.ql,.qv{font-size:12px}.eval-list{gap:11px}.eval-track{height:5px}.eval-val{font-family:inherit}.eval-footnote{margin-bottom:0}.timer{font-family:inherit;font-size:17px}.session-tag{font-size:12px}.end-btn{min-height:36px}.ctrl-btn{height:36px}
+
+@media(max-width:1024px){.interview-page{height:auto;min-height:100dvh;overflow:auto}.interview-body{height:auto;min-height:calc(100dvh - 60px);grid-template-columns:1fr;grid-template-rows:auto auto;overflow:visible}.chat-panel{height:calc(100dvh - 60px);min-height:620px}.info-panel{height:auto;display:grid;grid-template-columns:200px 1fr 1fr;border-top:1px solid var(--neutral-200);border-left:0;overflow:visible}.vr-card{width:auto}.conversation-scroll{right:16px}.digital-human-stage{min-height:360px}}
+@media(max-width:700px){.topbar{padding:0 12px}.session-tag{max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.interview-body{margin-top:60px}.chat-panel{height:calc(100dvh - 60px);min-height:600px;padding:9px}.digital-human-stage{min-height:310px}.question-strip{min-height:82px;flex-basis:82px;padding:10px 12px}.question-strip button{display:none}.input-bar{height:72px;flex-basis:72px}.conversation-scroll{right:9px;bottom:84px;left:9px}.info-panel{display:flex;padding:10px;flex-direction:column}.vr-card{width:100%;max-width:none}.topbar-center{position:absolute;left:50%;transform:translateX(-50%)}.session-tag{display:none}}
+@media(prefers-reduced-motion:reduce){.transcript-enter-active,.transcript-leave-active{transition:none}}
 </style>
