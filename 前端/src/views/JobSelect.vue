@@ -4,7 +4,7 @@
       <!-- Page Header -->
       <header class="page-header reveal">
         <h1 class="page-title">面试准备</h1>
-        <p class="page-desc">选择目标岗位并上传简历，系统将结合岗位要求与简历内容生成面试方案</p>
+        <p class="page-desc">{{ stepDescriptions[currentStep] }}</p>
       </header>
 
       <!-- Step Indicator -->
@@ -143,9 +143,15 @@
                     <p>{{ selectedJob.evidence }}</p>
                   </section>
 
-                  <div class="job-detail__selected">
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m5 12 4 4L19 6" /></svg>
-                    已选择该岗位
+                  <div class="job-detail__footer">
+                    <div class="job-detail__selected">
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m5 12 4 4L19 6" /></svg>
+                      <span><strong>已选择该岗位</strong><small>将基于该岗位生成训练方案</small></span>
+                    </div>
+                    <button class="btn btn--primary" type="button" @click="currentStep = 1">
+                      下一步：上传简历
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14m-6-6 6 6-6 6" /></svg>
+                    </button>
                   </div>
                 </template>
                 <template v-else>
@@ -158,16 +164,6 @@
             </div>
           </div>
 
-          <!-- Actions -->
-          <div class="step-actions">
-            <div />
-            <button class="btn btn--primary" :disabled="!selectedJob" @click="currentStep = 1">
-              下一步：上传简历
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M5 12h14M12 5l7 7-7 7" />
-              </svg>
-            </button>
-          </div>
         </section>
 
         <!-- ========== Step 2: Upload Resume ========== -->
@@ -218,7 +214,8 @@
                     </div>
                     <div class="file-chip__info">
                       <span class="file-chip__name">{{ uploadedFile.name }}</span>
-                      <span class="file-chip__size">{{ formatSize(uploadedFile.size) }}</span>
+                      <span v-if="uploadedFile.size" class="file-chip__size">{{ formatSize(uploadedFile.size) }}</span>
+                      <span v-else class="file-chip__size">已保存的简历</span>
                     </div>
                     <button class="file-chip__remove" @click.stop="removeFile" aria-label="删除文件">
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -226,12 +223,30 @@
                       </svg>
                     </button>
                   </div>
+                  <div class="resume-state" :class="{ 'is-error': resumeError, 'is-ready': !resumeUploading && !resumeError }">
+                    <span class="resume-state__dot" />
+                    <span v-if="resumeUploading">正在读取简历并识别技术栈与项目经历…</span>
+                    <span v-else-if="resumeError">{{ resumeError }}</span>
+                    <span v-else>解析完成，识别到 {{ extractedSkills.length }} 项技能<span v-if="resumeProjectCount">、{{ resumeProjectCount }} 段项目经历</span></span>
+                  </div>
+                  <div v-if="resumeUploading" class="resume-progress" aria-label="正在解析简历"><span /></div>
                 </template>
               </div>
 
+              <p v-if="resumeError && !uploadedFile" class="resume-validation" role="alert">{{ resumeError }}</p>
+
+              <section v-if="savedResume?.filename && !uploadedFile" class="saved-resume">
+                <div>
+                  <span class="saved-resume__label">或使用已有简历</span>
+                  <strong>{{ savedResume.filename }}</strong>
+                  <small>已识别 {{ savedResume.skills?.length || 0 }} 项技能<span v-if="savedResume.projects?.length"> · {{ savedResume.projects.length }} 段项目经历</span></small>
+                </div>
+                <button class="btn btn--ghost" type="button" @click="useSavedResume">使用此简历</button>
+              </section>
+
               <!-- Extracted Skills -->
               <Transition name="slide-up">
-                <div v-if="uploadedFile" class="extracted-skills">
+                <div v-if="uploadedFile && !resumeUploading && !resumeError" class="extracted-skills">
                   <h3 class="extracted-skills__title">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent-500)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <polyline points="22 4 12 14.01 9 11.01" />
@@ -299,7 +314,8 @@
 
               <!-- Job Summary Sidebar -->
             <aside v-if="selectedJob" class="job-summary card reveal">
-              <h3 class="card__title">已选岗位</h3>
+              <h3 class="card__title">本次面试依据</h3>
+              <div class="summary-section-head"><strong>已选岗位</strong><button type="button" @click="currentStep = 0">更换岗位 →</button></div>
               <div class="summary-card">
                 <JobLogo :icon-key="selectedJob.iconKey" :tone="selectedJob.themeKey" />
                 <div class="summary-card__body">
@@ -308,11 +324,20 @@
                 </div>
               </div>
               <div class="summary-section">
-                <h4 class="summary-section__label">面试重点</h4>
+                <h4 class="summary-section__label">关键能力</h4>
                 <div class="summary-section__tags">
                   <span v-for="focus in selectedJob.focus" :key="focus" class="focus-pill">{{ focus }}</span>
                 </div>
               </div>
+              <div class="resume-uses">
+                <h4>上传后将用于</h4>
+                <ol>
+                  <li><b>01</b><span><strong>技术栈识别</strong><small>提取你掌握的语言、框架与工具</small></span></li>
+                  <li><b>02</b><span><strong>项目经历提取</strong><small>识别真实项目、职责与技术亮点</small></span></li>
+                  <li><b>03</b><span><strong>针对性追问</strong><small>生成更贴近个人经历的问题</small></span></li>
+                </ol>
+              </div>
+              <p class="resume-privacy">简历仅用于本轮训练的问题生成与追问。</p>
             </aside>
           </div>
 
@@ -350,28 +375,29 @@
               <div v-if="modulesLoading" class="catalog-state"><span class="catalog-state__spinner" /><p>正在加载能力维度…</p></div>
               <div v-else-if="modulesError" class="catalog-state catalog-state--error"><p>{{ modulesError }}</p><button type="button" @click="fetchModules">重新加载</button></div>
               <div v-else class="module-grid">
-                <label v-for="module in allModules" :key="module.code" class="module-option" :class="{ 'is-selected': selectedModuleCodes.has(module.code), 'is-disabled': !selectedModuleCodes.has(module.code) && selectedModuleCodes.size >= 5 }">
-                  <input type="checkbox" :checked="selectedModuleCodes.has(module.code)" :disabled="!selectedModuleCodes.has(module.code) && selectedModuleCodes.size >= 5" @change="toggleModule(module.code)" />
+                <label v-for="module in allModules" :key="module.code" class="module-option" :class="{ 'is-selected': selectedModuleCodes.has(module.code) }">
+                  <input type="checkbox" :checked="selectedModuleCodes.has(module.code)" @change="toggleModule(module.code)" />
                   <span class="module-option__check">✓</span>
                   <strong>{{ module.name }}</strong>
                   <small>{{ module.description || '岗位能力评价维度' }}</small>
                 </label>
               </div>
+              <p v-if="moduleFeedback" class="module-feedback" role="status">{{ moduleFeedback }}</p>
             </div>
 
             <aside class="module-priority card">
-              <p class="module-priority__eyebrow">评价优先级</p>
-              <h3>把最想提升的能力放在前面</h3>
-              <p>顺序会影响报告权重；目标档位决定本次评价基准。</p>
+              <h3>本轮训练策略</h3>
+              <p>拖动调整顺序，优先级越高，本轮训练与复盘关注越多。</p>
               <div v-if="!sortedSelectedModules.length" class="module-priority__empty">从左侧选择训练目标</div>
               <TransitionGroup v-else tag="ol" name="priority" class="priority-list">
                 <li
                   v-for="(module, index) in sortedSelectedModules"
                   :key="module.code"
-                  :class="{ 'is-dragging': draggedModuleCode === module.code, 'is-drop-target': dragOverModuleCode === module.code && draggedModuleCode !== module.code }"
+                  :class="{ 'is-active': activeModuleCode === module.code, 'is-dragging': draggedModuleCode === module.code, 'is-drop-target': dragOverModuleCode === module.code && draggedModuleCode !== module.code }"
                   @dragover.prevent
                   @dragenter.prevent="setModuleDropTarget(module.code)"
                   @drop.prevent="dropModule(module.code)"
+                  @click="activeModuleCode = module.code"
                 >
                   <button
                     type="button"
@@ -384,25 +410,33 @@
                   >
                     <span v-for="dot in 6" :key="dot" />
                   </button>
-                  <span class="priority-index"><small>优先级</small>{{ index + 1 }}</span>
+                  <span class="priority-index">{{ String(index + 1).padStart(2, '0') }}</span>
                   <span class="priority-info">
                     <strong>{{ module.name }}</strong>
-                    <small>报告权重 <b>{{ moduleWeights[index] }}%</b></small>
                   </span>
-                  <span class="level-picker" role="radiogroup" :aria-label="`${module.name}目标难度`">
+                  <b class="priority-weight">{{ moduleWeights[index] }}%</b>
+                  <span class="priority-arrow">›</span>
+                </li>
+              </TransitionGroup>
+              <section v-if="activeModule" class="strategy-detail">
+                <h4>{{ activeModule.name }}</h4>
+                <p>{{ activeModule.description || '围绕该能力组织本轮问题与复盘重点。' }}</p>
+                <div class="strategy-level">
+                  <span>训练深度</span>
+                  <div role="radiogroup" :aria-label="`${activeModule.name}训练深度`">
                     <button
                       v-for="level in moduleLevelOptions"
                       :key="level.value"
                       type="button"
                       role="radio"
-                      :aria-checked="moduleLevels[module.code] === level.value"
-                      :class="{ 'is-active': moduleLevels[module.code] === level.value }"
-                      :title="level.hint"
-                      @click="moduleLevels[module.code] = level.value"
-                    ><strong>{{ level.label }}</strong><small>{{ level.hint }}</small></button>
-                  </span>
-                </li>
-              </TransitionGroup>
+                      :aria-checked="moduleLevels[activeModule.code] === level.value"
+                      :class="{ 'is-active': moduleLevels[activeModule.code] === level.value }"
+                      @click="moduleLevels[activeModule.code] = level.value"
+                    >{{ level.label }}</button>
+                  </div>
+                </div>
+                <p class="strategy-focus"><strong>本轮重点：</strong>{{ activeModuleLevelHint }}</p>
+              </section>
               <span class="sr-only" aria-live="polite">{{ sortAnnouncement }}</span>
             </aside>
           </div>
@@ -414,80 +448,83 @@
 
         <!-- ========== Step 4: Confirm & Start ========== -->
         <section v-show="currentStep === 3" key="step3" class="step-panel">
-          <div class="confirm-wrap reveal">
-            <div class="confirm-card card">
-              <div class="confirm-card__header">
-                <div class="confirm-card__icon-ring">
-                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--accent-500)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
-                  </svg>
+          <div class="confirmation-layout reveal">
+            <section class="configuration-card card">
+              <header><h2>本次面试配置</h2><p>请确认以下信息，支持随时修改。</p></header>
+
+              <div class="config-section config-job">
+                <div class="config-section__head"><strong>目标岗位</strong><button type="button" @click="currentStep = 0">修改岗位 →</button></div>
+                <div class="config-job__body">
+                  <JobLogo v-if="selectedJob" :icon-key="selectedJob.iconKey" :tone="selectedJob.themeKey" />
+                  <div><strong>{{ selectedJob?.title || '尚未选择岗位' }}</strong><span>{{ selectedJob?.familyName }} · {{ selectedJob?.directionCode }}</span></div>
                 </div>
-                <h2 class="confirm-card__title">准备就绪</h2>
-                <p class="confirm-card__subtitle">即将开始你的 AI 模拟面试</p>
+                <div class="config-tags"><span v-for="tag in selectedJob?.focus?.slice(0, 4)" :key="tag">{{ tag }}</span></div>
               </div>
 
-              <div class="confirm-card__details">
-                <div class="detail-row">
-                  <span class="detail-row__label">目标岗位</span>
-                  <span class="detail-row__value">{{ selectedJob?.title || '快速面试' }}</span>
-                </div>
-                <div class="detail-row">
-                  <span class="detail-row__label">简历</span>
-                  <span class="detail-row__value">{{ uploadedFile ? uploadedFile.name : '未上传' }}</span>
-                </div>
-                <div class="detail-row">
-                  <span class="detail-row__label">面试时长</span>
-                  <button
-                    class="duration-trigger"
-                    type="button"
-                    aria-haspopup="dialog"
-                    @click="openDurationPicker"
-                  >
-                    <span>{{ formattedDuration }}</span>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <path d="M9 18l6-6-6-6" />
-                    </svg>
-                  </button>
-                </div>
-                <div class="detail-row">
-                  <span class="detail-row__label">面试节奏</span>
-                  <span class="detail-row__value">按所选时长持续进行（含动态追问）</span>
-                </div>
-                <div class="detail-row detail-row--modules">
-                  <span class="detail-row__label">训练目标</span>
-                  <span class="module-tags-inline"><span v-for="module in sortedSelectedModules" :key="module.code">{{ module.name }}</span></span>
-                </div>
+              <div class="config-section">
+                <div class="config-section__head"><strong>本轮训练重点</strong><button type="button" @click="currentStep = 2">修改目标 →</button></div>
+                <ol class="config-priorities">
+                  <li v-for="(module, index) in sortedSelectedModules" :key="module.code">
+                    <b>{{ String(index + 1).padStart(2, '0') }}</b>
+                    <span>{{ module.name }}</span>
+                    <strong>{{ moduleWeights[index] }}%</strong>
+                    <em>{{ levelLabel(moduleLevels[module.code]) }}</em>
+                  </li>
+                </ol>
               </div>
 
-              <div class="confirm-card__tip">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" />
-                </svg>
-                <span>面试过程中请保持网络稳定，建议使用安静的环境</span>
+              <div class="config-section config-resume">
+                <div class="config-section__head"><strong>简历</strong><button type="button" @click="currentStep = 1">{{ uploadedFile ? '更换简历' : '补充简历' }} →</button></div>
+                <div>
+                  <strong>{{ uploadedFile ? uploadedFile.name : '本轮未使用' }}</strong>
+                  <span>{{ uploadedFile ? '已用于项目经历与技术栈追问。' : '本次训练将主要依据岗位与训练目标生成问题。' }}</span>
+                </div>
               </div>
-            </div>
+            </section>
+
+            <aside class="launch-card card">
+              <span class="launch-status">配置完成</span>
+              <h2>准备就绪</h2>
+              <p>一切已准备好，开始你的 AI 虚拟面试。</p>
+
+              <section class="launch-format">
+                <div class="launch-format__mark" aria-hidden="true">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2m7 9v3"/></svg>
+                </div>
+                <div><strong>AI 虚拟面试</strong><span>根据岗位与训练配置提问，并结合回答动态追问。</span></div>
+              </section>
+              <div class="launch-capabilities"><span>语音问答</span><span>动态追问</span><span>实时评估</span></div>
+
+              <section class="duration-section">
+                <h3>面试时长</h3>
+                <button class="duration-trigger duration-trigger--card" type="button" aria-haspopup="dialog" @click="openDurationPicker">
+                  <span><strong>{{ formattedDuration }}</strong><small>当前训练时长</small></span>
+                  <b>调整 →</b>
+                </button>
+                <p>支持 5 分钟至 2 小时自定义，精确到秒。</p>
+              </section>
+
+              <section class="before-start">
+                <h3>开始前</h3>
+                <ul><li>保持网络连接稳定</li><li>确保麦克风可正常使用</li><li>建议在安静环境中完成训练</li></ul>
+              </section>
+
+              <button class="btn btn--primary launch-button" :disabled="startingInterview" @click="handleStartInterview">
+                {{ startingInterview ? '正在初始化本轮训练…' : '开始 AI 虚拟面试' }}
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14m-6-6 6 6-6 6" /></svg>
+              </button>
+              <p v-if="startError" class="start-error" role="alert">{{ startError }}</p>
+              <small class="launch-note">进入后将准备首道问题，面试期间按所选时长进行。</small>
+            </aside>
           </div>
 
-          <!-- Actions -->
-          <div class="step-actions">
+          <div class="step-actions step-actions--confirm">
             <button class="btn btn--ghost" @click="currentStep = 2">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M19 12H5M12 19l-7-7 7-7" />
-              </svg>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5m7 7-7-7 7-7" /></svg>
               返回修改
             </button>
-            <button
-              class="btn btn--primary btn--lg"
-              :disabled="startingInterview"
-              @click="handleStartInterview"
-            >
-              {{ startingInterview ? '正在创建面试…' : '开始面试' }}
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polygon points="5 3 19 12 5 21 5 3" />
-              </svg>
-            </button>
+            <div />
           </div>
-          <p v-if="startError" class="start-error" role="alert">{{ startError }}</p>
         </section>
 
         <Teleport to="body">
@@ -511,6 +548,7 @@
                   <div>
                     <p class="duration-dialog__eyebrow">面试时长</p>
                     <h2 id="duration-title">安排一段专注的练习时间</h2>
+                    <p class="duration-dialog__intro">选择常用时长，或精确设置本次训练时间。</p>
                   </div>
                   <button class="duration-dialog__close" type="button" aria-label="关闭时间选择" @click="closeDurationPicker">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
@@ -519,6 +557,7 @@
                   </button>
                 </header>
 
+                <h3 class="duration-dialog__label">快捷选择</h3>
                 <div class="duration-presets" aria-label="常用时长">
                   <button
                     v-for="preset in durationPresets"
@@ -531,6 +570,7 @@
                   </button>
                 </div>
 
+                <h3 class="duration-dialog__label">自定义时长</h3>
                 <div class="duration-wheel" aria-label="滚动选择面试时长">
                   <div class="duration-wheel__highlight" aria-hidden="true" />
                   <div class="duration-wheel__fade duration-wheel__fade--top" aria-hidden="true" />
@@ -564,6 +604,7 @@
                   </div>
                 </div>
 
+                <p class="duration-dialog__summary">本次面试将持续 <strong>{{ formattedDraftDuration }}</strong></p>
                 <p class="duration-dialog__range">可选范围为 5 分钟至 2 小时，精确到秒</p>
 
                 <footer class="duration-dialog__footer">
@@ -585,7 +626,7 @@ import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import AppLayout from '../components/layout/AppLayout.vue'
 import JobLogo from '../components/jobs/JobLogo.vue'
-import { getJobList, getModules, getSkillTags, startInterview, updateResumeTags, uploadResumeFile } from '../api'
+import { getJobList, getModules, getResumeFileProfile, getSkillTags, startInterview, updateResumeTags, uploadResumeFile } from '../api'
 
 /* ------------------------------------------------------------------ */
 /*  State                                                              */
@@ -597,6 +638,8 @@ const activeFamily = ref('BE')
 const selectedJob = ref(null)
 const isDragging = ref(false)
 const uploadedFile = ref(null)
+const savedResume = ref(null)
+const resumeProjectCount = ref(0)
 const fileInput = ref(null)
 const extractedSkills = ref([])
 const allTags = ref([])
@@ -609,6 +652,8 @@ const modulesError = ref('')
 const selectedModuleCodes = ref(new Set())
 const moduleOrder = ref([])
 const moduleLevels = ref({})
+const activeModuleCode = ref('')
+const moduleFeedback = ref('')
 const draggedModuleCode = ref('')
 const dragOverModuleCode = ref('')
 const sortAnnouncement = ref('')
@@ -637,6 +682,12 @@ const resumeUploading = ref(false)
 const resumeError = ref('')
 
 const stepsInfo = ['选择岗位', '上传简历', '训练目标', '确认信息']
+const stepDescriptions = [
+  '选择目标岗位，为后续简历解析与训练方案生成做准备',
+  '上传简历，让后续题目更贴近你的真实经历',
+  '选择本轮重点能力，系统将据此组织面试题目与复盘重点',
+  '确认本次训练配置，开始 AI 虚拟面试',
+]
 const moduleWeights = [30, 25, 20, 15, 10]
 const moduleLevelOptions = [
   { value: 1, label: '基础', hint: '关注概念理解与基本应用' },
@@ -773,6 +824,8 @@ const formattedDraftDuration = computed(() => formatDuration(draftDurationSecond
 const sortedSelectedModules = computed(() => moduleOrder.value
   .map(code => allModules.value.find(module => module.code === code))
   .filter(Boolean))
+const activeModule = computed(() => sortedSelectedModules.value.find(module => module.code === activeModuleCode.value) || sortedSelectedModules.value[0] || null)
+const activeModuleLevelHint = computed(() => moduleLevelOptions.find(level => level.value === moduleLevels.value[activeModule.value?.code])?.hint || '围绕该能力完成针对性训练。')
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -817,8 +870,8 @@ function syncAllWheels(behavior = 'smooth') {
 }
 
 function setDurationUnit(key, value) {
-  draftDuration.value = { ...draftDuration.value, [key]: value }
-  syncWheel(key)
+  draftDuration.value = normalizeDraftDuration({ ...draftDuration.value, [key]: value })
+  nextTick(() => syncAllWheels())
 }
 
 function nudgeDuration(key, direction) {
@@ -832,14 +885,20 @@ function handleWheelScroll(key) {
   wheelScrollTimers[key] = setTimeout(() => {
     const unit = durationUnits.find(item => item.key === key)
     const index = Math.min(unit.values.length - 1, Math.max(0, Math.round(wheelRefs[key].scrollTop / WHEEL_ITEM_HEIGHT)))
-    draftDuration.value = { ...draftDuration.value, [key]: unit.values[index] }
-    syncWheel(key)
+    draftDuration.value = normalizeDraftDuration({ ...draftDuration.value, [key]: unit.values[index] })
+    syncAllWheels()
   }, 90)
 }
 
 function selectPreset(minutes) {
   draftDuration.value = splitDuration(minutes * 60)
   nextTick(() => syncAllWheels())
+}
+
+function normalizeDraftDuration(value) {
+  if (value.hours >= 2) return { hours: 2, minutes: 0, seconds: 0 }
+  const seconds = value.hours * 3600 + value.minutes * 60 + value.seconds
+  return splitDuration(Math.max(MIN_DURATION_SECONDS, Math.min(MAX_DURATION_SECONDS, seconds)))
 }
 
 function openDurationPicker() {
@@ -868,24 +927,37 @@ function triggerUpload() {
 
 function handleFileChange(e) {
   const file = e.target.files[0]
-  if (file) {
-    uploadedFile.value = file
-    simulateExtract()
-  }
+  if (file) selectResumeFile(file)
+  e.target.value = ''
 }
 
 function handleDrop(e) {
   isDragging.value = false
   const file = e.dataTransfer.files[0]
-  if (file) {
-    uploadedFile.value = file
-    simulateExtract()
+  if (file) selectResumeFile(file)
+}
+
+function selectResumeFile(file) {
+  const extension = file.name.split('.').pop()?.toLowerCase()
+  if (!['pdf', 'doc', 'docx'].includes(extension)) {
+    uploadedFile.value = null
+    resumeError.value = '请上传 PDF、DOC 或 DOCX 格式的简历'
+    return
   }
+  if (file.size > 10 * 1024 * 1024) {
+    uploadedFile.value = null
+    resumeError.value = '简历文件不能超过 10MB'
+    return
+  }
+  uploadedFile.value = file
+  simulateExtract()
 }
 
 function removeFile() {
   uploadedFile.value = null
   extractedSkills.value = []
+  resumeProjectCount.value = 0
+  resumeError.value = ''
 }
 
 function simulateExtract() {
@@ -899,6 +971,8 @@ function simulateExtract() {
         data.keywords.forEach(k => { if (!skills.includes(k)) skills.push(k) })
       }
       extractedSkills.value = skills
+      resumeProjectCount.value = Array.isArray(data.projects) ? data.projects.length : 0
+      savedResume.value = data
     })
     .catch((e) => {
       console.error('Resume upload failed:', e)
@@ -909,6 +983,23 @@ function simulateExtract() {
     })
 }
 
+async function fetchSavedResume() {
+  try {
+    const data = await getResumeFileProfile()
+    if (data?.filename) savedResume.value = data
+  } catch (_) {
+    // Existing resume data is optional.
+  }
+}
+
+function useSavedResume() {
+  if (!savedResume.value?.filename) return
+  uploadedFile.value = { name: savedResume.value.filename, size: 0, existing: true }
+  extractedSkills.value = [...(savedResume.value.skills || [])]
+  resumeProjectCount.value = savedResume.value.projects?.length || 0
+  resumeError.value = ''
+}
+
 function formatSize(bytes) {
   if (bytes < 1024) return bytes + ' B'
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
@@ -916,6 +1007,7 @@ function formatSize(bytes) {
 }
 
 function toggleModule(code) {
+  moduleFeedback.value = ''
   const next = new Set(selectedModuleCodes.value)
   if (next.has(code)) {
     next.delete(code)
@@ -924,8 +1016,16 @@ function toggleModule(code) {
     next.add(code)
     moduleOrder.value.push(code)
     moduleLevels.value = { ...moduleLevels.value, [code]: moduleLevels.value[code] || 2 }
+    activeModuleCode.value = code
+  } else {
+    moduleFeedback.value = '最多选择 5 项，请先取消一个已选目标。'
   }
   selectedModuleCodes.value = next
+  if (!next.has(activeModuleCode.value)) activeModuleCode.value = moduleOrder.value[0] || ''
+}
+
+function levelLabel(value) {
+  return moduleLevelOptions.find(level => level.value === value)?.label || '进阶'
 }
 
 function removeSkill(index) {
@@ -1045,6 +1145,7 @@ async function fetchModules() {
       selectedModuleCodes.value = new Set(defaults)
       moduleOrder.value = defaults
       moduleLevels.value = Object.fromEntries(defaults.map(code => [code, 2]))
+      activeModuleCode.value = defaults[0] || ''
     }
   } catch (error) {
     console.error('Failed to load modules:', error)
@@ -1120,6 +1221,7 @@ onMounted(() => {
   scheduleObserve()
   fetchJobs()
   fetchModules()
+  fetchSavedResume()
 })
 onUnmounted(() => { if (observer) observer.disconnect() })
 </script>
@@ -3124,4 +3226,31 @@ onUnmounted(() => { if (observer) observer.disconnect() })
     width: 100%;
   }
 }
+
+/* Interview preparation V2 — compact shared workspace */
+.page-container{max-width:1500px;padding:18px 24px 24px}.page-header{margin-bottom:8px}.page-title{font-size:30px}.page-desc{margin-top:5px;font-size:14px}.stepper{gap:64px;margin-bottom:18px;padding:4px 0 8px}.stepper__dot{width:32px;height:32px}.stepper__track{top:20px;left:29%;right:29%}.stepper__item{min-width:92px;gap:6px}.stepper__label{font-size:12px}.stepper__track-fill{transition-duration:260ms}.step-panel{animation-duration:280ms}.card,.job-catalog{border-radius:16px}.step-actions{margin-top:14px;padding-top:14px}.btn{min-height:40px}
+
+/* Step 1 */
+.job-catalog__top{padding:18px 22px 12px}.job-catalog>.search-box{margin:0 22px 16px}.job-catalog__layout{grid-template-columns:180px minmax(420px,1.25fr) minmax(330px,.9fr);min-height:0;height:clamp(500px,calc(100dvh - 305px),590px)}.job-list,.catalog-state{height:100%}.family-nav{padding:12px 10px}.family-nav button{position:relative;min-height:45px;border-radius:9px}.family-nav button.is-active::before{content:"";position:absolute;left:-10px;top:7px;bottom:7px;width:3px;border-radius:0 3px 3px 0;background:var(--accent-500)}.job-list{padding:10px}.job-list__item{padding:11px 12px;border-radius:12px}.job-list__item+.job-list__item{margin-top:2px}.job-list__summary{margin-top:3px}.job-list__tags{margin-top:5px}.job-detail{align-self:stretch;display:flex;flex-direction:column;padding:18px 20px;background:#f8fbf9}.job-detail__summary{margin-top:14px;line-height:1.6}.job-detail__section{margin-top:17px}.job-detail__footer{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:auto -20px -18px;padding:13px 16px;border-top:1px solid var(--neutral-200);background:rgba(255,255,255,.8)}.job-detail__selected{min-width:0;margin:0;padding:0;border:0}.job-detail__selected>span{display:flex;min-width:0;flex-direction:column}.job-detail__selected strong{font-size:12px}.job-detail__selected small{margin-top:2px;color:var(--neutral-500);font-size:9px;font-weight:400}.job-detail__footer .btn{flex:0 0 auto;padding:10px 16px}
+
+/* Step 2 */
+.upload-layout{grid-template-columns:minmax(0,1.9fr) minmax(310px,.9fr);gap:16px}.upload-card,.job-summary{min-height:clamp(490px,calc(100dvh - 330px),590px);padding:22px}.upload-zone{min-height:230px;padding:42px 24px;display:flex;flex-direction:column;justify-content:center}.upload-zone--filled{min-height:128px;padding:20px}.resume-state{display:flex;align-items:center;gap:8px;margin-top:14px;color:var(--neutral-500);font-size:12px}.resume-state__dot{width:7px;height:7px;border-radius:50%;background:#d49a37}.resume-state.is-ready{color:var(--accent-700)}.resume-state.is-ready .resume-state__dot{background:var(--accent-500)}.resume-state.is-error{color:#b4473e}.resume-state.is-error .resume-state__dot{background:#d9534f}.resume-progress{height:3px;margin-top:10px;overflow:hidden;border-radius:3px;background:var(--neutral-100)}.resume-progress span{display:block;width:42%;height:100%;border-radius:inherit;background:var(--accent-500);animation:resumeProgress 1.2s ease-in-out infinite}.saved-resume{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-top:16px;padding:14px 16px;border:1px solid var(--neutral-200);border-radius:12px}.saved-resume>div{display:grid;gap:3px}.saved-resume__label,.saved-resume small{color:var(--neutral-500);font-size:11px}.saved-resume strong{font-size:13px}.saved-resume .btn{padding:8px 14px}.extracted-skills{margin-top:16px;padding-top:16px}.job-summary{position:static}.summary-section-head{display:flex;align-items:center;justify-content:space-between;margin-top:18px}.summary-section-head strong{font-size:13px}.summary-section-head button,.config-section__head button{border:0;background:transparent;color:var(--accent-700);font:inherit;font-size:11px;font-weight:650;cursor:pointer}.resume-uses{margin-top:20px;padding-top:18px;border-top:1px solid var(--neutral-200)}.resume-uses h4{margin:0 0 12px;font-size:13px}.resume-uses ol{display:grid;gap:13px;margin:0;padding:0;list-style:none}.resume-uses li{display:flex;gap:11px;align-items:center}.resume-uses li>b{display:grid;width:34px;height:34px;place-items:center;border-radius:50%;background:var(--accent-50);color:var(--accent-700);font-size:11px}.resume-uses li span{display:grid;gap:2px}.resume-uses li strong{font-size:12px}.resume-uses li small{color:var(--neutral-500);font-size:10px}.resume-privacy{margin-top:auto;padding-top:18px;color:var(--neutral-500);font-size:10px;line-height:1.5}
+.resume-validation{margin:8px 2px 0;color:#b4473e;font-size:11px}
+
+/* Step 3 */
+.module-layout{grid-template-columns:minmax(0,1.55fr) minmax(390px,.85fr);gap:16px}.module-select,.module-priority{min-height:clamp(520px,calc(100dvh - 330px),610px);padding:20px}.module-heading{margin-bottom:14px}.module-heading .card__desc{margin-bottom:0}.module-count{height:30px}.module-grid{gap:9px 12px}.module-option{min-height:73px;padding:13px 14px;border-radius:12px;transform:none}.module-option:hover{transform:none}.module-option.is-selected{border-color:var(--accent-400);background:#f7fcfa;box-shadow:none}.module-option.is-selected::before{content:"";position:absolute;left:-1px;top:14px;bottom:14px;width:3px;border-radius:0 3px 3px 0;background:var(--accent-500)}.module-option strong{font-size:13px}.module-option small{margin-top:5px;font-size:11px;line-height:1.35}.module-feedback{margin:10px 0 0;color:#9a6715;font-size:11px}.module-priority.card{position:static;overflow:hidden;border-color:var(--neutral-200);background:#fff;color:var(--neutral-900);box-shadow:none}.module-priority::after{display:none}.module-priority h3{margin:0 0 5px;color:var(--neutral-900);font-size:17px}.module-priority>p:not(.module-priority__eyebrow){margin:0;color:var(--neutral-500);font-size:11px;line-height:1.45}.priority-list{gap:6px;margin-top:14px}.priority-list li{grid-template-columns:22px 40px minmax(0,1fr) auto 14px;gap:8px;min-height:46px;padding:7px 9px;border-radius:9px;background:#fff;box-shadow:none;cursor:pointer}.priority-list li:hover,.priority-list li.is-active{border-color:var(--accent-300);background:#f7fcfa;box-shadow:none}.priority-list li.is-active::before{content:"";position:absolute;left:-1px;top:7px;bottom:7px;width:3px;border-radius:0 3px 3px 0;background:var(--accent-500)}.priority-index{min-height:32px;border-radius:7px;font-size:12px}.priority-info strong{font-size:12px}.priority-weight{color:var(--accent-700);font-size:12px}.priority-arrow{color:var(--neutral-400);font-size:18px}.strategy-detail{margin-top:14px;padding-top:14px;border-top:1px solid var(--neutral-200)}.strategy-detail h4{margin:0 0 4px;font-size:14px}.strategy-detail>p{margin:0;color:var(--neutral-500);font-size:11px;line-height:1.45}.strategy-level{display:grid;grid-template-columns:72px 1fr;align-items:center;gap:8px;margin-top:12px}.strategy-level>span{font-size:11px}.strategy-level>div{display:grid;grid-template-columns:repeat(3,1fr);padding:3px;border-radius:8px;background:var(--neutral-100)}.strategy-level button{min-height:30px;border:0;border-radius:6px;background:transparent;color:var(--neutral-600);font:inherit;font-size:11px;cursor:pointer}.strategy-level button.is-active{background:var(--accent-500);color:#fff}.strategy-focus{margin-top:10px!important;padding:9px 10px;border-radius:8px;background:#f1f8f5!important;color:var(--neutral-600)!important}.strategy-focus strong{color:var(--accent-700)}
+
+/* Step 4 */
+.confirmation-layout{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(360px,.8fr);gap:16px;align-items:stretch}.configuration-card,.launch-card{min-height:clamp(500px,calc(100dvh - 330px),600px);padding:20px}.configuration-card>header h2,.launch-card h2{margin:0;font-size:19px}.configuration-card>header p,.launch-card>p{margin:5px 0 0;color:var(--neutral-500);font-size:12px}.config-section{padding:15px 0;border-top:1px solid var(--neutral-200)}.configuration-card>header+.config-section{margin-top:14px}.config-section__head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}.config-section__head>strong{font-size:13px}.config-job__body{display:flex;align-items:center;gap:12px;padding:11px;border-radius:10px;background:var(--neutral-50)}.config-job__body>div{display:grid;gap:3px}.config-job__body strong{font-size:13px}.config-job__body span,.config-resume span{color:var(--neutral-500);font-size:10px}.config-tags{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 0 60px}.config-tags span{padding:4px 7px;border-radius:6px;background:var(--neutral-100);color:var(--neutral-600);font-size:9px}.config-priorities{display:grid;gap:5px;margin:0;padding:0;list-style:none}.config-priorities li{display:grid;grid-template-columns:32px minmax(0,1fr) 42px 44px;align-items:center;gap:8px;min-height:31px}.config-priorities b{color:var(--accent-700);font-size:11px}.config-priorities span{font-size:11px}.config-priorities strong{color:var(--accent-700);font-size:11px}.config-priorities em{padding:3px 5px;border-radius:5px;background:var(--neutral-100);color:var(--neutral-500);font-size:9px;font-style:normal;text-align:center}.config-resume>div:last-child{display:grid;gap:3px;padding:10px 12px;border-radius:9px;background:var(--neutral-50)}.config-resume>div:last-child strong{font-size:12px}.launch-card{display:flex;flex-direction:column;background:#fbfefc}.launch-status{align-self:flex-start;padding:4px 8px;border-radius:999px;background:var(--accent-50);color:var(--accent-700);font-size:10px;font-weight:700}.launch-card h2{margin-top:10px}.launch-format{display:flex;gap:11px;margin-top:15px;padding:12px;border-radius:10px;background:#f3faf7}.launch-format__mark{display:grid;width:40px;height:40px;place-items:center;border-radius:9px;background:#fff;color:var(--accent-700)}.launch-format>div:last-child{display:grid;gap:3px}.launch-format strong{font-size:12px}.launch-format span{color:var(--neutral-500);font-size:9px;line-height:1.45}.launch-capabilities{display:grid;grid-template-columns:repeat(3,1fr);margin-top:8px}.launch-capabilities span{padding:7px 4px;border-right:1px solid var(--neutral-200);color:var(--neutral-600);font-size:9px;text-align:center}.launch-capabilities span:last-child{border-right:0}.duration-section,.before-start{margin-top:14px;padding-top:13px;border-top:1px solid var(--neutral-200)}.duration-section h3,.before-start h3{margin:0 0 8px;font-size:12px}.duration-trigger--card{width:100%;min-height:55px;justify-content:space-between;padding:8px 11px;text-align:left}.duration-trigger--card>span{display:grid;gap:2px}.duration-trigger--card strong{font-size:15px}.duration-trigger--card small{color:var(--neutral-500);font-size:9px;font-weight:400}.duration-trigger--card>b{font-size:10px}.duration-section>p{margin:6px 0 0;color:var(--neutral-500);font-size:9px}.before-start ul{display:grid;gap:5px;margin:0;padding:0;list-style:none}.before-start li{color:var(--neutral-600);font-size:10px}.before-start li::before{content:"·";margin-right:7px;color:var(--accent-600);font-weight:900}.launch-button{width:100%;justify-content:center;margin-top:auto}.launch-note{margin-top:7px;color:var(--neutral-400);font-size:9px;text-align:center}.step-actions--confirm{border-top:0}.start-error{margin:7px 0 0;text-align:center}
+
+/* Duration modal refinements */
+.duration-dialog__intro{margin:7px 0 0;color:var(--neutral-500);font-size:12px}.duration-dialog__label{margin:18px 0 8px;font-size:12px}.duration-presets{margin:0 0 16px}.duration-dialog__summary{margin:14px 0 0;color:var(--neutral-600);font-size:12px;text-align:center}.duration-dialog__summary strong{color:var(--accent-700);font-size:14px}.duration-dialog__range{margin-top:5px;font-size:10px}
+
+@keyframes resumeProgress{0%{transform:translateX(-110%)}100%{transform:translateX(260%)}}
+
+@media(max-width:1100px){.page-container{padding-inline:18px}.job-catalog__layout{grid-template-columns:160px minmax(360px,1.1fr) minmax(300px,.8fr)}.module-layout{grid-template-columns:1.35fr .85fr}.confirmation-layout{grid-template-columns:1.25fr .85fr}}
+@media(min-width:901px) and (max-height:950px){.page-container{padding-top:10px;padding-bottom:12px}.page-header{margin-bottom:4px}.page-title{font-size:26px}.page-desc{margin-top:3px;font-size:12px}.stepper{margin-bottom:10px;padding:2px 0 4px}.stepper__dot{width:30px;height:30px}.stepper__track{top:17px}.job-catalog__top{padding:13px 18px 8px}.job-catalog>.search-box{margin:0 18px 10px;padding-block:9px}.job-catalog__layout{height:clamp(430px,calc(100dvh - 390px),520px);min-height:0}.job-list__item{padding:8px 10px}.job-list__item+.job-list__item{margin-top:0}.job-list__summary{font-size:11px}.job-list__tags{margin-top:3px}.family-nav button{min-height:42px}.job-detail{padding:14px 16px}.job-detail__summary{margin-top:9px}.job-detail__section{margin-top:12px}.job-detail__footer{margin:auto -16px -14px}.upload-card,.job-summary,.module-select,.module-priority,.configuration-card,.launch-card{min-height:calc(100dvh - 365px);padding:16px}.upload-zone{min-height:190px;padding:28px 20px}.module-heading{margin-bottom:9px}.module-grid{gap:7px 10px}.module-option{min-height:60px;padding:9px 12px}.module-option small{margin-top:3px}.priority-list{margin-top:10px}.priority-list li{min-height:40px;padding:4px 8px}.strategy-detail{margin-top:8px;padding-top:8px}.strategy-level{margin-top:8px}.strategy-focus{margin-top:7px!important}.config-section{padding:10px 0}.configuration-card>header+.config-section{margin-top:8px}.launch-card h2{margin-top:7px}.launch-format{margin-top:9px;padding:9px}.duration-section,.before-start{margin-top:8px;padding-top:8px}.step-actions{margin-top:8px;padding-top:8px}}
+@media(max-width:900px){.page-container{padding-top:16px}.job-catalog__layout{height:auto;grid-template-columns:170px 1fr}.job-detail{grid-column:1/-1;min-height:380px}.upload-layout,.module-layout,.confirmation-layout{grid-template-columns:1fr}.upload-card,.job-summary,.module-select,.module-priority,.configuration-card,.launch-card{min-height:auto}.stepper{gap:20px}.stepper__track{left:18%;right:18%}}
+@media(max-width:640px){.page-container{padding:14px 12px 28px}.page-title{font-size:25px}.page-desc{font-size:12px}.stepper{gap:4px}.stepper__item{min-width:72px}.stepper__track{left:14%;right:14%}.job-catalog__layout{display:block}.job-detail__footer{align-items:stretch;flex-direction:column}.module-grid{grid-template-columns:1fr}.module-option{min-height:70px}.configuration-card,.launch-card{padding:16px}.config-priorities li{grid-template-columns:30px minmax(0,1fr) 38px 40px}.duration-dialog{max-height:calc(100dvh - 24px);overflow:auto}.duration-wheel{height:230px}.duration-wheel__column{height:230px;padding:89px 0}.duration-wheel__highlight{top:89px}}
+@media(prefers-reduced-motion:reduce){.resume-progress span{animation:none}.step-panel{animation:none}}
 </style>

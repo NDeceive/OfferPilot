@@ -31,7 +31,7 @@
         <div class="nav-actions">
           <router-link to="/member" class="upgrade-pill">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+              <path d="m4 7 4 4 4-7 4 7 4-4-2 10H6L4 7Z"/><path d="M7 20h10"/>
             </svg>
             Pro
           </router-link>
@@ -157,6 +157,11 @@ const studentNav = [
     path: '/history',
     label: '面试记录',
     icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+  },
+  {
+    path: '/learning',
+    label: '学习资源',
+    icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg>',
   },
 ]
 
@@ -331,7 +336,7 @@ onUnmounted(() => {
 }
 
 .nav-link-icon {
-  display: flex;
+  display: none;
   align-items: center;
   opacity: 0.7;
 }
@@ -377,7 +382,6 @@ onUnmounted(() => {
 .upgrade-pill:hover {
   background: var(--accent-100);
   color: var(--accent-800);
-  transform: translateY(-1px);
   box-shadow: var(--shadow-accent);
 }
 
