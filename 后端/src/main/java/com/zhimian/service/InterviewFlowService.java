@@ -33,6 +33,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -353,6 +354,29 @@ public class InterviewFlowService {
         sessionMapper.deleteById(sessionId);
     }
 
+    /** 批量删除面试会话；单条失败不影响其余会话。 */
+    @Transactional
+    public Map<String, Object> deleteBatch(List<Long> sessionIds) {
+        int deleted = 0;
+        int failed = 0;
+        if (sessionIds != null) {
+            for (Long id : sessionIds) {
+                if (id == null) {
+                    failed++;
+                    continue;
+                }
+                try {
+                    delete(id);
+                    deleted++;
+                } catch (BizException e) {
+                    log.warn("批量删除会话失败 sessionId={}, reason={}", id, e.getMessage());
+                    failed++;
+                }
+            }
+        }
+        return Map.of("deleted", deleted, "failed", failed);
+    }
+
     // ============================ 标签化出题 ============================
 
     /**
@@ -575,10 +599,14 @@ public class InterviewFlowService {
      * 检查面试是否超时（基于 durationSeconds 与 startTime 计算）。
      */
     private boolean isTimeExceeded(InterviewSession session) {
+        return isTimeExceeded(session, LocalDateTime.now());
+    }
+
+    static boolean isTimeExceeded(InterviewSession session, LocalDateTime now) {
         if (session.getDurationSeconds() == null || session.getStartTime() == null) {
             return true;
         }
-        long elapsed = java.time.Duration.between(session.getStartTime(), LocalDateTime.now()).getSeconds();
+        long elapsed = java.time.Duration.between(session.getStartTime(), now).getSeconds();
         return elapsed >= session.getDurationSeconds();
     }
 
