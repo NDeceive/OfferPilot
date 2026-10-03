@@ -18,6 +18,14 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final com.zhimian.service.AccountTokenService accountTokens;
+
+    /** Sign out all devices; password changes use the same revocation mechanism. */
+    @PostMapping("/logout")
+    public Result<Void> logout() {
+        accountTokens.revoke(com.zhimian.config.UserContext.getUserId());
+        return Result.success();
+    }
 
     @PostMapping("/register")
     public Result<Void> register(@Valid @RequestBody RegisterRequest req) {

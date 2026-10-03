@@ -1,0 +1,58 @@
+[
+  {
+    "id":"01", "name":"ChatGPT / OpenAI", "category":"几何关系 · 结构层次", "asset":"openai-icon.svg", "source":"https://openai.com/brand/", "sourceLabel":"OpenAI 官方品牌规范", "assetNote":"OpenAI 图形参考库版本；本板研究 Blossom 型图形，非 GPT 独立字标，也非最新版官方资产交付包。",
+    "observations":["圆弧与折角交替，外轮廓近圆，内部形成多方向关系。","重复单元带来统一节奏，空隙让交叠关系保持可读。","单色中仍能观察到内外层次，层次由几何与留白组织。"],
+    "like":"建议借鉴结构秩序与负空间：复杂关系被统一成一个整体，图形不是若干小图标的拼接。",
+    "avoid":"不迁移六向编织结、中心多边形或近似花结轮廓；这种结构容易形成明显近似，也可能使新品牌的小尺寸过密。",
+    "action":"探索由 2–3 个原创形体构成的关系，让一个主要开口组织内部层次；从 32 px 倒推间隙，在 16 px 检查是否闭合。",
+    "annotations":["01 / 外轮廓先形成整体","02 / 留白分隔结构","03 / 曲直关系带来节奏"], "priority":"结构研究优先", "hypotheses":"H1 · H2 · H6"
+  },
+  {
+    "id":"02", "name":"Claude", "category":"有机节奏 · 克制个性", "asset":"claude.svg", "source":"https://claude.com/", "sourceLabel":"Claude 官方产品页", "assetNote":"Simple Icons 16.32.0 单色参考几何；展示 Claude 产品符号，不以 Anthropic 公司字标代替。",
+    "observations":["中心较实，向外延伸的笔触长短与方向并不完全均匀。","端部与边缘有轻微差异，整体是放射关系而非机械等距阵列。","温和、手作感是本次视觉判断，并非官方寓意说明。"],
+    "like":"建议借鉴受控的不规则：统一骨架中保留少量差异，让图形有气质而不显得机械。",
+    "avoid":"不迁移放射星芒或随意毛边；照搬其外形会近似已有 AI 符号，过细笔触也增加缩小风险。",
+    "action":"在原创轮廓中比较一种对称版与一种轻微不对称版，控制曲率或开口的差异；用视觉重心判断温和感，不增加装饰线。",
+    "annotations":["01 / 稳定的中心重量","02 / 不等长形成节奏","03 / 端部差异保留个性"], "priority":"气质研究优先", "hypotheses":"H1 · H3 · H5"
+  },
+  {
+    "id":"03", "name":"TikTok", "category":"单一主形 · 方向张力", "asset":"tiktok.svg", "source":"https://www.tiktokbrandhub.com/visual-identity/logo", "sourceLabel":"TikTok 官方 Logo 页面", "assetNote":"主图为 Simple Icons 单色研究版；可展开参考库原色版，色彩不是本次 OfferPilot 配色候选。",
+    "observations":["音符主形包含直立部分、下部圆弧和右侧延伸。","竖直重量与偏向一侧的形体形成方向张力。","原色参考中可观察到青红错位效果；单色主形仍有明确边界。"],
+    "like":"建议借鉴一个强主形与曲直对比：视觉动势集中在主要轮廓，避免靠多个箭头表达前进。",
+    "avoid":"不采用青红撞色、重影或音符轮廓；娱乐感过强的表达不符合当前绿色、专业可信的产品方向。",
+    "action":"每个草案保留一个主形，比较实体与线条的视觉分量；用一处方向变化表达行动，先取消底线和独立箭头做对照。",
+    "annotations":["01 / 直立部分建立重量","02 / 圆弧构成识别特征","03 / 偏向一侧形成张力"], "priority":"视觉分量研究", "hypotheses":"H1 · H3 · H5"
+  },
+  {
+    "id":"04", "name":"DeepSeek", "category":"具象概括 · 独立轮廓", "asset":"deepseek.svg", "source":"https://www.deepseek.com/", "sourceLabel":"DeepSeek 官方网站", "assetNote":"Simple Icons 16.32.0 单色参考版；本板观察鲸形轮廓，不推断未获官方说明的隐藏寓意。",
+    "observations":["主体体块较大，尾部与身体形成明显方向变化。","内部白色区域帮助分出身体关系，细小眼部不是唯一线索。","具象外形可用短语描述；亲和力是视觉判断，尚无本项目用户测试。"],
+    "like":"建议借鉴大轮廓先成立的概括方式：主体与一处突出特征让图形容易描述。",
+    "avoid":"不沿用鲸鱼或类似尾部；也不把角色五官、羽毛、肢体细节全部塞入品牌图标。",
+    "action":"若探索具象路线，先寻找与引导或陪练有真实关联的原创形象，再做无细节剪影；移除小五官后复核主要特征。",
+    "annotations":["01 / 大体块承担主体识别","02 / 内部空白区分关系","03 / 尾部成为外轮廓特征"], "priority":"具象路线参照", "hypotheses":"H1 · H3 · H4"
+  },
+  {
+    "id":"05", "name":"Nike", "category":"运动品牌 · 单一轮廓", "asset":"nike.svg", "source":"https://about.nike.com/en/magazine/nike-swoosh-logo-history", "sourceLabel":"Nike 官方 Swoosh 文章", "assetNote":"Simple Icons 单色参考版；极简轮廓作为复杂度对照，不据其知名度断言新标会同样易记。",
+    "observations":["一枚连续形体通过厚薄变化和长向延伸形成动势。","内部信息少，但轮廓并非等宽普通勾线。","Nike 官方历史文章把早期曲线标志与运动感联系起来。"],
+    "like":"建议借鉴精确比例与厚薄变化：较少元素也能有视觉力量，完成度来自曲线控制。",
+    "avoid":"不设计近似勾形；不把大品牌长期曝光获得的识别度当作新图形天然具有的效果。",
+    "action":"为每条复杂路线制作一次删减版，检查去掉辅助元素后是否更鲜明；仍需保留原创记忆点，不能退回普通箭头。",
+    "annotations":["01 / 厚薄变化","02 / 一次方向推进","03 / 精确末端收束"], "priority":"复杂度对照", "hypotheses":"H1 · H3 · H5"
+  },
+  {
+    "id":"06", "name":"FedEx", "category":"物流品牌 · 字标负空间", "asset":"fedex.svg", "source":"https://newsroom.fedex.com/media-requests-and-resources", "sourceLabel":"FedEx 官方媒体资源", "assetNote":"Simple Icons 描边 Ex 参考版，不等同官方原色字标；用于观察 E/x 间关系，不作为正式单色规范。",
+    "observations":["横向字标整体紧凑，字母间距参与构成。","E 与 x 之间的空白可观察到箭头关系，语义由空间产生。","字标的横向比例与方形 App 图标需求不同。"],
+    "like":"建议借鉴空间本身承载信息：负空间与外形一起设计，减少另贴一个箭头的需要。",
+    "avoid":"不照搬 E/x 或强迫 OP 拼出多重隐藏图案；字标巧思也不能自动解决独立图形需求。",
+    "action":"原创草案尝试一个有意义的负空间；分别检查外轮廓和内开口是否成立，缩小后保留主要空间而非细小彩蛋。",
+    "annotations":["01 / 字距参与造型","02 / 空白形成方向","03 / 横向字标需另配图形"], "priority":"负空间研究优先", "hypotheses":"H2 · H3 · H4"
+  },
+  {
+    "id":"07", "name":"Duolingo", "category":"学习品牌 · 亲和力边界", "asset":"duolingo.svg", "source":"https://blog.duolingo.com/reshaping-duo/", "sourceLabel":"Duolingo 官方轮廓迭代文章", "assetNote":"Simple Icons 单色图标参考版，有容器与面部细节；不代表官方最新吉祥物或完整 Logo 系统。",
+    "observations":["图标呈现集中在眼部与头部轮廓的角色识别。","面部关系比纯剪影包含更多信息，需分别考虑吉祥物和品牌符号。","官方轮廓迭代文章强调先解决整体形状，再处理内部细节。"],
+    "like":"建议借鉴温和学习品牌的情绪与轮廓优先方法；绿色只是共同条件，仍需建立独立气质。",
+    "avoid":"不迁移大眼、幼态比例、卡通猫头鹰或高饱和荧光绿；OfferPilot 需要适合求职情境的成熟亲和力。",
+    "action":"具象路线分别提交剪影与简化细节版，判断专业感是否下降；若角色更适合作为陪练形象，则与核心 Logo 分开。",
+    "annotations":["01 / 外轮廓与容器","02 / 眼部聚集识别","03 / 角色细节的复杂度边界"], "priority":"情绪与复杂度对照", "hypotheses":"H3 · H4 · H5"
+  }
+]

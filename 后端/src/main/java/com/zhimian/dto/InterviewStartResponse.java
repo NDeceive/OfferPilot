@@ -13,4 +13,7 @@ public class InterviewStartResponse {
     private QuestionView question;
     /** 面试时长（秒） */
     private Integer durationSeconds;
+    /** Remaining server time when resuming an existing teaching attempt. */
+    private Integer remainingSeconds;
+    private Boolean finishable;
 }

@@ -13,10 +13,19 @@ import java.util.List;
 @Data
 public class StartInterviewRequest {
 
+    /** Teaching allocation; its immutable server configuration overrides client settings. */
+    private Long assignmentId;
+
+    /** Reuse for retried start requests; different configurations require a new ID. */
+    @jakarta.validation.constraints.Size(max = 64)
+    private String requestId;
+
     @NotNull(message = "岗位不能为空")
     private Long jobId;
 
     /** 难度: 1简单 2中等 3困难，缺省按中等处理 */
+    @Min(1)
+    @Max(3)
     private Integer difficulty;
 
     /** 面试时长（秒），缺省 1800（30分钟） */
@@ -25,12 +34,19 @@ public class StartInterviewRequest {
     private Integer durationSeconds;
 
     /** 模块偏好（可选）：[{code, rank, level}]，缺省使用默认5模块均衡模式 */
-    private List<ModulePreferenceItem> modulePreferences;
+    @jakarta.validation.Valid
+    @jakarta.validation.constraints.Size(max = 10)
+    private List<@jakarta.validation.constraints.NotNull ModulePreferenceItem> modulePreferences;
 
     @Data
     public static class ModulePreferenceItem {
+        @jakarta.validation.constraints.NotBlank
         private String code;
+        @Min(1)
+        @Max(5)
         private int rank;
+        @Min(1)
+        @Max(3)
         private int level;
     }
 }

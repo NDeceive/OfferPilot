@@ -42,6 +42,9 @@ public class ResumeFileService {
 
     @Transactional
     public ResumeFileProfileResponse uploadAndAnalyze(MultipartFile file) {
+        if (file.getSize() > 10 * 1024 * 1024) {
+            throw new com.zhimian.common.BizException("简历文件不能超过 10 MB");
+        }
         if (file.isEmpty()) {
             throw new RuntimeException("文件不能为空");
         }
@@ -119,11 +122,7 @@ public class ResumeFileService {
         }
 
         // Also populate the existing resume table so the text-paste flow has data
-        try {
-            resumeService.saveAndAnalyze(rawText);
-        } catch (Exception e) {
-            log.warn("Failed to sync file data to resume table", e);
-        }
+        resumeService.saveAndAnalyze(rawText);
 
         // Build response — normalize newlines to avoid segmented look
         ResumeFileProfileResponse resp = new ResumeFileProfileResponse();
@@ -137,46 +136,24 @@ public class ResumeFileService {
 
     public ResumeFileProfileResponse getFileProfile() {
         Long userId = UserContext.getUserId();
+        ResumeFile file = resumeFileMapper.selectOne(new LambdaQueryWrapper<ResumeFile>()
+                .eq(ResumeFile::getUserId, userId).last("LIMIT 1"));
+        var resume = resumeService.getMine();
+        ResumeFileProfileResponse response = new ResumeFileProfileResponse();
+        response.setRawText(resume == null ? "" : resume.getRawText());
+        response.setFilename(file != null ? file.getFilename() : resume != null ? "在线简历" : null);
+        response.setFileId(file == null ? null : file.getId());
+        response.setSkills(resume == null ? List.of() : readList(resume.getSkills()));
+        response.setProjects(resume == null ? List.of() : readList(resume.getProjects()));
+        return response;
+    }
 
-        ResumeFile rf = resumeFileMapper.selectOne(
-                new LambdaQueryWrapper<ResumeFile>().eq(ResumeFile::getUserId, userId).last("LIMIT 1"));
-        if (rf == null) {
-            ResumeFileProfileResponse empty = new ResumeFileProfileResponse();
-            empty.setRawText("");
-            empty.setSkills(Collections.emptyList());
-            empty.setProjects(Collections.emptyList());
-            return empty;
-        }
-
-        List<ResumeSkill> skills = resumeSkillMapper.selectList(
-                new LambdaQueryWrapper<ResumeSkill>().eq(ResumeSkill::getUserId, userId));
-        List<String> skillNames = skills.stream().map(ResumeSkill::getSkillName).distinct().toList();
-
-        List<ResumeParagraph> paragraphs = resumeParagraphMapper.selectList(
-                new LambdaQueryWrapper<ResumeParagraph>()
-                        .eq(ResumeParagraph::getUserId, userId)
-                        .eq(ResumeParagraph::getParagraphType, "PROJECT")
-                        .orderByAsc(ResumeParagraph::getSeqNo));
-        List<String> projectTexts = paragraphs.stream().map(ResumeParagraph::getContent).toList();
-
-        // Get raw text from the existing resume table (already saved as-is during upload)
-        String rawText = "";
+    private List<String> readList(String value) {
+        if (value == null || value.isBlank()) return List.of();
         try {
-            var resume = resumeService.getMine();
-            if (resume != null && resume.getRawText() != null) {
-                rawText = resume.getRawText();
-            }
-        } catch (Exception e) {
-            log.debug("Failed to read raw text from resume table", e);
-        }
-
-        ResumeFileProfileResponse resp = new ResumeFileProfileResponse();
-        resp.setRawText(normalizeText(rawText));
-        resp.setSkills(skillNames);
-        resp.setProjects(projectTexts);
-        resp.setFilename(rf.getFilename());
-        resp.setFileId(rf.getId());
-        return resp;
+            return new com.fasterxml.jackson.databind.ObjectMapper().readValue(value,
+                    new com.fasterxml.jackson.core.type.TypeReference<List<String>>() {});
+        } catch (IOException e) { return List.of(); }
     }
 
     private List<ResumeParagraph> segmentAndClassify(String fullText, Long userId, Long fileId) {

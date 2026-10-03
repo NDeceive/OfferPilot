@@ -7,6 +7,8 @@ export const useUserStore = defineStore('user', {
     username: localStorage.getItem('username') || '',
     nickname: localStorage.getItem('nickname') || '',
     role: localStorage.getItem('role') || '',
+    avatar: '',
+    profileLoaded: false,
   }),
 
   getters: {
@@ -15,7 +17,15 @@ export const useUserStore = defineStore('user', {
   },
 
   actions: {
+    syncProfile(user) {
+      this.nickname = user.nickname || user.username || ''
+      this.avatar = user.avatar || ''
+      this.profileLoaded = true
+      localStorage.setItem('nickname', this.nickname)
+    },
     setAuth(data) {
+      this.avatar = ''
+      this.profileLoaded = false
       this.token = data.token
       this.userId = data.userId
       this.username = data.username
@@ -29,6 +39,8 @@ export const useUserStore = defineStore('user', {
     },
 
     logout() {
+      this.avatar = ''
+      this.profileLoaded = false
       this.token = ''
       this.userId = null
       this.username = ''

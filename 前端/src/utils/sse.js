@@ -48,9 +48,10 @@ function dispatch(frame, handlers) {
  */
 export async function postSse(path, payload, handlers = {}, options = {}) {
   const store = useUserStore()
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api'
   // 刻意不设 Accept：浏览器默认的 */* 既能匹配 produces=text/event-stream，
   // 又能在参数校验失败时让后端正常返回 JSON 错误体（写死 Accept 会变成 406）
-  const res = await fetch(`/api${path}`, {
+  const res = await fetch(`${apiBaseUrl}${path}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

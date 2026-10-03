@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>智面幻境 · Logo 单色深化 / Stage 03</title>
+  <style>
+    :root { color-scheme:light; --bg:#f3f3ef; --card:#fff; --ink:#111411; --muted:#606761; --rule:#d9ded8; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif; }
+    main { max-width:1480px; margin:auto; padding:44px 36px 64px; }
+    .eyebrow { font-size:12px; font-weight:750; letter-spacing:.18em; text-transform:uppercase; color:var(--muted); }
+    h1 { margin:10px 0 12px; font-size:clamp(30px,4vw,50px); letter-spacing:-.05em; line-height:1.13; }
+    .intro { max-width:980px; margin:0; color:#485049; line-height:1.75; font-size:15px; }
+    .mast { display:flex; gap:26px; justify-content:space-between; align-items:end; padding-bottom:26px; border-bottom:1px solid var(--rule); }
+    .method { color:var(--muted); text-align:right; font-size:12px; line-height:1.7; white-space:nowrap; }
+    .routes { display:grid; gap:22px; margin-top:30px; }
+    .route { background:var(--card); border:1px solid var(--rule); }
+    .route-head { display:flex; gap:16px; justify-content:space-between; align-items:baseline; padding:20px 24px 17px; border-bottom:1px solid var(--rule); }
+    .route-code { color:var(--muted); font-size:11px; font-weight:750; letter-spacing:.13em; }
+    h2 { font-size:22px; margin:5px 0 6px; letter-spacing:-.025em; }
+    .route-head p { margin:0; color:var(--muted); font-size:12px; }
+    .route-intent { text-align:right; max-width:360px; line-height:1.5; }
+    .variants { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); }
+    .variant { min-width:0; padding:19px 19px 16px; border-right:1px solid var(--rule); }
+    .variant:last-child { border-right:0; }
+    .variant-top { display:flex; justify-content:space-between; align-items:baseline; gap:12px; }
+    .variant-id { font-size:11px; font-weight:800; letter-spacing:.15em; }
+    .variant-label { font-size:12px; color:var(--muted); }
+    .hero-stage { height:148px; display:grid; place-items:center; }
+    .hero { width:116px; height:116px; color:#111; }
+    .size-row { display:flex; align-items:end; justify-content:center; gap:28px; padding:12px 0 7px; border-top:1px solid #ecefeb; }
+    .size-item { display:flex; flex-direction:column; align-items:center; gap:6px; color:var(--muted); font-size:10px; }
+    .size-item svg { display:block; color:#111; }
+    .size-item .s16 { width:16px; height:16px; }
+    .size-item .s32 { width:32px; height:32px; }
+    .size-item .s64 { width:64px; height:64px; }
+    .variant-note { min-height:32px; margin:9px 0 0; text-align:center; color:var(--muted); font-size:11px; line-height:1.5; }
+    .route-foot { border-top:1px solid var(--rule); padding:12px 24px; color:var(--muted); font-size:12px; line-height:1.55; }
+    .route-foot strong { color:#323a33; }
+    .reverse { margin-top:25px; background:#111; color:#f8f8f5; padding:22px 24px 25px; }
+    .reverse-head { display:flex; justify-content:space-between; gap:20px; align-items:baseline; border-bottom:1px solid #333; padding-bottom:12px; }
+    .reverse h2 { margin:0; font-size:20px; }
+    .reverse p { margin:0; color:#b6bbb6; font-size:11px; }
+    .reverse-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); }
+    .reverse-item { display:flex; align-items:center; justify-content:center; gap:28px; min-height:118px; border-right:1px solid #333; }
+    .reverse-item:last-child { border-right:0; }
+    .reverse-item svg { width:68px; height:68px; color:#fff; }
+    .reverse-item .tiny { width:16px; height:16px; }
+    .reverse-item span { font-size:11px; color:#b6bbb6; white-space:nowrap; }
+    .review { margin-top:24px; padding:22px 24px; background:var(--card); border:1px solid var(--rule); }
+    .review h2 { margin:0 0 9px; font-size:19px; }
+    .review p { font-size:12px; color:var(--muted); line-height:1.6; margin:0 0 14px; }
+    table { width:100%; border-collapse:collapse; font-size:12px; }
+    th, td { text-align:left; padding:9px 10px; border-bottom:1px solid #e9ece8; vertical-align:top; }
+    th { color:var(--muted); font-weight:700; }
+    tr:last-child td { border-bottom:0; }
+    .endnote { display:flex; flex-wrap:wrap; gap:16px; justify-content:space-between; border-top:1px solid var(--rule); margin-top:24px; padding-top:16px; color:var(--muted); font-size:12px; line-height:1.7; }
+    .endnote p { max-width:660px; margin:0; }
+    svg.defs { width:0; height:0; overflow:hidden; position:absolute; }
+    @media (max-width:900px) { main { padding:30px 18px 50px; } .mast { display:block; } .method { text-align:left; margin-top:14px; } .variant { padding:14px 8px; } .size-row { gap:14px; } .route-head { display:block; } .route-intent { text-align:left; margin-top:10px!important; } }
+    @media (max-width:600px) { .variants { grid-template-columns:1fr; } .variant { border-right:0; border-bottom:1px solid var(--rule); } .variant:last-child { border-bottom:0; } .reverse-grid { grid-template-columns:1fr; } .reverse-item { border-right:0; border-bottom:1px solid #333; } .reverse-item:last-child { border-bottom:0; } }
+  </style>
+</head>
+<body>
+  <svg class="defs" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="a-narrow" viewBox="0 0 80 80"><path d="M33 12C24 18 20 27 20 40s4 22 13 28M47 12c9 6 13 15 13 28s-4 22-13 28" fill="none" stroke="currentColor" stroke-width="10" stroke-linecap="round"/><circle cx="40" cy="40" r="6" fill="currentColor"/></symbol>
+    <symbol id="a-shift" viewBox="0 0 80 80"><path d="M29 12C16 17 10 27 10 40s6 23 19 28M51 12c13 5 19 15 19 28s-6 23-19 28" fill="none" stroke="currentColor" stroke-width="10" stroke-linecap="round"/><circle cx="40" cy="40" r="5.5" fill="currentColor"/></symbol>
+    <symbol id="a-open" viewBox="0 0 80 80"><path d="M29 20C17 23 12 30 12 40s5 17 17 20M51 20c12 3 17 10 17 20s-5 17-17 20" fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round"/><circle cx="40" cy="40" r="6" fill="currentColor"/></symbol>
+    <symbol id="c-dense" viewBox="0 0 80 80"><path fill="currentColor" fill-rule="evenodd" d="M12 12h56v56H12V12Zm9 9v38h38V21H21Z"/><path fill="currentColor" d="M27 28h26v8H27zm0 16h26v8H27z"/></symbol>
+    <symbol id="c-open" viewBox="0 0 80 80"><path fill="currentColor" d="M12 12h56v9H21v38h47v9H12V12Z"/><path fill="currentColor" d="M27 29h28v8H27zm0 15h28v8H27z"/></symbol>
+    <symbol id="c-top" viewBox="0 0 80 80"><path fill="currentColor" d="M12 10h56v9H12zM14 23h52v45H14V23Zm9 9v27h34V32H23Z" fill-rule="evenodd"/><path fill="currentColor" d="M28 37h24v7H28zm0 11h24v7H28z"/></symbol>
+    <symbol id="d-balanced" viewBox="0 0 80 80"><path d="M29 13H14v54h15M51 13h15v54H51" fill="none" stroke="currentColor" stroke-width="10" stroke-linejoin="round"/><circle cx="40" cy="40" r="7.5" fill="currentColor"/></symbol>
+    <symbol id="d-offset" viewBox="0 0 80 80"><path d="M29 10H13v60h16M50 21h17v42H51" fill="none" stroke="currentColor" stroke-width="10" stroke-linejoin="round"/><circle cx="42" cy="37" r="7" fill="currentColor"/></symbol>
+    <symbol id="d-square" viewBox="0 0 80 80"><path fill="currentColor" d="M12 12h21v10H22v36h11v10H12V12Zm56 0H47v10h11v36H47v10h21V12Z"/><rect x="34" y="34" width="12" height="12" rx="2" fill="currentColor"/></symbol>
+  </svg>
+  <main>
+    <div class="mast"><div><div class="eyebrow">OfferPilot / Monochrome refinement / Stage 03</div><h1>智面幻境 · 三条路线深化</h1><p class="intro">基于上一轮初筛保留的 A2、C1、D1，各自调整结构与比例。所有候选保持相同黑白条件；本轮仍只讨论独立符号，不把字标、颜色或产品界面包装用于加分。</p></div><div class="method">3 路线 × 3 结构变体<br>116 / 16 / 32 / 64px 对照<br>另附纯黑底反白检查</div></div>
+    <div class="routes">
+      <section class="route"><div class="route-head"><div><div class="route-code">ROUTE A / DIALOGUE & RESPONSE</div><h2>双向对练</h2><p>由「两个回应者」与中心练习点构成。</p></div><p class="route-intent">优化点：由粗线改为可控的对称／开口比例，检查是否仍像通用眼睛或声波。</p></div><div class="variants">
+        <div class="variant"><div class="variant-top"><span class="variant-id">A-01</span><span class="variant-label">紧凑均衡</span></div><div class="hero-stage"><svg class="hero"><use href="#a-narrow"/></svg></div><div class="size-row"><span class="size-item"><svg class="s16"><use href="#a-narrow"/></svg>16</span><span class="size-item"><svg class="s32"><use href="#a-narrow"/></svg>32</span><span class="size-item"><svg class="s64"><use href="#a-narrow"/></svg>64</span></div><p class="variant-note">较稳，但在小尺寸略拥挤。</p></div>
+        <div class="variant"><div class="variant-top"><span class="variant-id">A-02</span><span class="variant-label">宽距呼应</span></div><div class="hero-stage"><svg class="hero"><use href="#a-shift"/></svg></div><div class="size-row"><span class="size-item"><svg class="s16"><use href="#a-shift"/></svg>16</span><span class="size-item"><svg class="s32"><use href="#a-shift"/></svg>32</span><span class="size-item"><svg class="s64"><use href="#a-shift"/></svg>64</span></div><p class="variant-note">留白舒展，轮廓偏声波。</p></div>
+        <div class="variant"><div class="variant-top"><span class="variant-id">A-03</span><span class="variant-label">开口留白</span></div><div class="hero-stage"><svg class="hero"><use href="#a-open"/></svg></div><div class="size-row"><span class="size-item"><svg class="s16"><use href="#a-open"/></svg>16</span><span class="size-item"><svg class="s32"><use href="#a-open"/></svg>32</span><span class="size-item"><svg class="s64"><use href="#a-open"/></svg>64</span></div><p class="variant-note">开口明显，整体更像括号。</p></div>
+      </div><div class="route-foot"><strong>本轮观察：</strong> A 路线亲和、适合陪练，但圆弧加中心点容易被读成眼睛或语音助手。</div></section>
+      <section class="route"><div class="route-head"><div><div class="route-code">ROUTE C / CHINESE NAME</div><h2>「面」的框架</h2><p>从中文名称抽取框架和内部层次。</p></div><p class="route-intent">优化点：让内框在 16px 不闭合成一块，同时检验「面」的联想是否强于普通窗口。</p></div><div class="variants">
+        <div class="variant"><div class="variant-top"><span class="variant-id">C-01</span><span class="variant-label">方框双层</span></div><div class="hero-stage"><svg class="hero"><use href="#c-dense"/></svg></div><div class="size-row"><span class="size-item"><svg class="s16"><use href="#c-dense"/></svg>16</span><span class="size-item"><svg class="s32"><use href="#c-dense"/></svg>32</span><span class="size-item"><svg class="s64"><use href="#c-dense"/></svg>64</span></div><p class="variant-note">字意清晰，但窗口感偏强。</p></div>
+        <div class="variant"><div class="variant-top"><span class="variant-id">C-02</span><span class="variant-label">开放边界</span></div><div class="hero-stage"><svg class="hero"><use href="#c-open"/></svg></div><div class="size-row"><span class="size-item"><svg class="s16"><use href="#c-open"/></svg>16</span><span class="size-item"><svg class="s32"><use href="#c-open"/></svg>32</span><span class="size-item"><svg class="s64"><use href="#c-open"/></svg>64</span></div><p class="variant-note">更轻快，但可能读成 E。</p></div>
+        <div class="variant"><div class="variant-top"><span class="variant-id">C-03</span><span class="variant-label">顶线分层</span></div><div class="hero-stage"><svg class="hero"><use href="#c-top"/></svg></div><div class="size-row"><span class="size-item"><svg class="s16"><use href="#c-top"/></svg>16</span><span class="size-item"><svg class="s32"><use href="#c-top"/></svg>32</span><span class="size-item"><svg class="s64"><use href="#c-top"/></svg>64</span></div><p class="variant-note">字形更明确，细节也更多。</p></div>
+      </div><div class="route-foot"><strong>本轮观察：</strong> C 路线最贴合中文名称，但比另两条更依赖内部负形，需严控笔画数量。</div></section>
+      <section class="route"><div class="route-head"><div><div class="route-code">ROUTE D / FOCUS & FEEDBACK</div><h2>反馈校准</h2><p>用围合与焦点表达针对性改进。</p></div><p class="route-intent">优化点：改变标准扫描框的节奏，测试对称与错位两种认知方式。</p></div><div class="variants">
+        <div class="variant"><div class="variant-top"><span class="variant-id">D-01</span><span class="variant-label">均衡聚焦</span></div><div class="hero-stage"><svg class="hero"><use href="#d-balanced"/></svg></div><div class="size-row"><span class="size-item"><svg class="s16"><use href="#d-balanced"/></svg>16</span><span class="size-item"><svg class="s32"><use href="#d-balanced"/></svg>32</span><span class="size-item"><svg class="s64"><use href="#d-balanced"/></svg>64</span></div><p class="variant-note">识别稳，但像扫描 UI 图标。</p></div>
+        <div class="variant"><div class="variant-top"><span class="variant-id">D-02</span><span class="variant-label">错位校准</span></div><div class="hero-stage"><svg class="hero"><use href="#d-offset"/></svg></div><div class="size-row"><span class="size-item"><svg class="s16"><use href="#d-offset"/></svg>16</span><span class="size-item"><svg class="s32"><use href="#d-offset"/></svg>32</span><span class="size-item"><svg class="s64"><use href="#d-offset"/></svg>64</span></div><p class="variant-note">更有动作感，但略失衡。</p></div>
+        <div class="variant"><div class="variant-top"><span class="variant-id">D-03</span><span class="variant-label">方形焦点</span></div><div class="hero-stage"><svg class="hero"><use href="#d-square"/></svg></div><div class="size-row"><span class="size-item"><svg class="s16"><use href="#d-square"/></svg>16</span><span class="size-item"><svg class="s32"><use href="#d-square"/></svg>32</span><span class="size-item"><svg class="s64"><use href="#d-square"/></svg>64</span></div><p class="variant-note">更理性，亲和感下降。</p></div>
+      </div><div class="route-foot"><strong>本轮观察：</strong> D 路线具有明确的「针对性」语义，但与常见取景／扫码图形距离仍近。</div></section>
+    </div>
+    <section class="reverse"><div class="reverse-head"><h2>反白检查 · 各路线对照稿</h2><p>纯黑背景 / 纯白图形 / 不代表入选</p></div><div class="reverse-grid"><div class="reverse-item"><span>A-03</span><svg><use href="#a-open"/></svg><svg class="tiny"><use href="#a-open"/></svg></div><div class="reverse-item"><span>C-01</span><svg><use href="#c-dense"/></svg><svg class="tiny"><use href="#c-dense"/></svg></div><div class="reverse-item"><span>D-02</span><svg><use href="#d-offset"/></svg><svg class="tiny"><use href="#d-offset"/></svg></div></div></section>
+    <section class="review"><h2>评审记录</h2><p>此处为视觉评审，不是用户偏好或商标清查。75 分且无关键失败才能进入下一轮；凡 16px 合并、靠通用图标含义成立的稿件返回修订。</p><table><thead><tr><th>路线</th><th>候选评估</th><th>下一轮建议</th></tr></thead><tbody>
+      <tr><td>A · 双向对练</td><td>A-01 68；A-02 69；A-03 71。共同关键问题：像常见眼睛／声波符号。</td><td>返回概念发散：弃用「两圆弧＋中心点」公式，保留双向反馈的含义。</td></tr>
+      <tr><td>C · 「面」的框架</td><td>C-01 77；C-02 66；C-03 61。C-01 在 16px 与反白下仍保留两层关系。</td><td>C-01 暂留：尝试独有的外框切口与内横间距，降低窗口图标感。</td></tr>
+      <tr><td>D · 反馈校准</td><td>D-01 60；D-02 64；D-03 58。共同关键问题：像扫描／取景框 UI 图标。</td><td>返回概念发散：弃用方括框与圆点组合，另找「针对性改进」的图形语法。</td></tr>
+    </tbody></table></section>
+    <div class="endnote"><p>这九个符号均为 SVG 几何稿，无位图、颜色、渐变、阴影或模拟场景。视觉分数仅决定是否有进一步精修价值；不证明原创或可注册。</p><p>本轮仅 C-01 暂过视觉门槛。下一步应修订 C-01，并为 A、D 重新发散，不直接进入字标或配色定稿。</p></div>
+  </main>
+</body>
+</html>

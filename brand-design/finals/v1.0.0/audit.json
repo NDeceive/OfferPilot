@@ -1,0 +1,114 @@
+[
+  {
+    "name": "symbol-green",
+    "paths": 3,
+    "text": false,
+    "raster": false,
+    "pixelChannelDifferences": 0
+  },
+  {
+    "name": "symbol-black",
+    "paths": 3,
+    "text": false,
+    "raster": false,
+    "pixelChannelDifferences": 0
+  },
+  {
+    "name": "symbol-white",
+    "paths": 3,
+    "text": false,
+    "raster": false,
+    "pixelChannelDifferences": 0
+  },
+  {
+    "name": "micro-green",
+    "paths": 3,
+    "text": false,
+    "raster": false,
+    "pixelChannelDifferences": 0
+  },
+  {
+    "name": "micro-black",
+    "paths": 3,
+    "text": false,
+    "raster": false,
+    "pixelChannelDifferences": 0
+  },
+  {
+    "name": "micro-white",
+    "paths": 3,
+    "text": false,
+    "raster": false,
+    "pixelChannelDifferences": 0
+  },
+  {
+    "name": "lockup-cn-green",
+    "paths": 4,
+    "text": false,
+    "raster": false,
+    "pixelChannelDifferences": 4
+  },
+  {
+    "name": "lockup-cn-black",
+    "paths": 4,
+    "text": false,
+    "raster": false,
+    "pixelChannelDifferences": 1
+  },
+  {
+    "name": "lockup-cn-white",
+    "paths": 4,
+    "text": false,
+    "raster": false,
+    "pixelChannelDifferences": 4
+  },
+  {
+    "name": "lockup-en-green",
+    "paths": 4,
+    "text": false,
+    "raster": false,
+    "pixelChannelDifferences": 0
+  },
+  {
+    "name": "lockup-en-black",
+    "paths": 4,
+    "text": false,
+    "raster": false,
+    "pixelChannelDifferences": 0
+  },
+  {
+    "name": "lockup-en-white",
+    "paths": 4,
+    "text": false,
+    "raster": false,
+    "pixelChannelDifferences": 0
+  },
+  {
+    "name": "lockup-bilingual-green",
+    "paths": 5,
+    "text": false,
+    "raster": false,
+    "pixelChannelDifferences": 0
+  },
+  {
+    "name": "lockup-bilingual-black",
+    "paths": 5,
+    "text": false,
+    "raster": false,
+    "pixelChannelDifferences": 0
+  },
+  {
+    "name": "lockup-bilingual-white",
+    "paths": 5,
+    "text": false,
+    "raster": false,
+    "pixelChannelDifferences": 0
+  },
+  {
+    "name": "app-icon-square",
+    "paths": 4,
+    "text": false,
+    "raster": false,
+    "pixelChannelDifferences": 0
+  }
+]

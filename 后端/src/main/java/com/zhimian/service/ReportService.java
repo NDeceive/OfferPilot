@@ -26,6 +26,7 @@ import com.zhimian.mapper.SkillQuestionMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -46,6 +47,8 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 public class ReportService {
+    private final TeachingService teachingService;
+    private final InterviewSnapshotService snapshots;
 
     private final InterviewSessionMapper sessionMapper;
     private final InterviewMessageMapper messageMapper;
@@ -89,6 +92,7 @@ public class ReportService {
      * 为已结束的会话生成报告（幂等）：已存在则直接返回其 reportId。
      * 由 finish 调用，调用方负责保证会话状态与归属。
      */
+    @Transactional
     public Long generateForSession(InterviewSession session) {
         InterviewReport existing = reportMapper.selectOne(
                 new LambdaQueryWrapper<InterviewReport>()
@@ -103,7 +107,7 @@ public class ReportService {
                         .eq(InterviewMessage::getSessionId, session.getId())
                         .orderByAsc(InterviewMessage::getId));
 
-        JobPosition job = jobMapper.selectById(session.getJobId());
+        JobPosition job = snapshots.job(session.getId(),session.getJobId());
         Metrics m = collectMetrics(messages, job);
 
         double quality = m.contentQuality();
@@ -120,7 +124,7 @@ public class ReportService {
         // 弱项（得分 < 60）作为薄弱标签
         List<String> weakDims = new ArrayList<>();
         for (String dim : orderedDimensions()) {
-            if (scores.get(dim).doubleValue() < 60) {
+            if (m.answerCount > 0 && scores.get(dim).doubleValue() < 60) {
                 weakDims.add(dim);
             }
         }
@@ -169,14 +173,14 @@ public class ReportService {
         if (report == null) {
             throw new BizException("报告不存在");
         }
-        if (!report.getUserId().equals(UserContext.getUserId())) {
+        if (!report.getUserId().equals(UserContext.getUserId()) && !teachingService.canReadReport(reportId)) {
             throw new BizException("无权查看该报告");
         }
 
         InterviewSession session = sessionMapper.selectById(report.getSessionId());
         String jobName = "未知岗位";
         if (session != null) {
-            JobPosition job = jobMapper.selectById(session.getJobId());
+            JobPosition job = snapshots.job(session.getId(),session.getJobId());
             if (job != null) {
                 jobName = job.getName();
             }
@@ -223,6 +227,7 @@ public class ReportService {
         resp.setOverallMatchScore(report.getOverallMatchScore());
         resp.setDisplayLevel(report.getDisplayLevel());
         resp.setProfileLabel(report.getProfileLabel());
+        resp.setTrainingContext(teachingService.reportContext(report.getSessionId(),reportId));
 
         List<InterviewModuleScore> moduleScores = moduleScoreMapper.selectList(
                 new LambdaQueryWrapper<InterviewModuleScore>()
@@ -253,6 +258,19 @@ public class ReportService {
                 moduleViews.add(mv);
             }
             resp.setModuleScores(moduleViews);
+        }
+        // Historical reports may contain a generic "all questions completed" fallback.
+        // Correct the response from answer evidence without rewriting stored scores or raw reports.
+        List<InterviewMessage> answerEvidence = messageMapper.selectList(new LambdaQueryWrapper<InterviewMessage>()
+                .eq(InterviewMessage::getSessionId, report.getSessionId()));
+        boolean hasAnswer = answerEvidence.stream().anyMatch(msg -> ROLE_CANDIDATE.equals(msg.getRole())
+                && "ANSWER".equals(msg.getMsgType()) && msg.getContent() != null && !msg.getContent().isBlank());
+        if (!hasAnswer) {
+            resp.setSummary("本次未形成可评价回答，暂不判断能力表现。请查看原始过程并完成训练要求。");
+            resp.setStrengths(List.of());
+            resp.setWeaknesses(List.of());
+            resp.setSuggestions(List.of("完成指定问题后再查看能力反馈；如次数已耗尽，请联系教师安排补练。"));
+            resp.setWeakTags("");
         }
         return resp;
     }
@@ -593,6 +611,7 @@ public class ReportService {
     // ============================ 中文评语生成 ============================
 
     private String buildSummary(BigDecimal total, Map<String, BigDecimal> scores, Metrics m) {
+        if (m.answerCount == 0) return "本次未形成主问题回答，暂不判断能力表现。请完成指定问题后再进行训练复盘。";
         String topDim = bestDimension(scores);
         String weakDim = worstDimension(scores);
         String band;
@@ -606,6 +625,9 @@ public class ReportService {
         } else {
             band = "整体仍有较大提升空间，建议加强系统准备";
         }
+        if (topDim.equals(weakDim) || scores.get(topDim).compareTo(scores.get(weakDim)) == 0) {
+            return String.format("本次模拟面试综合得分 %.1f 分。共完成 %d 道主问题作答。各维度评分相同，暂不区分相对优势与薄弱项，请结合原始回答查看具体依据。", t, m.answerCount);
+        }
         return String.format(
                 "本次模拟面试综合得分 %.1f 分，%s。共完成 %d 道主问题作答，其中触发追问 %d 次。"
                         + "你在「%s」方面表现相对突出，而「%s」是当前最需要加强的环节。"
@@ -615,6 +637,7 @@ public class ReportService {
 
     private List<String> buildStrengths(Map<String, BigDecimal> scores, Metrics m) {
         List<String> list = new ArrayList<>();
+        if (m.answerCount == 0) return list;
         for (String dim : orderedDimensions()) {
             if (scores.get(dim).doubleValue() >= 75) {
                 list.add(dim + "表现良好（" + scores.get(dim) + " 分），" + strengthHint(dim));
@@ -624,13 +647,14 @@ public class ReportService {
             list.add("回答中较多结合了项目与实践细节，说服力较强。");
         }
         if (list.isEmpty()) {
-            list.add("能够完整参与并完成全部主问题作答，具备继续提升的良好基础。");
+            list.add("本次已记录 " + m.answerCount + " 道主问题回答，暂未形成明确的能力优势，请结合原始回答继续复盘。");
         }
         return list;
     }
 
     private List<String> buildWeaknesses(Map<String, BigDecimal> scores, Metrics m) {
         List<String> list = new ArrayList<>();
+        if (m.answerCount == 0) return list;
         for (String dim : orderedDimensions()) {
             if (scores.get(dim).doubleValue() < 60) {
                 list.add(dim + "较为薄弱（" + scores.get(dim) + " 分），" + weaknessHint(dim));
@@ -650,6 +674,7 @@ public class ReportService {
 
     private List<String> buildSuggestions(Map<String, BigDecimal> scores, Metrics m) {
         List<String> list = new ArrayList<>();
+        if (m.answerCount == 0) return List.of("先完成指定问题的回答，再查看能力反馈；如次数已耗尽，请联系教师安排补练。");
         if (scores.get(DIM_KNOWLEDGE).doubleValue() < 70) {
             list.add("围绕岗位核心知识点系统梳理，作答时主动覆盖题目的关键术语与要点。");
         }

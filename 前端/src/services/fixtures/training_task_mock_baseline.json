@@ -1,0 +1,144 @@
+{
+  "meta": {
+    "purpose": "统一演示基线；禁止硬编码到生产",
+    "version": "V1"
+  },
+  "classes": [
+    {
+      "id": "software2501",
+      "name": "软件2501",
+      "studentCount": 47
+    },
+    {
+      "id": "software2502",
+      "name": "软件2502",
+      "studentCount": 45
+    },
+    {
+      "id": "software2503",
+      "name": "软件2503",
+      "studentCount": 46
+    },
+    {
+      "id": "software2504",
+      "name": "软件2504",
+      "studentCount": 48
+    }
+  ],
+  "taskCenterExamples": [
+    {
+      "id": "task_project_expr",
+      "title": "项目经历表达训练",
+      "classId": "software2502",
+      "type": "ABILITY",
+      "trainingMode": "AI_INTERVIEW",
+      "scope": "全班",
+      "participantCount": 45,
+      "completed": 26,
+      "inProgress": 7,
+      "notStarted": 4,
+      "overdue": 8,
+      "completionRate": 58,
+      "lifecycle": "ACTIVE",
+      "deadline": "2026-10-05T23:59:00+08:00"
+    },
+    {
+      "id": "task_java_backend",
+      "title": "Java后端专项训练",
+      "classId": "software2502",
+      "type": "POSITION",
+      "trainingMode": "AI_INTERVIEW",
+      "scope": "Java后端方向",
+      "participantCount": 14,
+      "completed": 10,
+      "inProgress": 1,
+      "notStarted": 1,
+      "overdue": 2,
+      "completionRate": 71,
+      "lifecycle": "ACTIVE",
+      "deadline": "2026-10-03T23:59:00+08:00"
+    },
+    {
+      "id": "task_algorithm",
+      "title": "算法工程师模拟训练",
+      "classId": "software2501",
+      "type": "POSITION",
+      "trainingMode": "AI_INTERVIEW",
+      "scope": "算法方向",
+      "participantCount": 12,
+      "lifecycle": "SCHEDULED",
+      "startTime": "2026-10-06T08:00:00+08:00",
+      "deadline": "2026-10-13T23:59:00+08:00"
+    },
+    {
+      "id": "task_comprehensive",
+      "title": "综合模拟面试",
+      "classId": "software2503",
+      "type": "COMPREHENSIVE",
+      "trainingMode": "AI_INTERVIEW",
+      "scope": "全班",
+      "participantCount": 46,
+      "completed": 46,
+      "completionRate": 100,
+      "lifecycle": "ENDED"
+    },
+    {
+      "id": "task_logic",
+      "title": "逻辑表达能力训练",
+      "classId": "software2504",
+      "type": "ABILITY",
+      "trainingMode": "AI_INTERVIEW",
+      "scope": "全班",
+      "participantCount": 48,
+      "completed": 18,
+      "inProgress": 12,
+      "notStarted": 13,
+      "overdue": 5,
+      "completionRate": 38,
+      "lifecycle": "ACTIVE"
+    },
+    {
+      "id": "task_test_draft",
+      "title": "软件测试专项训练",
+      "classId": "software2504",
+      "type": "POSITION",
+      "trainingMode": "SPECIAL_PRACTICE",
+      "scope": "指定学生",
+      "participantCount": 18,
+      "lifecycle": "DRAFT",
+      "lastEditedStep": 2
+    }
+  ],
+  "taskDetailCanonical": {
+    "id": "task_logic_8",
+    "title": "逻辑表达专项训练",
+    "classId": "software2502",
+    "participantCount": 8,
+    "type": "ABILITY",
+    "primaryAbility": "LOGIC_EXPRESSION",
+    "trainingMode": "AI_INTERVIEW",
+    "durationMinutes": 15,
+    "difficulty": "STANDARD",
+    "mainQuestionCount": 8,
+    "dynamicFollowUp": true,
+    "minValidAttempts": 1,
+    "maxAttempts": 3,
+    "allowRepeat": true,
+    "allowLateCompletion": false,
+    "lifecycle": "ACTIVE",
+    "execution": {
+      "completed": 5,
+      "inProgress": 1,
+      "notStarted": 2,
+      "currentlyOverdue": 0,
+      "lateCompleted": 0
+    },
+    "resultAnalysis": {
+      "validResultCount": 5,
+      "insufficientDataCount": 3,
+      "improved": 3,
+      "stable": 1,
+      "declined": 1
+    }
+  }
+}

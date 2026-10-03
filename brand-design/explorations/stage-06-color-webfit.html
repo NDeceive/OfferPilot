@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>智面幻境 · 第六阶段：标志色彩与网页适配</title>
+  <style>
+    :root{--forest:#003b30;--mint:#51e4b2;--mint-strong:#00c98d;--cream:#f3f5ee;--ink:#10211a;--rule:#d8e3dc}
+    *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:#e9eee9;color:var(--ink);font-family:-apple-system,"Segoe UI","PingFang SC","Noto Sans SC","Microsoft YaHei",sans-serif}
+    main{width:min(1480px,100%);margin:auto;background:#f8faf6;box-shadow:0 25px 80px #113d2b19}h1,h2,h3,p{margin-top:0}a{color:inherit}
+    .eyebrow{font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase}
+    .intro{position:relative;overflow:hidden;min-height:454px;padding:44px 64px 52px;color:#f4fff8;background:radial-gradient(circle at 87% 23%,#138b6570,transparent 32%),linear-gradient(140deg,#003b30,#003126)}
+    .intro:after{position:absolute;right:-150px;bottom:-380px;width:700px;height:700px;border:1px solid #7af2c528;border-radius:50%;content:""}
+    .intro-top{display:flex;justify-content:space-between;gap:20px;color:#c7f5e3}.intro-top span:last-child{font-size:12px}
+    .intro-grid{position:relative;z-index:1;display:grid;grid-template-columns:.82fr 1.18fr;align-items:center;gap:48px;margin-top:66px}
+    h1{max-width:590px;margin-bottom:16px;font-size:clamp(38px,4.5vw,66px);line-height:1.09;letter-spacing:-.06em}
+    .intro p{max-width:580px;margin-bottom:0;color:#bdd8cb;font-size:16px;line-height:1.8}
+    .hero-logo{display:flex;align-items:center;justify-content:center;gap:26px;min-height:180px}
+    .hero-logo .mark{width:126px;height:126px}.hero-logo .brand-cn{font-size:46px}.hero-logo .brand-en{font-size:17px;color:#a9d8c4}
+    .mark{display:block;flex:none;width:56px;height:56px;overflow:visible}.mark-main{fill:var(--mark-main,currentColor)}.mark-exit{fill:var(--mark-exit,currentColor)}
+    .brand-copy{display:flex;flex-direction:column;gap:3px;white-space:nowrap}.brand-cn{font-weight:750;letter-spacing:-.055em;line-height:1.15}.brand-en{font-weight:650;letter-spacing:-.025em;line-height:1.25}
+    .section{padding:51px 64px 54px;border-bottom:1px solid var(--rule)}.section-head{display:grid;grid-template-columns:1fr auto;align-items:end;gap:28px;margin-bottom:25px}
+    .section h2{margin:5px 0 0;font-size:30px;letter-spacing:-.045em}.section-head p{max-width:520px;margin:0;color:#60756b;font-size:13px;line-height:1.65;text-align:right}
+    .geometry-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+    .geometry-card{padding:24px;border:1px solid #dce6df;background:#fff}.geometry-card.revised{border-color:#9cc8af;background:#f5faf6}
+    .geometry-card header{display:flex;justify-content:space-between;gap:15px;align-items:baseline}.geometry-card h3{margin:0;font-size:17px}.geometry-card header span{color:#547362;font-size:11px}
+    .geometry-stage{display:grid;place-items:center;height:164px;margin:18px 0 15px;background:#f8faf8}
+    .geometry-stage .mark{width:108px;height:108px;color:#111}
+    .sizes{display:flex;justify-content:center;align-items:end;gap:38px;padding-bottom:15px;border-bottom:1px solid #e8eeea}
+    .sizes>div{display:grid;justify-items:center;gap:7px;color:#74837a;font:11px/1.2 ui-monospace,Consolas,monospace}
+    .sizes .mark{color:#111}.sizes .s16{width:16px;height:16px}.sizes .s32{width:32px;height:32px}.sizes .s64{width:64px;height:64px}
+    .geometry-card p{margin:13px 0 0;color:#5b6c61;font-size:13px;line-height:1.6}
+    .palette-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.palette{overflow:hidden;border:1px solid #dce5de;background:#fff}
+    .palette.active{border:2px solid #0c7551}.palette-top{display:grid;place-items:center;height:175px;padding:20px}
+    .palette .lockup{display:flex;align-items:center;gap:11px}.palette .mark{width:55px;height:55px}.palette .brand-cn{font-size:23px}.palette .brand-en{font-size:10px}
+    .palette-info{padding:20px}.palette-info>div:first-child{display:flex;justify-content:space-between;gap:12px;align-items:baseline}
+    .palette h3{margin:0;font-size:16px}.badge{font-size:10px;font-weight:800;letter-spacing:.08em}.palette p{min-height:44px;margin:10px 0 15px;color:#62756a;font-size:12px;line-height:1.6}
+    .swatches{display:flex;gap:5px}.swatch{flex:1;min-width:0}.swatch i{display:block;height:27px;border:1px solid #00000012}.swatch span{display:block;overflow:hidden;margin-top:6px;color:#607168;font:9px/1.2 ui-monospace,Consolas,monospace;text-overflow:ellipsis}
+    .route-a .palette-top{background:#003b30;color:white}.route-a .mark{--mark-main:#f1fff7;--mark-exit:#51e4b2}.route-a .brand-en{color:#a9d8c4}
+    .route-b .palette-top{background:#fbfaf6;color:#174b39}.route-b .mark{--mark-main:#174b39;--mark-exit:#ee9b45}.route-b .brand-en{color:#567462}
+    .route-c .palette-top{background:#f4f8fc;color:#07172f}.route-c .mark{--mark-main:#1769ff;--mark-exit:#12b8a6}.route-c .brand-en{color:#596a86}
+    .app-grid{display:grid;grid-template-columns:1.4fr .85fr;gap:18px}
+    .app-landing{min-height:324px;padding:22px 27px;color:#fff;background:radial-gradient(circle at 82% 60%,#05775975,transparent 39%),#003b30}
+    .fake-header{display:flex;justify-content:space-between;align-items:center;gap:12px}.fake-header .lockup{display:flex;align-items:center;gap:7px}.fake-header .mark{width:30px;height:30px;--mark-main:#fff;--mark-exit:#51e4b2}
+    .fake-header .brand-cn{font-size:16px}.fake-header .brand-en{font-size:9px;color:#a6d3be}.fake-nav{display:flex;gap:28px;color:#b8d7ca;font-size:13px}
+    .fake-cta{padding:10px 16px;border-radius:6px;background:#d9fff3;color:#003b30;font-size:11px;font-weight:750}
+    .landing-copy{max-width:410px;margin-top:62px}.landing-copy span{display:inline-block;padding:6px 11px;border:1px solid #61e9b258;border-radius:99px;color:#69ecc0;font-size:11px}
+    .landing-copy h3{margin:17px 0 8px;font-size:36px;line-height:1.15;letter-spacing:-.04em}.landing-copy p{margin:0;color:#b7d3c5;font-size:13px;line-height:1.7}
+    .app-side{display:grid;gap:18px}.app-dashboard{min-height:150px;padding:18px;background:#f6f9f5;border:1px solid #d9e8dd}
+    .app-dashboard .lockup{display:flex;align-items:center;gap:9px}.app-dashboard .mark{width:42px;height:42px;--mark-main:#174b39;--mark-exit:#00a977}
+    .app-dashboard .brand-cn{font-size:18px}.app-dashboard .brand-en{font-size:10px;color:#628073}
+    .nav-lines{display:grid;gap:8px;margin-top:25px}.nav-lines i{height:9px;width:75%;border-radius:4px;background:#e3ebe4}.nav-lines i:nth-child(2){width:58%}
+    .app-mobile{min-height:158px;padding:18px;background:#fbfaf6;border:1px solid #e5e9e2}.app-mobile .lockup{display:flex;align-items:center;gap:8px}
+    .app-mobile .mark{width:38px;height:38px;--mark-main:#174b39;--mark-exit:#00a977}.app-mobile .brand-cn{font-size:17px}.app-mobile .brand-en{font-size:9px;color:#667d6d}
+    .mobile-message{margin-top:22px;padding:12px 14px;border:1px solid #e2ebe4;border-radius:10px;background:#fff;color:#3e594a;font-size:11px}
+    .proof-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:18px;margin-top:18px}.proof{display:flex;align-items:center;justify-content:space-around;gap:18px;min-height:143px;padding:20px}
+    .proof.dark{background:#003b30}.proof.light{background:#fff;border:1px solid #d9e3dc}
+    .app-icon{display:grid;place-items:center;width:78px;height:78px;border-radius:19px;background:#00c98d}.app-icon .mark{width:55px;height:55px;--mark-main:#003b30;--mark-exit:#003b30}
+    .proof .lockup{display:flex;align-items:center;gap:10px}.proof .mark{width:42px;height:42px}.proof .brand-cn{font-size:22px}.proof .brand-en{font-size:10px}
+    .proof.dark .lockup{color:#fff}.proof.dark .mark{--mark-main:#fff;--mark-exit:#51e4b2}.proof.dark .brand-en{color:#b4d6c5}
+    .proof.dark .mark.mono{--mark-main:#fff;--mark-exit:#fff}
+    .proof.light .mark{--mark-main:#174b39;--mark-exit:#00a977}.proof.light .brand-en{color:#638071}
+    .spec{display:grid;grid-template-columns:1.15fr .85fr;gap:30px;align-items:start}.spec h3{margin:0 0 14px;font-size:17px}.spec ul{margin:0;padding-left:18px;color:#4b6254;font-size:13px;line-height:1.85}
+    .review-table{width:100%;border-collapse:collapse;font-size:12px}.review-table th,.review-table td{padding:10px 8px;border-bottom:1px solid #dde8df;text-align:left;vertical-align:top}.review-table th{color:#5b7464}
+    .prompts{margin-top:30px;color:#5d7364;font-size:12px}.prompts summary{cursor:pointer;font-weight:700}.prompts p{margin:8px 0;line-height:1.6}
+    .foot{padding:27px 64px 35px;background:#eff5ef;color:#557062;font-size:12px;line-height:1.7}
+    .foot p{margin:0}.foot p+p{margin-top:7px}
+    @media(max-width:900px){.intro,.section,.foot{padding-left:28px;padding-right:28px}.intro-grid{gap:20px}.hero-logo .mark{width:85px;height:85px}.hero-logo .brand-cn{font-size:32px}.palette-grid{grid-template-columns:1fr 1fr}.palette:last-child{grid-column:1/-1}.app-grid{grid-template-columns:1fr}}
+    @media(max-width:620px){.intro{min-height:0;padding-top:26px;padding-bottom:35px}.intro-grid{grid-template-columns:1fr;margin-top:46px}.hero-logo{justify-content:flex-start;min-height:90px}.hero-logo .mark{width:72px;height:72px}.hero-logo .brand-cn{font-size:29px}.hero-logo .brand-en{font-size:12px}.intro-top span:last-child{display:none}.section{padding-top:36px;padding-bottom:39px}.section-head{display:block}.section-head p{text-align:left;margin-top:10px}.geometry-grid,.palette-grid,.proof-grid,.spec{grid-template-columns:1fr}.palette:last-child{grid-column:auto}.fake-nav{display:none}.landing-copy h3{font-size:30px}.fake-cta{padding:8px 11px}.app-landing{min-height:285px}.proof{min-height:125px}.review-table{font-size:11px}}
+  </style>
+</head>
+<body>
+  <svg xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
+    <symbol id="c12-main" viewBox="0 0 80 80"><path d="M12 12h56v9H12zM12 21h9v49h-9zM21 61h47v9H21zM59 21h9v20h-9zM27 28h27v8H27z"></path></symbol>
+    <symbol id="c12-exit" viewBox="0 0 80 80"><path d="M27 46h41v9H27z"></path></symbol>
+    <symbol id="c13-main" viewBox="0 0 80 80"><path d="M12 12h56v9H12zM12 21h9v49h-9zM21 61h47v9H21zM59 21h9v17h-9zM27 28h29v8H27z"></path></symbol>
+    <symbol id="c13-exit" viewBox="0 0 80 80"><path d="M27 46h45v9H27z"></path></symbol>
+  </svg>
+  <main>
+    <header class="intro">
+      <div class="intro-top"><span class="eyebrow">OfferPilot / Identity exploration / Stage 06</span><span>工作提案 · 尚未应用到产品</span></div>
+      <div class="intro-grid">
+        <div><h1>从单色符号<br>走进真实网页</h1><p>保留「面」字框架与出框动作，用克制的几何修订和有记忆点的绿色系统回应“太简单、与网页不搭”。色彩不是补救弱符号的滤镜；先检查黑白，再检查应用。</p></div>
+        <div class="hero-logo"><svg class="mark" style="--mark-main:#f4fff8;--mark-exit:#51e4b2"><use class="mark-main" href="#c13-main"></use><use class="mark-exit" href="#c13-exit"></use></svg><div class="brand-copy"><span class="brand-cn">智面幻境</span><span class="brand-en" lang="en">OfferPilot</span></div></div>
+      </div>
+    </header>
+    <section class="section" id="geometry">
+      <div class="section-head"><div><span class="eyebrow">01 / Silhouette first</span><h2>只改开口与出框比例</h2></div><p>两稿放在同一中性背景与同一尺寸下比较。C-13 不增加装饰：右侧开口加宽 3 单位，出框笔画延长 4 单位。</p></div>
+      <div class="geometry-grid">
+        <article class="geometry-card"><header><h3>C-12 · 上轮基准</h3><span>封闭感较强</span></header><div class="geometry-stage"><svg class="mark"><use class="mark-main" href="#c12-main"></use><use class="mark-exit" href="#c12-exit"></use></svg></div><div class="sizes"><div><svg class="mark s16"><use class="mark-main" href="#c12-main"></use><use class="mark-exit" href="#c12-exit"></use></svg>16 px</div><div><svg class="mark s32"><use class="mark-main" href="#c12-main"></use><use class="mark-exit" href="#c12-exit"></use></svg>32 px</div><div><svg class="mark s64"><use class="mark-main" href="#c12-main"></use><use class="mark-exit" href="#c12-exit"></use></svg>64 px</div></div><p>优点：重心稳，小图标清楚。风险：右侧开口略紧，仍容易被读成方框里的字母 E。</p></article>
+        <article class="geometry-card revised"><header><h3>C-13 · 光学修订</h3><span>本轮工作推荐</span></header><div class="geometry-stage"><svg class="mark"><use class="mark-main" href="#c13-main"></use><use class="mark-exit" href="#c13-exit"></use></svg></div><div class="sizes"><div><svg class="mark s16"><use class="mark-main" href="#c13-main"></use><use class="mark-exit" href="#c13-exit"></use></svg>16 px</div><div><svg class="mark s32"><use class="mark-main" href="#c13-main"></use><use class="mark-exit" href="#c13-exit"></use></svg>32 px</div><div><svg class="mark s64"><use class="mark-main" href="#c13-main"></use><use class="mark-exit" href="#c13-exit"></use></svg>64 px</div></div><p>出框动作稍明显，开口更能保留到 16 px；仍保持一色可用。它只是微调，不能单凭颜色宣称独创性。</p></article>
+      </div>
+    </section>
+    <section class="section" id="palettes">
+      <div class="section-head"><div><span class="eyebrow">02 / Same mark, three palettes</span><h2>同一 C-13，比较三种颜色</h2></div><p>只换颜色，不换轮廓、字标层级和比例。色值取自当前官网、移动端及主界面，便于判断到底该统一到哪一支。</p></div>
+      <div class="palette-grid">
+        <article class="palette route-a active"><div class="palette-top"><div class="lockup"><svg class="mark"><use class="mark-main" href="#c13-main"></use><use class="mark-exit" href="#c13-exit"></use></svg><div class="brand-copy"><span class="brand-cn">智面幻境</span><span class="brand-en" lang="en">OfferPilot</span></div></div></div><div class="palette-info"><div><h3>A · 深林薄荷</h3><span class="badge">推荐 / 鲜明</span></div><p>与官网深绿英雄区直接衔接；亮色只落在“出框”一笔，形成可记住的色彩瞬间。</p><div class="swatches"><div class="swatch"><i style="background:#003b30"></i><span>#003B30</span></div><div class="swatch"><i style="background:#00c98d"></i><span>#00C98D</span></div><div class="swatch"><i style="background:#51e4b2"></i><span>#51E4B2</span></div><div class="swatch"><i style="background:#f3f5ee"></i><span>#F3F5EE</span></div><div class="swatch"><i style="background:#10211a"></i><span>#10211A</span></div></div></div></article>
+        <article class="palette route-b"><div class="palette-top"><div class="lockup"><svg class="mark"><use class="mark-main" href="#c13-main"></use><use class="mark-exit" href="#c13-exit"></use></svg><div class="brand-copy"><span class="brand-cn">智面幻境</span><span class="brand-en" lang="en">OfferPilot</span></div></div></div><div class="palette-info"><div><h3>B · 暖林橙点</h3><span class="badge">稳健 / 温暖</span></div><p>贴近移动端暖白与森林绿；橙色增加亲和力，但也更像“提醒”而非主品牌动作。</p><div class="swatches"><div class="swatch"><i style="background:#174b39"></i><span>#174B39</span></div><div class="swatch"><i style="background:#2f7458"></i><span>#2F7458</span></div><div class="swatch"><i style="background:#ee9b45"></i><span>#EE9B45</span></div><div class="swatch"><i style="background:#fbfaf6"></i><span>#FBFAF6</span></div><div class="swatch"><i style="background:#10211a"></i><span>#10211A</span></div></div></div></article>
+        <article class="palette route-c"><div class="palette-top"><div class="lockup"><svg class="mark"><use class="mark-main" href="#c13-main"></use><use class="mark-exit" href="#c13-exit"></use></svg><div class="brand-copy"><span class="brand-cn">智面幻境</span><span class="brand-en" lang="en">OfferPilot</span></div></div></div><div class="palette-info"><div><h3>C · 蓝青过渡</h3><span class="badge">强烈 / 不推荐</span></div><p>能接住部分蓝色主界面，却与官网和移动端断裂；不宜为了兼容旧页面而延续双主色。</p><div class="swatches"><div class="swatch"><i style="background:#1769ff"></i><span>#1769FF</span></div><div class="swatch"><i style="background:#12b8a6"></i><span>#12B8A6</span></div><div class="swatch"><i style="background:#60a5fa"></i><span>#60A5FA</span></div><div class="swatch"><i style="background:#f4f8fc"></i><span>#F4F8FC</span></div><div class="swatch"><i style="background:#07172f"></i><span>#07172F</span></div></div></div></article>
+      </div>
+    </section>
+    <section class="section" id="applications">
+      <div class="section-head"><div><span class="eyebrow">03 / In product context</span><h2>A 路线：放回真实使用位置</h2></div><p>这是基于现有网页色彩和信息层级制作的应用示意，不是已修改的产品截图。中文名称统一为「智面幻境」。</p></div>
+      <div class="app-grid">
+        <div class="app-landing"><div class="fake-header"><div class="lockup"><svg class="mark"><use class="mark-main" href="#c13-main"></use><use class="mark-exit" href="#c13-exit"></use></svg><div class="brand-copy"><span class="brand-cn">智面幻境</span><span class="brand-en" lang="en">OfferPilot</span></div></div><div class="fake-nav"><span>功能</span><span>课程</span><span>数据</span></div><span class="fake-cta">免费注册</span></div><div class="landing-copy"><span>AI 驱动，下一代面试训练</span><h3>每一次练习，<br>都向前一步。</h3><p>深绿背景让完整双语标志有清晰的第一眼；薄荷色留给符号的动作，不扩散到每个字。</p></div></div>
+        <div class="app-side"><div class="app-dashboard"><div class="lockup"><svg class="mark"><use class="mark-main" href="#c13-main"></use><use class="mark-exit" href="#c13-exit"></use></svg><div class="brand-copy"><span class="brand-cn">智面幻境</span><span class="brand-en" lang="en">OfferPilot</span></div></div><div class="nav-lines"><i></i><i></i></div></div><div class="app-mobile"><div class="lockup"><svg class="mark"><use class="mark-main" href="#c13-main"></use><use class="mark-exit" href="#c13-exit"></use></svg><div class="brand-copy"><span class="brand-cn">智面幻境</span><span class="brand-en" lang="en">OfferPilot</span></div></div><div class="mobile-message">移动端窄导航使用符号＋中文；英文只在宽位完整组合中保留。</div></div></div>
+      </div>
+      <div class="proof-grid"><div class="proof dark"><div class="app-icon"><svg class="mark"><use class="mark-main" href="#c13-main"></use><use class="mark-exit" href="#c13-exit"></use></svg></div><div class="lockup"><svg class="mark"><use class="mark-main" href="#c13-main"></use><use class="mark-exit" href="#c13-exit"></use></svg><div class="brand-copy"><span class="brand-cn">智面幻境</span><span class="brand-en" lang="en">OfferPilot</span></div></div><svg class="mark mono" style="width:28px;height:28px"><use class="mark-main" href="#c13-main"></use><use class="mark-exit" href="#c13-exit"></use></svg></div><div class="proof light"><div class="lockup"><svg class="mark"><use class="mark-main" href="#c13-main"></use><use class="mark-exit" href="#c13-exit"></use></svg><div class="brand-copy"><span class="brand-cn">智面幻境</span><span class="brand-en" lang="en">OfferPilot</span></div></div><svg class="mark" style="width:28px;height:28px;--mark-main:#111;--mark-exit:#111"><use class="mark-main" href="#c13-main"></use><use class="mark-exit" href="#c13-exit"></use></svg></div></div>
+    </section>
+    <section class="section" id="decision">
+      <div class="section-head"><div><span class="eyebrow">04 / Review & next gate</span><h2>结论：更有识别，但还不是定稿</h2></div><p>几何评审与场景适配分开看。色彩版通过不了的情况，应回到形状与对比度，而不是继续叠加效果。</p></div>
+      <div class="spec"><div><h3>使用规则</h3><ul><li>官网深底：白色主体＋薄荷出框笔画；大块深绿负责第一眼记忆。</li><li>浅底导航：深绿主体＋较深的翠绿出框，避免浅薄荷在白底变淡。</li><li>应用图标：亮绿底配深绿单色符号；16 px、打印和反白版也不依赖双色识别。</li><li>橙色只承担提醒或反馈，不进入主 Logo；英文副标在窄导航省略。</li><li>下一门槛：确认 C-13 与 A 方向，再做真实组件替换、深浅背景和商标相似性核查。</li></ul></div><div><h3>黑白评审</h3><table class="review-table"><thead><tr><th>稿</th><th>初筛</th><th>依据 / 修订任务</th></tr></thead><tbody><tr><td>C-12</td><td>79 / 对照</td><td>小尺寸稳定；开口偏紧，继续留作基准。</td></tr><tr><td>C-13</td><td>80 / 暂留</td><td>出框笔画更清楚，16 px 未因修订塌陷；仍需继续降低字母 E／通用文档图标的联想。</td></tr></tbody></table></div></div>
+      <details class="prompts"><summary>供后续制作使用的色彩提示词</summary><p>通用 / GPT Image：保持 C-13 的原始 SVG 轮廓、负空间和「智面幻境 / OfferPilot」拼写不变。以深林绿 #003B30、薄荷绿 #51E4B2、暖白 #F3F5EE 制作官网页眉、移动导航、应用图标与黑白备用版；无渐变、发光、阴影或新增符号。</p><p>Midjourney：exact C-13 mark silhouette, 智面幻境 OfferPilot, forest #003B30 mint #51E4B2 cream #F3F5EE, web header, app icon, monochrome proof, flat vector identity, no gradients --ar 1:1 --v 6 --style raw</p><p>Flux：preserve C-13 SVG geometry; exact Chinese and English wordmark; forest green, mint exit stroke, warm white; flat website and app icon scenarios; no glow, no 3D.</p><p>Ideogram：文字必须准确为「智面幻境」和「OfferPilot」；严格保留提供的 C-13 符号轮廓；深绿与薄荷绿网页品牌板、应用图标和纯黑白对照；不要生成额外图形。</p></details>
+    </section>
+    <footer class="foot"><p>设计来源：当前官网的深绿／薄荷绿、移动端暖白／森林绿、主界面的蓝色，以及阶段 05 的 T-01 字标层级。C-13 是阶段 06 草案，不是商标可用性结论。</p><p>交付边界：本页是静态设计对照；没有替换网页、改动项目配色或分发字体文件。字标仍为字体渲染，最终需转为可编辑路径并再次检查。</p></footer>
+  </main>
+</body>
+</html>

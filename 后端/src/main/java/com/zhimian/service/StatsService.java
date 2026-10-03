@@ -36,16 +36,16 @@ public class StatsService {
     private final InterviewModuleScoreMapper moduleScoreMapper;
     private final ReportDimensionMapper dimensionMapper;
     private final ScoreModuleMapper scoreModuleMapper;
+    private final ReportEligibilityService eligibility;
 
     public UserStats getMyStats() {
         Long userId = UserContext.getUserId();
         UserStats stats = new UserStats();
 
         // 面试场次（已结束 / 进行中）
-        stats.setFinishedInterviews(sessionMapper.selectCount(
-                new LambdaQueryWrapper<InterviewSession>()
-                        .eq(InterviewSession::getUserId, userId)
-                        .eq(InterviewSession::getStatus, "FINISHED")));
+        var validSessions=eligibility.readySessions(userId,true);
+        var readySessions=eligibility.readySessions(userId,false);
+        stats.setFinishedInterviews(validSessions.size());
         stats.setOngoingInterviews(sessionMapper.selectCount(
                 new LambdaQueryWrapper<InterviewSession>()
                         .eq(InterviewSession::getUserId, userId)
@@ -54,7 +54,8 @@ public class StatsService {
         // 报告与分数
         List<InterviewReport> reports = reportMapper.selectList(
                 new LambdaQueryWrapper<InterviewReport>().eq(InterviewReport::getUserId, userId));
-        stats.setReportCount(reports.size());
+        stats.setReportCount(reports.stream().filter(r->readySessions.contains(r.getSessionId())).count());
+        reports=reports.stream().filter(r->validSessions.contains(r.getSessionId())).toList();
         if (!reports.isEmpty()) {
             double sum = 0, highest = 0;
             int counted = 0;
@@ -95,24 +96,10 @@ public class StatsService {
     public RadarProfile getRadarProfile() {
         Long userId = UserContext.getUserId();
 
-        // 找最新一次已结束的面试
-        InterviewSession latestSession = sessionMapper.selectList(
-                new LambdaQueryWrapper<InterviewSession>()
-                        .eq(InterviewSession::getUserId, userId)
-                        .eq(InterviewSession::getStatus, "FINISHED")
-                        .orderByDesc(InterviewSession::getEndTime)
-                        .last("LIMIT 1"))
-                .stream().findFirst().orElse(null);
-
-        if (latestSession == null) {
-            return RadarProfile.empty();
-        }
-
-        // 找该会话的报告
-        InterviewReport report = reportMapper.selectOne(
-                new LambdaQueryWrapper<InterviewReport>()
-                        .eq(InterviewReport::getSessionId, latestSession.getId())
-                        .last("LIMIT 1"));
+        var valid=eligibility.readySessions(userId,true);
+        InterviewReport report=reportMapper.selectList(new LambdaQueryWrapper<InterviewReport>()
+                .eq(InterviewReport::getUserId,userId).orderByDesc(InterviewReport::getCreateTime))
+                .stream().filter(r->valid.contains(r.getSessionId())).findFirst().orElse(null);
         if (report == null) {
             return RadarProfile.empty();
         }

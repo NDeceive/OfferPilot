@@ -27,15 +27,6 @@
         </component>
       </nav>
 
-      <section class="member-card" v-show="!sidebarCollapsed">
-        <div class="member-gem">
-          <el-icon><PriceTag /></el-icon>
-        </div>
-        <strong>会员中心</strong>
-        <span>解锁更多功能与权益</span>
-        <button type="button">立即升级 <el-icon><ArrowRight /></el-icon></button>
-      </section>
-
       <button class="collapse-btn" type="button" @click="sidebarCollapsed = !sidebarCollapsed">
         <el-icon><component :is="sidebarCollapsed ? Expand : Fold" /></el-icon>
       </button>
@@ -90,7 +81,6 @@ import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
   ArrowDown,
-  ArrowRight,
   Bell,
   Coordinate,
   DataAnalysis,
@@ -101,7 +91,6 @@ import {
   HomeFilled,
   Notebook,
   PieChart,
-  PriceTag,
   Promotion,
   Search,
   Setting,
@@ -112,7 +101,7 @@ import {
   VideoCamera
 } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
-import brandMark from '@/assets/generated/brand-mark-ui.png'
+import brandMark from '@/assets/brand/symbol-green.svg'
 import userAvatar from '@/assets/generated/user-avatar-ui.png'
 
 const router = useRouter()
@@ -314,59 +303,6 @@ const handleCommand = (cmd) => {
 .nav-label {
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.member-card {
-  padding: 18px 16px 16px;
-  color: #10213c;
-  background: linear-gradient(180deg, #f7f9ff 0%, #ffffff 100%);
-  border: 1px solid #cddafd;
-  border-radius: 8px;
-  box-shadow: 0 18px 34px rgba(61, 103, 190, 0.07);
-}
-
-.member-gem {
-  display: grid;
-  width: 44px;
-  height: 44px;
-  margin-bottom: 10px;
-  color: #5d7cff;
-  place-items: center;
-  background: #eef3ff;
-  border-radius: 12px;
-  font-size: 23px;
-}
-
-.member-card strong,
-.member-card span {
-  display: block;
-}
-
-.member-card strong {
-  font-size: 16px;
-  font-weight: 900;
-}
-
-.member-card span {
-  margin-top: 5px;
-  color: #7c8aa3;
-  font-size: 12px;
-}
-
-.member-card button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  width: 100%;
-  height: 44px;
-  margin-top: 18px;
-  color: #1c6dff;
-  background: #fff;
-  border: 1px solid #cbd7f5;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 800;
 }
 
 .collapse-btn {

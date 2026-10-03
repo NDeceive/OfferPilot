@@ -1,0 +1,32 @@
+﻿{
+    "CompletedAt":  "2026-08-01 18:29:41 +08:00",
+    "ImmutableBaselineFiles":  153,
+    "TargetBaselineMismatch":  0,
+    "SourceBaselineMismatch":  0,
+    "AdditiveFiles":  21,
+    "Tests":  "2 passed, 0 failed",
+    "RollbackDirectory":  "migration-stage2-rollback-backend",
+    "Additions":  [
+                      "src/main/java/com/zhimian/config/AsrProperties.java",
+                      "src/main/java/com/zhimian/config/DigitalHumanProperties.java",
+                      "src/main/java/com/zhimian/controller/DashboardController.java",
+                      "src/main/java/com/zhimian/controller/SpeechController.java",
+                      "src/main/java/com/zhimian/dto/DashboardOverviewResponse.java",
+                      "src/main/java/com/zhimian/dto/SpeechTranscriptResponse.java",
+                      "src/main/java/com/zhimian/service/ai/ZhipuAsrClient.java",
+                      "src/main/java/com/zhimian/service/DashboardService.java",
+                      "src/main/java/com/zhimian/service/DigitalHumanProcessManager.java",
+                      "src/main/java/com/zhimian/service/SpeechRecognitionService.java",
+                      "src/main/resources/application.properties",
+                      "src/main/resources/static/job-logos/android.png",
+                      "src/main/resources/static/job-logos/apple.png",
+                      "src/main/resources/static/job-logos/electron.png",
+                      "src/main/resources/static/job-logos/flutter.png",
+                      "src/main/resources/static/job-logos/go.png",
+                      "src/main/resources/static/job-logos/nodejs.png",
+                      "src/main/resources/static/job-logos/openjdk.png",
+                      "src/main/resources/static/job-logos/python.png",
+                      "src/main/resources/static/job-logos/wechat.png",
+                      "src/test/java/com/zhimian/service/DashboardServiceTest.java"
+                  ]
+}

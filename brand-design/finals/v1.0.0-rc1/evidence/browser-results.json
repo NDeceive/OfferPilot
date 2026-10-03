@@ -1,0 +1,185 @@
+{
+  "results": [
+    {
+      "name": "landing",
+      "url": "/",
+      "width": 1440,
+      "logos": [
+        {
+          "src": "http://127.0.0.1:5185/src/assets/brand/lockup-cn-green.svg",
+          "loaded": true,
+          "width": 180,
+          "height": 48,
+          "x": 130,
+          "y": 8
+        },
+        {
+          "src": "http://127.0.0.1:5185/src/assets/brand/lockup-cn-green.svg",
+          "loaded": true,
+          "width": 180,
+          "height": 48,
+          "x": 130,
+          "y": 2445.265625
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "name": "login",
+      "url": "/login",
+      "width": 1440,
+      "logos": [
+        {
+          "src": "http://127.0.0.1:5185/src/assets/brand/lockup-bilingual-green.svg",
+          "loaded": true,
+          "width": 210,
+          "height": 72,
+          "x": 40,
+          "y": 112.90625
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "name": "register",
+      "url": "/register",
+      "width": 1440,
+      "logos": [
+        {
+          "src": "http://127.0.0.1:5185/src/assets/brand/lockup-bilingual-green.svg",
+          "loaded": true,
+          "width": 210,
+          "height": 72,
+          "x": 40,
+          "y": 133.25
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "name": "forgot",
+      "url": "/forgot-password",
+      "width": 1440,
+      "logos": [
+        {
+          "src": "http://127.0.0.1:5185/src/assets/brand/lockup-bilingual-green.svg",
+          "loaded": true,
+          "width": 210,
+          "height": 72,
+          "x": 40,
+          "y": 133.25
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "name": "login-mobile",
+      "url": "/login",
+      "width": 390,
+      "logos": [
+        {
+          "src": "http://127.0.0.1:5185/src/assets/brand/lockup-bilingual-green.svg",
+          "loaded": true,
+          "width": 210,
+          "height": 72,
+          "x": 24,
+          "y": 32
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "name": "home-desktop",
+      "url": "/home",
+      "width": 1440,
+      "role": "STUDENT",
+      "logos": [
+        {
+          "src": "http://127.0.0.1:5185/src/assets/brand/lockup-cn-green.svg",
+          "loaded": true,
+          "width": 180,
+          "height": 48,
+          "x": 104,
+          "y": 7.5
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "name": "home-360",
+      "url": "/home",
+      "width": 360,
+      "role": "STUDENT",
+      "logos": [
+        {
+          "src": "http://127.0.0.1:5185/src/assets/brand/lockup-cn-green.svg",
+          "loaded": true,
+          "width": 180,
+          "height": 48,
+          "x": 16,
+          "y": 16
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "name": "home-390",
+      "url": "/home",
+      "width": 390,
+      "role": "STUDENT",
+      "dpr": 2,
+      "logos": [
+        {
+          "src": "http://127.0.0.1:5185/src/assets/brand/lockup-cn-green.svg",
+          "loaded": true,
+          "width": 180,
+          "height": 48,
+          "x": 20,
+          "y": 16
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "name": "home-430",
+      "url": "/home",
+      "width": 430,
+      "role": "STUDENT",
+      "dpr": 3,
+      "logos": [
+        {
+          "src": "http://127.0.0.1:5185/src/assets/brand/lockup-cn-green.svg",
+          "loaded": true,
+          "width": 180,
+          "height": 48,
+          "x": 20,
+          "y": 16
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "name": "teacher",
+      "url": "/teacher/dashboard?demo=1",
+      "width": 1440,
+      "role": "TEACHER",
+      "logos": [
+        {
+          "src": "http://127.0.0.1:5185/src/assets/brand/lockup-en-green.svg",
+          "loaded": true,
+          "width": 185,
+          "height": 48,
+          "x": 54,
+          "y": 7.5
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "faviconHttp": 200,
+      "pathOnly": true
+    }
+  ],
+  "errors": [],
+  "backend": "API responses intercepted for layout-only checks"
+}

@@ -1,0 +1,58 @@
+{
+  "systemTemplates": [
+    {
+      "id": "tpl_logic",
+      "name": "逻辑表达专项训练",
+      "taskType": "ABILITY",
+      "primaryAbility": "LOGIC_EXPRESSION",
+      "trainingMode": "AI_INTERVIEW",
+      "durationMinutes": 15,
+      "difficulty": "STANDARD",
+      "mainQuestionCount": 8,
+      "dynamicFollowUp": true
+    },
+    {
+      "id": "tpl_java",
+      "name": "Java后端标准面试",
+      "taskType": "POSITION",
+      "targetRole": "Java后端开发",
+      "trainingMode": "AI_INTERVIEW",
+      "durationMinutes": 20,
+      "difficulty": "STANDARD",
+      "mainQuestionCount": 8
+    },
+    {
+      "id": "tpl_project",
+      "name": "项目经历深挖训练",
+      "taskType": "ABILITY",
+      "primaryAbility": "PROJECT_EXPRESSION",
+      "trainingMode": "AI_INTERVIEW",
+      "durationMinutes": 15,
+      "difficulty": "STANDARD",
+      "mainQuestionCount": 6
+    },
+    {
+      "id": "tpl_testing",
+      "name": "软件测试岗位专项",
+      "taskType": "POSITION",
+      "targetRole": "测试开发",
+      "trainingMode": "SPECIAL_PRACTICE",
+      "durationMinutes": 20,
+      "difficulty": "STANDARD",
+      "mainQuestionCount": 10
+    }
+  ],
+  "templateUseRule": {
+    "prefillSteps": [
+      2,
+      3,
+      4
+    ],
+    "neverCopy": [
+      "classId",
+      "studentIds",
+      "participantSnapshot",
+      "executionRecords"
+    ]
+  }
+}

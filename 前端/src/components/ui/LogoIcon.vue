@@ -1,75 +1,15 @@
 <template>
-  <div class="logo-icon" :style="{ width: size + 'px', height: size + 'px' }">
-    <svg :width="size" :height="size" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <!-- "m" letterform — stylized with upward arrow -->
-      <!-- Left stroke -->
-      <path
-        d="M8 30 L8 14 Q8 10 12 10 L14 10 Q18 10 18 14 L18 22"
-        stroke="url(#logo-grad)"
-        stroke-width="2.5"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        fill="none"
-      />
-      <!-- Middle arc -->
-      <path
-        d="M18 22 L18 14 Q18 10 22 10 L22 10 Q26 10 26 14 L26 22"
-        stroke="url(#logo-grad)"
-        stroke-width="2.5"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        fill="none"
-      />
-      <!-- Right ascending stroke (upward trend) -->
-      <path
-        d="M26 22 L26 16 Q26 10 30 10 L32 10"
-        stroke="url(#logo-grad)"
-        stroke-width="2.5"
-        stroke-linecap="round"
-        fill="none"
-      />
-      <!-- Arrow tip -->
-      <path
-        d="M28 7 L33 10 L28 13"
-        stroke="url(#logo-grad)"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        fill="none"
-        opacity="0.7"
-      />
-      <!-- Base line -->
-      <path
-        d="M6 30 L34 30"
-        stroke="url(#logo-grad)"
-        stroke-width="2"
-        stroke-linecap="round"
-        opacity="0.4"
-      />
-      <defs>
-        <linearGradient id="logo-grad" x1="8" y1="8" x2="34" y2="32" gradientUnits="userSpaceOnUse">
-          <stop stop-color="#059669" />
-          <stop offset="1" stop-color="#34d399" />
-        </linearGradient>
-      </defs>
-    </svg>
-  </div>
+  <img class="logo-icon" :src="source" :width="size" :height="size" alt="" aria-hidden="true" />
 </template>
-
 <script setup>
-defineProps({
-  size: {
-    type: Number,
-    default: 32,
-  },
-})
+import { computed } from 'vue'
+import standard from '../../assets/brand/symbol-green.svg'
+import micro from '../../assets/brand/micro-green.svg'
+import white from '../../assets/brand/symbol-white.svg'
+import microWhite from '../../assets/brand/micro-white.svg'
+const props = defineProps({ size: { type: Number, default: 32 }, inverse: { type: Boolean, default: false } })
+const source = computed(() => props.inverse ? (props.size < 32 ? microWhite : white) : (props.size < 32 ? micro : standard))
 </script>
-
 <style scoped>
-.logo-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
+.logo-icon { display: inline-block; flex-shrink: 0; object-fit: contain; }
 </style>

@@ -1,0 +1,178 @@
+{
+  "context": {
+    "term": "2026秋季学期",
+    "from": "2026-09-01",
+    "to": "2026-10-03",
+    "classIds": [],
+    "grade": "2025",
+    "major": "软件工程"
+  },
+  "a01": {
+    "coverage": [
+      52,
+      58,
+      63,
+      66,
+      69,
+      72
+    ],
+    "trainingVolume": [
+      {
+        "self": 180,
+        "teacherTask": 140
+      },
+      {
+        "self": 260,
+        "teacherTask": 220
+      },
+      {
+        "self": 360,
+        "teacherTask": 260
+      },
+      {
+        "self": 440,
+        "teacherTask": 320
+      },
+      {
+        "self": 500,
+        "teacherTask": 360
+      },
+      {
+        "self": 560,
+        "teacherTask": 390
+      }
+    ],
+    "logicAchievement": [
+      28,
+      35,
+      46,
+      55,
+      63,
+      68
+    ]
+  },
+  "a02": {
+    "classes": [
+      {
+        "className": "软件2501",
+        "participationRate": 82,
+        "taskExecution": {
+          "onTime": 65,
+          "late": 18,
+          "unfinished": 17
+        },
+        "commonAbilityGaps": {
+          "logic": -6,
+          "project": -10,
+          "communication": -4,
+          "roleUnderstanding": -8
+        },
+        "trainingSource": {
+          "self": 62,
+          "teacherTask": 38
+        }
+      },
+      {
+        "className": "软件2502",
+        "participationRate": 71,
+        "taskExecution": {
+          "onTime": 52,
+          "late": 24,
+          "unfinished": 24
+        },
+        "commonAbilityGaps": {
+          "logic": -8,
+          "project": -14,
+          "communication": -6,
+          "roleUnderstanding": -10
+        },
+        "trainingSource": {
+          "self": 54,
+          "teacherTask": 46
+        }
+      }
+    ]
+  },
+  "a03": {
+    "taskExecution": {
+      "onTime": 68,
+      "late": 17,
+      "unfinished": 15,
+      "dueAssignments": 224
+    },
+    "comparable": {
+      "ability": "逻辑表达",
+      "before": 66.8,
+      "after": 72.1,
+      "diff": 5.3,
+      "comparableCount": 67,
+      "completedCount": 103
+    },
+    "outcomes": {
+      "improved": 38,
+      "stable": 18,
+      "declined": 7,
+      "insufficient": 36
+    }
+  },
+  "a04": {
+    "roles": [
+      {
+        "name": "Java后端开发",
+        "count": 42,
+        "ratio": 28
+      },
+      {
+        "name": "前端开发",
+        "count": 36,
+        "ratio": 24
+      },
+      {
+        "name": "测试开发",
+        "count": 25,
+        "ratio": 17
+      },
+      {
+        "name": "算法工程师",
+        "count": 18,
+        "ratio": 12
+      },
+      {
+        "name": "产品经理",
+        "count": 16,
+        "ratio": 11
+      },
+      {
+        "name": "其他",
+        "count": 12,
+        "ratio": 8
+      }
+    ],
+    "commonAbilities": [
+      {
+        "name": "沟通表达",
+        "current": 58,
+        "target": 80,
+        "gap": -22
+      },
+      {
+        "name": "项目经历表达",
+        "current": 62,
+        "target": 80,
+        "gap": -18
+      },
+      {
+        "name": "岗位理解",
+        "current": 68,
+        "target": 80,
+        "gap": -12
+      },
+      {
+        "name": "逻辑表达",
+        "current": 72,
+        "target": 80,
+        "gap": -8
+      }
+    ]
+  }
+}

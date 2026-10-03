@@ -1,0 +1,102 @@
+{
+  "initial": {
+    "routes": 5,
+    "drafts": 10,
+    "selected": 0,
+    "overflow": false
+  },
+  "clean": true,
+  "green": true,
+  "persisted": true,
+  "exported": true,
+  "responsive": [
+    {
+      "width": 390,
+      "overflow": false,
+      "miniSizes": [
+        16,
+        32,
+        64,
+        16,
+        32,
+        64
+      ]
+    },
+    {
+      "width": 360,
+      "overflow": false,
+      "miniSizes": [
+        16,
+        32,
+        64,
+        16,
+        32,
+        64
+      ]
+    }
+  ],
+  "errors": [],
+  "assets": [
+    {
+      "file": "A1.svg",
+      "paths": 2,
+      "raster": false,
+      "effects": false
+    },
+    {
+      "file": "A2.svg",
+      "paths": 3,
+      "raster": false,
+      "effects": false
+    },
+    {
+      "file": "B1.svg",
+      "paths": 2,
+      "raster": false,
+      "effects": false
+    },
+    {
+      "file": "B2.svg",
+      "paths": 1,
+      "raster": false,
+      "effects": false
+    },
+    {
+      "file": "C1.svg",
+      "paths": 1,
+      "raster": false,
+      "effects": false
+    },
+    {
+      "file": "C2.svg",
+      "paths": 3,
+      "raster": false,
+      "effects": false
+    },
+    {
+      "file": "D1.svg",
+      "paths": 1,
+      "raster": false,
+      "effects": false
+    },
+    {
+      "file": "D2.svg",
+      "paths": 1,
+      "raster": false,
+      "effects": false
+    },
+    {
+      "file": "E1.svg",
+      "paths": 2,
+      "raster": false,
+      "effects": false
+    },
+    {
+      "file": "E2.svg",
+      "paths": 2,
+      "raster": false,
+      "effects": false
+    }
+  ],
+  "checkedAt": "2026-10-03T14:46:38.533Z"
+}

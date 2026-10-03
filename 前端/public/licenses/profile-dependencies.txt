@@ -1,0 +1,12 @@
+Personal profile avatar cropper dependencies
+
+vue-picture-cropper 1.0.0
+https://github.com/chengpeiquan/vue-picture-cropper
+MIT; original license preserved in vue-picture-cropper.txt.
+
+cropperjs 1.6.2
+https://github.com/fengyuanchen/cropperjs
+MIT; original license preserved in cropperjs.txt.
+
+Installed from npm. The project supplies its own interface, validation and
+authenticated upload endpoint; no remote upload service is used.

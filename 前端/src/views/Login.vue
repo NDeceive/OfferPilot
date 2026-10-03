@@ -11,11 +11,7 @@
     <div class="stage-panel">
       <div class="stage-content">
         <div class="stage-logo">
-          <LogoIcon :size="36" />
-          <span class="stage-brand">
-            <span class="brand-cn">智面幻境</span>
-            <span class="brand-en">OfferPilot</span>
-          </span>
+          <BrandLogo variant="bilingual" :width="210" />
         </div>
 
         <h1 class="stage-title">把准备落实到<br /><span class="title-accent">每一次回答</span></h1>
@@ -118,7 +114,7 @@ import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../store/user'
 import { login as loginApi } from '../api'
-import LogoIcon from '../components/ui/LogoIcon.vue'
+import BrandLogo from '../components/ui/BrandLogo.vue'
 import AuthShowcase from '../components/auth/AuthShowcase.vue'
 
 const router = useRouter()

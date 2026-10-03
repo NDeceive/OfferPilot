@@ -16,6 +16,9 @@ import java.util.Date;
 @Component
 public class JwtUtil {
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.zhimian.service.AccountTokenService accountTokens;
+
     @Value("${jwt.secret}")
     private String secret;
 
@@ -34,6 +37,7 @@ public class JwtUtil {
                 .subject(String.valueOf(userId))
                 .claim("username", username)
                 .claim("role", role)
+                .claim("version", accountTokens.version(userId))
                 .issuedAt(now)
                 .expiration(expiry)
                 .signWith(getKey())
