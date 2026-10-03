@@ -15,8 +15,7 @@ FORM: A continuous editorial product journey, closely following the supplied V3 
 
     <header class="site-header" :class="{ 'nav-hidden': !navVisible, 'nav-scrolled': isScrolled }">
       <a class="brand" href="#top" aria-label="OfferPilot 首页">
-        <LogoIcon :size="28" />
-        <span><strong>智面试场</strong><small>OfferPilot</small></span>
+        <BrandLogo variant="cn-on-dark" :width="180" />
       </a>
       <nav class="main-nav" aria-label="主导航">
         <a href="#features">功能</a>
@@ -31,6 +30,7 @@ FORM: A continuous editorial product journey, closely following the supplied V3 
 
     <main id="top">
       <section class="hero section-shell">
+        <div class="hero-landscape" aria-hidden="true"><svg viewBox="0 0 1440 240" preserveAspectRatio="none" focusable="false"><g class="landscape-back"><path d="M-80 160C140 45 330 230 600 150S1080 30 1520 130"/><path d="M-80 178C160 64 340 248 610 168S1090 48 1520 148"/></g><g class="landscape-front"><path d="M-80 180C210 260 360 80 660 160S1100 250 1520 115"/><path d="M-80 198C210 278 360 98 660 178S1100 268 1520 133"/><path class="landscape-fill" d="M-80 216C210 296 360 116 660 196S1100 286 1520 151V280H-80Z"/></g></svg></div>
         <div class="hero-copy">
           <p class="pill"><span></span>AI 驱动，下一代面试训练</p>
           <h1 class="reveal-title hero-title is-visible">
@@ -165,7 +165,7 @@ FORM: A continuous editorial product journey, closely following the supplied V3 
     </main>
 
     <footer class="site-footer section-shell">
-      <div class="brand"><LogoIcon :size="25" /><span><strong>智面试场</strong><small>OfferPilot</small></span></div>
+      <div class="brand"><BrandLogo :width="180" /></div>
       <nav><a href="#">隐私政策</a><a href="#">使用条款</a><a href="#">联系我们</a></nav>
       <p>© 2026 OfferPilot. 让你的路，走更远。</p>
     </footer>
@@ -174,7 +174,7 @@ FORM: A continuous editorial product journey, closely following the supplied V3 
 
 <script setup>
 import { onMounted, onUnmounted, ref } from 'vue'
-import LogoIcon from '../components/ui/LogoIcon.vue'
+import BrandLogo from '../components/ui/BrandLogo.vue'
 
 const journeyRef = ref(null)
 const journeyVisible = ref(false)
@@ -322,4 +322,15 @@ onUnmounted(() => {
 @media(max-width:480px){
   .prep-board{min-height:700px}.role-card{width:96%}.resume-card,.goals-card{width:88%}.orange-note{right:8px}.process{min-height:0}.journey{height:760px}.journey-step{grid-template-columns:minmax(0,1fr) 132px}.step-preview{width:132px;justify-self:end}.final-cta{padding-top:46px}.result-board{min-height:520px}.mini-steps{top:310px}
 }
+
+/* A quiet moving landscape occupies the lower hero space without adding content. */
+.hero-landscape{position:absolute;left:50%;bottom:0;width:100vw;height:clamp(100px,20svh,240px);transform:translateX(-50%);pointer-events:none;z-index:-1;overflow:hidden}
+.hero-landscape svg{display:block;width:110%;height:100%;margin-left:-5%;overflow:visible}
+.hero-landscape path{fill:none;stroke:#51e4b2;stroke-width:1;opacity:.28}
+.hero-landscape .landscape-fill{fill:#51e4b2;stroke:none;opacity:.045}
+.landscape-back{animation:landscape-drift 22s ease-in-out infinite alternate;transform-origin:center}
+.landscape-front{animation:landscape-drift 17s ease-in-out -8s infinite alternate-reverse;transform-origin:center}
+@keyframes landscape-drift{from{transform:translate(-18px,8px) rotate(-.6deg)}to{transform:translate(18px,-8px) rotate(.6deg)}}
+@media(max-width:1000px){.hero-landscape{height:110px;opacity:.65}}
+@media(prefers-reduced-motion:reduce){.landscape-back,.landscape-front{animation:none}}
 </style>

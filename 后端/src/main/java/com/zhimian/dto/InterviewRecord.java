@@ -9,6 +9,10 @@ import java.time.LocalDateTime;
  */
 @Data
 public class InterviewRecord {
+    private String trainingSource;
+    private String taskTitle;
+    private Long assignmentId;
+    private String reportState;
     private Long sessionId;
     private Long jobId;
     private String jobName;

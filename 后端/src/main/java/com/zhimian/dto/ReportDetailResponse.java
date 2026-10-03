@@ -37,4 +37,5 @@ public class ReportDetailResponse {
     private String profileLabel;
     /** 模块评分明细（新版才有） */
     private List<ModuleScoreView> moduleScores;
+    private java.util.Map<String,Object> trainingContext;
 }

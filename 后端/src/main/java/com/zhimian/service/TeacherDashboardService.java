@@ -56,6 +56,7 @@ public class TeacherDashboardService {
     private final InterviewReportMapper reportMapper;
     private final JobPositionMapper jobPositionMapper;
     private final InterviewFollowupRecordMapper followupRecordMapper;
+    private final TeachingService teachingService;
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final DateTimeFormatter DATETIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
@@ -77,18 +78,19 @@ public class TeacherDashboardService {
      */
     public TeacherDashboardOverviewResponse getOverview() {
         // 一次性拉取基础数据，后续在内存中聚合，避免 N+1 查询。当前数据规模可控。
-        List<SysUser> students = userMapper.selectList(
-                new LambdaQueryWrapper<SysUser>().eq(SysUser::getRole, "STUDENT"));
-        List<InterviewSession> sessions = sessionMapper.selectList(new LambdaQueryWrapper<>());
-        List<InterviewReport> reports = reportMapper.selectList(new LambdaQueryWrapper<>());
+        List<Long> studentIds=teachingService.people().stream().map(s->TeachingService.id(s,"id")).distinct().toList();
+        List<Long> sessionIds=teachingService.rows("SELECT p.session_id FROM teaching_attempt p JOIN teaching_assignment a ON a.id=p.assignment_id JOIN teaching_task t ON t.id=a.task_id JOIN teaching_class c ON c.id=t.class_id WHERE c.teacher_id=?",teachingService.user()).stream().map(p->TeachingService.id(p,"sessionId")).toList();
+        List<SysUser> students=studentIds.isEmpty()?List.of():userMapper.selectBatchIds(studentIds);
+        List<InterviewSession> sessions=sessionIds.isEmpty()?List.of():sessionMapper.selectBatchIds(sessionIds);
+        List<InterviewReport> reports=sessionIds.isEmpty()?List.of():reportMapper.selectList(new LambdaQueryWrapper<InterviewReport>().in(InterviewReport::getSessionId,sessionIds));
         List<JobPosition> jobs = jobPositionMapper.selectList(new LambdaQueryWrapper<>());
 
         TeacherDashboardOverviewResponse resp = new TeacherDashboardOverviewResponse();
         resp.setSummary(buildSummary(students, sessions, reports));
         resp.setTrainingTrend(buildTrend(sessions));
-        resp.setWeaknessDistribution(buildWeaknessDistribution());
+        resp.setWeaknessDistribution(List.of());
         resp.setStudentTrainingList(buildStudentList(students, sessions, reports, jobs));
-        resp.setCommonProblems(buildCommonProblems());
+        resp.setCommonProblems(List.of());
 
         log.info("[教师仪表盘] 学生数={}, 会话数={}, 报告数={}", students.size(), sessions.size(), reports.size());
         return resp;
@@ -106,29 +108,30 @@ public class TeacherDashboardService {
             studentIds.add(s.getId());
         }
 
-        // 已训练学生：在会话中出现过、且确实是学生的 userId 去重
+        // 完成至少一份分配任务，且仍属于本教师成员范围；开始训练不算完成。
         Set<Long> trainedStudentIds = new HashSet<>();
-        for (InterviewSession ses : sessions) {
-            if (ses.getUserId() != null && studentIds.contains(ses.getUserId())) {
-                trainedStudentIds.add(ses.getUserId());
-            }
+        for (var allocation : teachingService.rows("SELECT a.student_id FROM teaching_assignment a JOIN teaching_task t ON t.id=a.task_id JOIN teaching_class c ON c.id=t.class_id JOIN teaching_attempt p ON p.assignment_id=a.id AND p.state='READY' AND p.valid=TRUE WHERE c.teacher_id=? AND t.published_at IS NOT NULL GROUP BY a.id,a.student_id,t.min_attempts HAVING COUNT(p.id)>=t.min_attempts",teachingService.user())) {
+            long studentId=TeachingService.id(allocation,"studentId");
+            if(studentIds.contains(studentId))trainedStudentIds.add(studentId);
         }
 
         int studentTotal = students.size();
         int trainedCount = trainedStudentIds.size();
 
-        // 平均分：所有报告 totalScore 的平均，保留 1 位小数
+        // 平均分仅采用本教师任务的有效报告。
+        var validReports=teachingService.rows("SELECT p.report_id FROM teaching_attempt p JOIN teaching_assignment a ON a.id=p.assignment_id JOIN teaching_task t ON t.id=a.task_id JOIN teaching_class c ON c.id=t.class_id WHERE c.teacher_id=? AND p.state='READY' AND p.valid=TRUE",teachingService.user()).stream().map(p->TeachingService.id(p,"reportId")).collect(java.util.stream.Collectors.toSet());
         double scoreSum = 0;
         int scored = 0;
         for (InterviewReport r : reports) {
-            if (r.getTotalScore() != null) {
+            if (validReports.contains(r.getId())&&r.getTotalScore() != null) {
                 scoreSum += r.getTotalScore().doubleValue();
                 scored++;
             }
         }
 
-        long aiCount = countFollowupBySource("AI");
-        long ruleCount = countFollowupBySource("RULE");
+        var sessionIds=sessions.stream().map(InterviewSession::getId).toList();
+        long aiCount = countFollowupBySource("AI",sessionIds);
+        long ruleCount = countFollowupBySource("RULE",sessionIds);
 
         TeacherDashboardSummary summary = new TeacherDashboardSummary();
         summary.setStudentTotal(studentTotal);
@@ -140,11 +143,13 @@ public class TeacherDashboardService {
         return summary;
     }
 
-    /** 全局按来源统计追问数（不按用户隔离，教师视角） */
-    private long countFollowupBySource(String source) {
+    /** 只统计本教师任务会话的追问来源。 */
+    private long countFollowupBySource(String source,List<Long> sessionIds) {
+        if(sessionIds.isEmpty())return 0;
         Long c = followupRecordMapper.selectCount(
                 new LambdaQueryWrapper<InterviewFollowupRecord>()
-                        .eq(InterviewFollowupRecord::getSource, source));
+                        .eq(InterviewFollowupRecord::getSource, source)
+                        .in(InterviewFollowupRecord::getSessionId,sessionIds));
         return c == null ? 0L : c;
     }
 

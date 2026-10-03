@@ -1,0 +1,11 @@
+{
+  "note": "演示结果明细，补充落地包 taskDetailCanonical：5个有效结果，3人提升、1人稳定、1人下降。只属于 task_logic_8，不混用班级历史训练记录。",
+  "taskId": "task_logic_8",
+  "pairs": [
+    { "first": 65, "latest": 78, "durationMinutes": 13 },
+    { "first": 70, "latest": 82, "durationMinutes": 12 },
+    { "first": 62, "latest": 74, "durationMinutes": 14 },
+    { "first": 76, "latest": 76, "durationMinutes": 12 },
+    { "first": 80, "latest": 75, "durationMinutes": 13 }
+  ]
+}

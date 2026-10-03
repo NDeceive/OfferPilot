@@ -1,0 +1,136 @@
+/* OfferPilot controls: shared visuals, page-owned placement and widths. */
+:root { --control-radius: 12px; --control-height: 44px; }
+body button {
+  font-family: var(--font-body);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+body :is(button, a[role="button"]):focus-visible {
+  outline: 2px solid var(--accent-700) !important;
+  outline-offset: 3px !important;
+}
+body button:disabled, body button[aria-disabled="true"] {
+  cursor: not-allowed !important;
+  opacity: .5;
+  box-shadow: none !important;
+}
+/* Action variants also accept data-variant for future controls. */
+body :is(.btn,.primary,.primary-btn,.btn--primary,.analytics-primary,.submit-btn,.submit-button,.student-button,.career-save,.start-button,.launch-button,.secondary,.secondary-btn,.btn--ghost,.btn-ghost,.ghost-btn,.mobile-secondary-button,.danger,.danger-button,.modal-btn,.mini-btn,.page-btn,.batch-btn,.student-text,.text-btn,.text-link,.link-btn,[data-variant]) {
+  border-radius: var(--control-radius) !important;
+  min-height: var(--control-height);
+  padding: 10px 18px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 160ms ease-out, border-color 160ms ease-out, color 160ms ease-out;
+}
+body :is(a,button):is(.primary,.primary-btn,.btn--primary,.analytics-primary,.submit-btn,.submit-button,.student-button,.career-save,.start-button,.launch-button,[data-variant="primary"]) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--accent-500) !important;
+  color: #fff !important;
+  border: 1px solid var(--accent-500) !important;
+  box-shadow: none !important;
+}
+body :is(a,button):is(.primary,.primary-btn,.btn--primary,.analytics-primary,.submit-btn,.submit-button,.student-button,.career-save,.start-button,.launch-button,[data-variant="primary"]):hover:not(:disabled) {
+  background: var(--accent-600) !important;
+  border-color: var(--accent-600) !important;
+}
+body :is(a,button):is(.secondary,.secondary-btn,.btn--ghost,.btn-ghost,.ghost-btn,.mobile-secondary-button,.modal-btn-cancel,.mini-btn,.page-btn,[data-variant="secondary"]) {
+  background: white !important;
+  border: 1px solid var(--neutral-200) !important;
+  color: var(--neutral-700) !important;
+  box-shadow: none !important;
+}
+body :is(a,button):is(.secondary,.secondary-btn,.btn--ghost,.btn-ghost,.ghost-btn,.mobile-secondary-button,.modal-btn-cancel,.mini-btn,.page-btn,[data-variant="secondary"]):hover:not(:disabled) {
+  background: var(--accent-50) !important;
+  border-color: var(--accent-300) !important;
+  color: var(--accent-800) !important;
+}
+body button:is(.text,.student-text,.text-btn,.text-link,.link-btn,.analytics-link,[data-variant="quiet"]) {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid transparent !important;
+  border-radius: var(--control-radius) !important;
+  background: transparent !important;
+  color: var(--accent-700) !important;
+  box-shadow: none !important;
+}
+body button:is(.text,.student-text,.text-btn,.text-link,.link-btn,.analytics-link,[data-variant="quiet"]):hover:not(:disabled) { background: var(--accent-50) !important; }
+body :is(a,button):is(.danger,.danger-button,.modal-btn-danger,.batch-btn-danger,.delete-btn,[data-variant="danger"]) {
+  border: 1px solid #fecaca !important;
+  background: var(--color-error-bg) !important;
+  color: #b91c1c !important;
+  border-radius: var(--control-radius) !important;
+  min-height: 44px;
+  padding: 10px 16px;
+  box-shadow: none !important;
+}
+body :is(a,button):is(.danger,.danger-button,.modal-btn-danger,.batch-btn-danger,.delete-btn,[data-variant="danger"]):hover:not(:disabled) { background: #fee2e2 !important; border-color: #fca5a5 !important; }
+/* Unnamed actions in forms and toolbars share the outlined default.
+   Tabs, charts, navigation and selectable rows retain their semantic layouts. */
+body :is(form,.live-pagination,.pagination,.mail-actions,.drawer-actions,.table-actions,.selection-actions) button:not([class]):not([role="tab"]) {
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid var(--neutral-200);
+  border-radius: var(--control-radius);
+  background: white;
+  color: var(--neutral-700);
+  font-size: 14px;
+  font-weight: 500;
+}
+body :is(form,.live-pagination,.pagination,.mail-actions,.drawer-actions,.table-actions,.selection-actions) button:not([class]):hover:not(:disabled) { background: var(--accent-50); border-color: var(--accent-300); }
+body button:is(.icon-button,.notification-btn,.mobile-menu-btn,.pwd-toggle,[data-variant="icon"]) {
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: var(--control-radius) !important;
+}
+/* Search fields may be standalone or inside an existing icon wrapper. */
+body input:is([type="search"],[placeholder*="搜索"],[aria-label^="搜索"]) {
+  min-height: var(--control-height) !important;
+  min-width: 0;
+  max-width: 100%;
+  border: 1px solid var(--neutral-200) !important;
+  border-radius: var(--control-radius) !important;
+  background: white !important;
+  color: var(--neutral-800) !important;
+  padding: 10px 14px !important;
+  font: 14px/1.5 var(--font-body) !important;
+  transition: border-color 160ms ease-out;
+}
+body input:is([type="search"],[placeholder*="搜索"],[aria-label^="搜索"])::placeholder { color: var(--neutral-500); opacity: 1; }
+body input:is([type="search"],[placeholder*="搜索"],[aria-label^="搜索"]):hover:not(:disabled) { border-color: var(--accent-300) !important; }
+body input:is([type="search"],[placeholder*="搜索"],[aria-label^="搜索"]):focus-visible {
+  border-color: var(--accent-600) !important;
+  outline: 2px solid var(--accent-700) !important;
+  outline-offset: 3px;
+}
+body input:is([type="search"],[placeholder*="搜索"],[aria-label^="搜索"]):disabled { background: var(--neutral-100) !important; cursor: not-allowed; }
+body :is(.mail-search,.search-shell,.search-box,.search-input-wrapper):has(input) {
+  border: 1px solid var(--neutral-200) !important;
+  border-radius: var(--control-radius) !important;
+  background: white !important;
+  min-height: 44px;
+}
+body :is(.mail-search,.search-shell,.search-box,.search-input-wrapper):has(input:focus-visible) {
+  border-color: var(--accent-600) !important;
+  outline: 2px solid var(--accent-700);
+  outline-offset: 3px;
+}
+body :is(.mail-search,.search-shell,.search-box,.search-input-wrapper) input:is([type="search"],[placeholder*="搜索"]) {
+  border: 0 !important;
+  border-radius: inherit !important;
+  background: transparent !important;
+  outline: none !important;
+}
+@media(max-width:767px) { body input:is([type="search"],[placeholder*="搜索"],[aria-label^="搜索"]) { font-size: 16px !important; } }
+@media(prefers-reduced-motion:reduce) { body button, body input[type="search"] { transition: none !important; } }
+/* Common geometry also covers bespoke buttons without flattening their content. */
+body button { border-radius: var(--control-radius); min-height: var(--control-height); }
+body button:not([class]):not([role="tab"]):not([aria-pressed="true"]) { border-radius: var(--control-radius) !important; }
+body button:active:not(:disabled) { filter: brightness(.97); }

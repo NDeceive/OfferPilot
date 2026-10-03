@@ -1,9 +1,9 @@
 <template>
   <AppLayout>
     <main class="report-page">
-      <router-link to="/history" class="back-link" aria-label="返回面试记录">
+      <router-link :to="route.query.assignmentId?'/my/tasks/'+route.query.assignmentId:'/history'" class="back-link" aria-label="返回面试记录">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
-        返回面试记录
+        {{route.query.assignmentId?'返回教学任务':'返回面试记录'}}
       </router-link>
 
       <div v-if="loading" class="state-panel">正在整理本次面试报告…</div>
@@ -14,6 +14,8 @@
       </div>
 
       <template v-else>
+        <section v-if="trainingContext" class="report-source-context"><strong>{{trainingContext.source==='TEACHING'?'教学任务':'自主训练'}}{{trainingContext.taskTitle?' · '+trainingContext.taskTitle:''}}</strong><p>{{trainingContext.className||''}} · {{trainingContext.scorePlan?.source==='TEACHER_TASK'?'教师统一评分方案':trainingContext.scorePlan?.source==='STUDENT_SELECTED'?'学生自选评分方案':'旧版默认方案'}} · {{trainingContext.provenance?.ruleVersion||'历史未记录评分版本'}}</p><p v-if="trainingContext.source==='TEACHING'">{{trainingContext.state==='READY'?'本报告已计入任务有效次数。':trainingContext.failureReason||'请在教学任务中查看结果是否计入次数。'}}次数完成与能力目标达成分别判断。</p></section>
+        <TeachingFeedback :report-id="reportId" :show-empty="!!route.query.assignmentId"/>
         <header class="report-hero">
           <div class="role-block">
             <JobLogo :icon-key="iconKey" :tone="themeKey" class="job-logo" />
@@ -28,9 +30,9 @@
             </div>
           </div>
           <div class="score-block">
-            <span>{{ displayLevel ? '训练目标匹配度' : '综合评分' }}</span>
-            <strong>{{ totalScore }}</strong>
-            <small>/ 100 · {{ displayLevel || scoreRank }}</small>
+            <span>{{ hasMatchScore ? '训练目标匹配度' : '综合评分' }}</span>
+            <strong>{{ totalScore??'—' }}</strong>
+            <small>{{hasMatchScore?'%':'/ 100'}} · {{totalScore===null?'未提供评分':displayLevel||scoreRank}}</small>
           </div>
         </header>
 
@@ -209,6 +211,7 @@ import { useRoute } from 'vue-router'
 import { exportReport, getImprovementPath, getJobList, getReportDetail, getSessionMessages } from '../api'
 import JobLogo from '../components/jobs/JobLogo.vue'
 import AppLayout from '../components/layout/AppLayout.vue'
+import TeachingFeedback from '../components/teacher/TeachingFeedback.vue'
 import RadarChart from '../components/ui/RadarChart.vue'
 import { getJobPresentation } from '../utils/jobPresentation'
 
@@ -216,7 +219,8 @@ const route = useRoute()
 const reportId = route.params.id
 const loading = ref(true)
 const loadError = ref('')
-const totalScore = ref(0)
+const totalScore = ref(null)
+const hasMatchScore=ref(false)
 const summary = ref('')
 const jobName = ref('')
 const category = ref('')
@@ -235,6 +239,7 @@ const displayLevel = ref('')
 const profileLabel = ref('')
 const radarTargets = ref([])
 const moduleScores = ref([])
+const trainingContext=ref(null)
 
 const radarLabels = computed(() => dimensions.value.map(item => item.dimension))
 const radarValues = computed(() => dimensions.value.map(item => item.score))
@@ -339,7 +344,9 @@ async function loadReport() {
     ])
     const matchedJob = (jobs || []).find(job => String(job.id) === String(data.jobId))
     const presentation = getJobPresentation(matchedJob || data)
-    totalScore.value = Math.round(data.overallMatchScore || data.totalScore || 0)
+    hasMatchScore.value=data.overallMatchScore!==null&&data.overallMatchScore!==undefined&&Number.isFinite(Number(data.overallMatchScore))
+    const score=hasMatchScore.value?data.overallMatchScore:data.totalScore
+    totalScore.value=score!==null&&score!==undefined&&Number.isFinite(Number(score))?Math.round(Number(score)):null
     summary.value = data.summary || ''
     jobName.value = data.jobName || '岗位模拟面试'
     category.value = data.category || matchedJob?.category || ''
@@ -351,14 +358,15 @@ async function loadReport() {
     displayLevel.value = data.displayLevel || ''
     profileLabel.value = data.profileLabel || ''
     moduleScores.value = Array.isArray(data.moduleScores) ? data.moduleScores : []
+    trainingContext.value=data.trainingContext||null
     dimensions.value = isNewReport.value
-      ? moduleScores.value.map(item => ({
+      ? moduleScores.value.filter(item=>item.rawScore!=null&&Number.isFinite(Number(item.rawScore))).map(item => ({
           dimension: item.moduleName || item.moduleCode,
           score: Math.round(Number(item.rawScore) || 0),
-          explanation: item.suggestion || `目标 ${Math.round(Number(item.targetScore) || 75)} 分，当前差距 ${Math.max(0, Math.round(Number(item.gapScore) || 0))} 分。`,
+          explanation: item.suggestion || (item.targetScore==null?'原报告未提供目标分。':`目标 ${Number(item.targetScore)} 分，当前差距 ${item.gapScore==null?'未提供':Number(item.gapScore)} 分。`),
         }))
       : (data.dimensions || [])
-    radarTargets.value = moduleScores.value.map(item => Math.round(Number(item.targetScore) || 75))
+    radarTargets.value = moduleScores.value.every(item=>item.rawScore!=null&&item.targetScore!=null)?moduleScores.value.map(item=>Number(item.targetScore)):[]
     strengths.value = normalizeTextList(data.strengths)
     weaknesses.value = normalizeTextList(data.weaknesses)
     suggestions.value = normalizeTextList(data.suggestions)
@@ -386,6 +394,7 @@ onMounted(loadReport)
 </script>
 
 <style scoped>
+.report-source-context{padding:20px 24px;background:white;border:1px solid #e4e4e7;border-radius:12px;margin-bottom:24px;font-size:14px;line-height:1.8}.report-source-context p{margin-top:8px;color:#52525b}
 .report-page { max-width: 1180px; margin: 0 auto; padding: 32px 0 72px; color: var(--neutral-900); }
 .back-link { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 22px; color: var(--neutral-500); font-size: 14px; text-decoration: none; }
 .back-link:hover { color: var(--accent-600); }

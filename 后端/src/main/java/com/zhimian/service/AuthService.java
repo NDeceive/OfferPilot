@@ -32,6 +32,7 @@ public class AuthService {
         }
         SysUser user = new SysUser();
         user.setUsername(req.getUsername());
+        user.setEmail(req.getEmail() == null || req.getEmail().isBlank() ? null : req.getEmail().trim().toLowerCase(java.util.Locale.ROOT));
         user.setPassword(passwordEncoder.encode(req.getPassword()));
         user.setNickname(req.getNickname() != null ? req.getNickname() : req.getUsername());
         // 安全：公开注册一律创建普通学生账号，忽略任何来自请求体的 role，

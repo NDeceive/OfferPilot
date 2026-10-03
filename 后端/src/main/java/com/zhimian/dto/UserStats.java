@@ -8,7 +8,7 @@ import lombok.Data;
  */
 @Data
 public class UserStats {
-    /** 累计完成的面试场次（已结束的会话） */
+    /** 有有效回答且报告就绪的训练次数；无效教学提交不计入 */
     private long finishedInterviews;
     /** 进行中的面试场次 */
     private long ongoingInterviews;

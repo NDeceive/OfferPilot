@@ -1,0 +1,22 @@
+<template>
+ <div class="task-management-charts">
+  <section class="live-panel"><header><div><h2>训练要求完成情况</h2><p>已发布任务 · 截至当前 · 排除减免分配</p></div></header><TeachingPieChart :items="states" donut :selected="selected" @select="selected=$event"/><div v-if="selected" class="task-status-detail"><strong>{{states.find(s=>s.key===selected)?.label}} · {{selectedRows.length}} 人次</strong><RouterLink v-for="row in selectedRows.slice(0,5)" :key="row.a.id" :to="{path:'/teacher/tasks/'+row.t.id,query:{assignmentId:row.a.id,execution:selected,returnTo:route.fullPath}}">{{row.a.name}} · {{row.t.title}} →</RouterLink><button @click="selected=''">清除状态选择</button></div><p class="chart-caption">按学生任务分配人次统计；完成训练次数要求不代表能力达标。</p></section>
+  <section class="live-panel"><header><div><h2>任务执行对比</h2><p>最近截止的 6 项已发布任务</p></div></header><RouterLink v-for="t in published.slice(0,6)" :key="t.id" class="task-chart-row" :to="{path:'/teacher/tasks/'+t.id,query:{returnTo:route.fullPath}}"><span>{{t.title}}</span><strong>{{count(t,'COMPLETED')}} / {{participants(t).length}} 人完成</strong><div class="task-chart-stack"><i v-for="state in definitions" :key="state.key" :style="{width:(participants(t).length?count(t,state.key)/participants(t).length*100:0)+'%',background:state.color}"/></div></RouterLink><p v-if="!published.length" class="task-chart-empty">尚无已发布任务，发布后显示真实执行情况。</p><div class="task-chart-legend"><span v-for="state in definitions" :key="state.key"><i :style="{background:state.color}"/>{{state.label}}</span></div></section>
+ </div>
+</template>
+<script setup>
+import {computed,ref} from 'vue'
+import {useRoute} from 'vue-router'
+import TeachingPieChart from './TeachingPieChart.vue'
+const props=defineProps({tasks:{type:Array,default:()=>[]}}),route=useRoute()
+const definitions=[{key:'COMPLETED',label:'已完成',color:'#34d399'},{key:'IN_PROGRESS',label:'待完成',color:'#a7e5ce'},{key:'PENDING_VALIDATION',label:'校验中',color:'#f8ce8b'},{key:'NOT_STARTED',label:'未开始',color:'#d4d4d8'}]
+const participants=t=>(t.assignments||[]).filter(a=>!a.exempt),count=(t,key)=>participants(t).filter(a=>a.completionStatus===key).length
+const published=computed(()=>props.tasks.filter(t=>t.publishedAt).slice().sort((a,b)=>String(a.deadline).localeCompare(String(b.deadline))))
+const selected=ref(''),selectedRows=computed(()=>published.value.flatMap(t=>participants(t).filter(a=>a.completionStatus===selected.value).map(a=>({a,t}))))
+const states=computed(()=>definitions.map(s=>({...s,count:published.value.reduce((n,t)=>n+count(t,s.key),0)})))
+</script>
+<style scoped>
+.task-management-charts{display:grid;grid-template-columns:1fr 1.2fr;gap:20px;margin:24px 0;align-items:start}.task-management-charts .live-panel{margin:0}.task-management-charts header p,.chart-caption{font-size:13px;color:#52525b}.task-chart-row{display:grid;grid-template-columns:1fr auto;gap:10px;padding:16px 0;border-bottom:1px solid #edf1ed;font-size:13px}.task-chart-row span{color:#27272a}.task-chart-row strong{font-weight:500;color:#52525b}.task-chart-stack{grid-column:1/-1;height:18px;background:#f4f4f5;display:flex;overflow:hidden;border-radius:4px}.task-chart-stack i{height:100%}.task-chart-legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:#52525b;margin-top:20px}.task-chart-legend span{display:flex;align-items:center;gap:6px}.task-chart-legend i{width:10px;height:10px}.task-chart-empty{padding:32px 0}.task-management-charts :deep(.teaching-pie-chart){display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:10px}.task-management-charts :deep(svg){width:100%;max-height:200px}.task-management-charts :deep(.pie-legend button){width:100%;display:flex;align-items:center;gap:6px;font-size:12px;padding:8px}.task-management-charts :deep(.pie-legend i){width:8px;height:8px;flex-shrink:0}.task-management-charts :deep(.pie-legend strong){margin-left:auto}.task-management-charts :deep(.pie-reading){grid-column:1/-1;font-size:13px;color:#52525b}
+@media(max-width:900px){.task-management-charts{grid-template-columns:1fr}}@media(max-width:500px){.task-management-charts :deep(.teaching-pie-chart){grid-template-columns:1fr}.task-chart-row{grid-template-columns:1fr}.task-chart-stack{grid-column:1}.task-management-charts :deep(.pie-reading){grid-column:1}}
+.task-status-detail{display:grid;gap:10px;font-size:13px;border-top:1px solid #edf1ed;padding:14px 0}.task-management-charts :deep(.pie-legend){display:grid;gap:6px}.task-management-charts :deep(.pie-legend button){min-height:44px}
+</style>

@@ -28,6 +28,7 @@ public class InterviewRecordService {
     private final InterviewSessionMapper sessionMapper;
     private final InterviewReportMapper reportMapper;
     private final JobPositionMapper jobMapper;
+    private final TeachingService teaching;
 
     public List<InterviewRecord> myRecords() {
         Long userId = UserContext.getUserId();
@@ -49,9 +50,13 @@ public class InterviewRecordService {
         }
 
         List<InterviewRecord> records = new ArrayList<>();
+        Map<Long,Map<String,Object>> teachingSessions=new HashMap<>();
+        teaching.rows("SELECT p.session_id,p.state,a.id assignment_id,t.title task_title FROM teaching_attempt p JOIN teaching_assignment a ON a.id=p.assignment_id JOIN teaching_task t ON t.id=a.task_id WHERE a.student_id=?",userId).forEach(row->teachingSessions.put(TeachingService.id(row,"sessionId"),row));
         for (InterviewSession s : sessions) {
             InterviewRecord rec = new InterviewRecord();
             rec.setSessionId(s.getId());
+            var origin=teachingSessions.get(s.getId());rec.setTrainingSource(origin==null?"SELF":"TEACHING");
+            if(origin!=null){rec.setTaskTitle(String.valueOf(origin.get("taskTitle")));rec.setAssignmentId(TeachingService.id(origin,"assignmentId"));rec.setReportState(String.valueOf(origin.get("state")));}
             rec.setJobId(s.getJobId());
             rec.setDifficulty(s.getDifficulty());
             rec.setStatus(s.getStatus());

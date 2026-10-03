@@ -37,12 +37,14 @@ public class ModuleScoreService {
     private final InterviewSessionMapper sessionMapper;
     private final InterviewMessageMapper messageMapper;
     private final JobPositionMapper jobMapper;
+    private final InterviewSnapshotService snapshots;
     private final InterviewReportMapper reportMapper;
     private final InterviewModuleScoreMapper moduleScoreMapper;
     private final ScoreModuleMapper scoreModuleMapper;
     private final ModulePreferenceService preferenceService;
     private final ScorePromptBuilder scorePromptBuilder;
     private final DeepSeekClient deepSeekClient;
+    private final TeachingService teachingService;
 
     private static final ObjectMapper JSON = new ObjectMapper();
 
@@ -85,6 +87,7 @@ public class ModuleScoreService {
      * 为已结束的会话生成模块评分并更新报告。
      * 由 InterviewFlowService.finish() 在 reportService.generateForSession() 之后调用。
      */
+    @org.springframework.transaction.annotation.Transactional
     public void scoreAndUpdateReport(Long sessionId, Long reportId) {
         InterviewSession session = sessionMapper.selectById(sessionId);
         if (session == null) return;
@@ -92,7 +95,7 @@ public class ModuleScoreService {
         InterviewReport report = reportMapper.selectById(reportId);
         if (report == null) return;
 
-        JobPosition job = jobMapper.selectById(session.getJobId());
+        JobPosition job = snapshots.job(session.getId(),session.getJobId());
 
         // 1. 收集全部 Q&A
         List<InterviewMessage> messages = messageMapper.selectList(
@@ -136,7 +139,8 @@ public class ModuleScoreService {
 
         // 7. Layer 3: 匹配度 + 画像 + 警报
         MatchResult matchResult = calculateMatch(scoreResult.scores, weights, targets, preferences);
-        List<String> profileLabels = generateProfileLabel(scoreResult.scores, weights, preferences);
+        var selectedScores=new LinkedHashMap<String,BigDecimal>();selectedModules.forEach(code->selectedScores.put(code,scoreResult.scores.get(code)));
+        List<String> profileLabels = generateProfileLabel(selectedScores, weights, preferences);
         List<String> alerts = checkAlerts(scoreResult.scores, weights, targets, preferences);
 
         // 8. 保存模块评分明细（只保存用户选中的模块）
@@ -144,6 +148,7 @@ public class ModuleScoreService {
 
         // 9. 更新报告
         updateReport(report, matchResult, profileLabels, alerts);
+        teachingService.scoreProvenance(reportId,scoreResult.scoringSource,"AI".equals(scoreResult.scoringSource)?deepSeekClient.modelName():"deterministic-rules");
 
         log.info("模块评分完成 sessionId={} reportId={} overallMatch={} source={}",
                 sessionId, reportId, matchResult.overallMatch, signals.scoringSource);
@@ -746,7 +751,7 @@ public class ModuleScoreService {
         Map<String, Double> priorities = new LinkedHashMap<>();
     }
 
-    private MatchResult calculateMatch(Map<String, BigDecimal> moduleScores,
+    MatchResult calculateMatch(Map<String, BigDecimal> moduleScores,
                                         Map<String, Double> weights,
                                         Map<String, Integer> targets,
                                         List<PreferenceItem> preferences) {
@@ -757,14 +762,15 @@ public class ModuleScoreService {
         if (preferences != null && !preferences.isEmpty()) {
             selectedModules = preferences.stream().map(PreferenceItem::getCode).collect(Collectors.toSet());
         } else {
-            selectedModules = moduleScores.keySet();
+            selectedModules = weights.keySet();
         }
 
         double totalMatch = 0;
         double totalWeight = 0;
 
         for (String code : selectedModules) {
-            BigDecimal score = moduleScores.getOrDefault(code, BigDecimal.ZERO);
+            BigDecimal score = moduleScores.get(code);
+            if(score==null)throw new com.zhimian.common.BizException("缺少选中维度评分："+code);
             double rawScore = score.doubleValue();
             double target = targets.getOrDefault(code, 75); // 默认75
             double weight = weights.getOrDefault(code, 0.20); // 默认等权
@@ -858,6 +864,8 @@ public class ModuleScoreService {
     private void saveModuleScores(Long reportId, ScoreResult sr,
                                    Map<String, Double> weights, Map<String, Integer> targets,
                                    MatchResult match, Set<String> selectedModules) {
+        // A report retry replaces the previous score set atomically.
+        moduleScoreMapper.delete(new LambdaQueryWrapper<InterviewModuleScore>().eq(InterviewModuleScore::getReportId,reportId));
         for (Map.Entry<String, BigDecimal> entry : sr.scores.entrySet()) {
             String code = entry.getKey();
             // 只保存用户选中的模块（selectedModules 为空时保存全部，兼容旧数据）

@@ -56,6 +56,24 @@ public class ModulePreferenceService {
 
     /** 保存用户的模块选择（含权重快照） */
     public void savePreference(Long sessionId, Long userId, List<PreferenceItem> items) {
+        var allowed=listModules().stream().map(ScoreModule::getCode).collect(Collectors.toSet());
+        var seen=new HashSet<String>();
+        for(var item:items) {
+            if(item==null || !allowed.contains(item.getCode()) || !seen.add(item.getCode()))
+                throw new com.zhimian.common.BizException("模块不存在或重复选择");
+            if(item.getRank()<1 || item.getRank()>5 || item.getLevel()<1 || item.getLevel()>3)
+                throw new com.zhimian.common.BizException("模块排名或目标等级不合法");
+        }
+        // Competition ranking: ties occupy successive positions (1,1,3,...).
+        var groups=items.stream().collect(Collectors.groupingBy(PreferenceItem::getRank,java.util.TreeMap::new,Collectors.counting()));
+        if(groups.size()>1) {
+            int expected=1;
+            for(var group:groups.entrySet()) {
+                if(group.getKey()!=expected || expected+group.getValue()-1>5)
+                    throw new com.zhimian.common.BizException("模块排名需要连续，包含并列时最多选择5个模块");
+                expected+=group.getValue().intValue();
+            }
+        }
         // 1. 计算权重
         Map<String, Double> weights = calculateWeights(items);
         Map<String, Integer> targets = new LinkedHashMap<>();

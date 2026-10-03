@@ -11,11 +11,7 @@
     <div class="brand-panel">
       <div class="brand-content">
         <router-link to="/" class="brand-logo">
-          <LogoIcon :size="36" />
-          <span class="brand-name">
-            <span class="brand-cn">智面幻境</span>
-            <span class="brand-en">OfferPilot</span>
-          </span>
+          <BrandLogo variant="bilingual" :width="210" />
         </router-link>
 
         <h1 class="brand-title">找回账号<br /><span class="title-accent">继续准备</span></h1>
@@ -96,7 +92,7 @@
 
 <script setup>
 import { ref, reactive } from 'vue'
-import LogoIcon from '../components/ui/LogoIcon.vue'
+import BrandLogo from '../components/ui/BrandLogo.vue'
 import AuthShowcase from '../components/auth/AuthShowcase.vue'
 
 const step = ref(1)

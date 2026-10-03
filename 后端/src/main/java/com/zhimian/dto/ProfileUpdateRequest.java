@@ -11,4 +11,5 @@ public class ProfileUpdateRequest {
     private String nickname;
     /** 新密码（可选，留空不改） */
     private String newPassword;
+    private String currentPassword;
 }

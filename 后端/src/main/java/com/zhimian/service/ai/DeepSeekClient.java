@@ -27,6 +27,7 @@ import java.util.function.Consumer;
 @Slf4j
 @Component
 public class DeepSeekClient {
+    public String modelName(){return props.getModel();}
 
     private final AiProperties props;
     private final ObjectMapper objectMapper;
@@ -42,6 +43,7 @@ public class DeepSeekClient {
      * @return 模型返回的纯文本内容；调用失败或内容为空时返回 null。
      */
     public String chat(String systemPrompt, String userPrompt) {
+        if(!props.isUsable())return null;
         try {
             // 组织 OpenAI 兼容的请求体
             Map<String, Object> body = Map.of(

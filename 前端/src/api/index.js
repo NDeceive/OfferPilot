@@ -11,6 +11,13 @@ export const getMyStats = () => request.get('/user/stats')
 export const getDashboardOverview = () => request.get('/dashboard/overview')
 export const getDashboardProfile = () => request.get('/user/dashboard/profile')
 export const updateProfile = (data) => request.put('/user/profile', data)
+export const getCareerProfile = () => request.get('/user/career-profile')
+export const saveCareerProfile = (data) => request.put('/user/career-profile', data)
+export const uploadAvatar = (file) => {
+  const data = new FormData()
+  data.append('file', file)
+  return request.post('/user/avatar', data)
+}
 
 /* ==================== Jobs ==================== */
 export const getJobList = () => request.get('/job/list')

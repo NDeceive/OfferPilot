@@ -2,7 +2,7 @@
   <div class="interview-page">
     <header class="topbar">
       <div class="topbar-left">
-        <router-link to="/home" class="back-btn">
+        <router-link :to="route.query.assignmentId?'/my/tasks/'+route.query.assignmentId:'/home'" class="back-btn" aria-label="返回任务或首页">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M19 12H5M12 19l-7-7 7-7"/>
           </svg>
@@ -18,7 +18,7 @@
         </div>
       </div>
       <div class="topbar-right">
-        <button class="ctrl-btn" @click="togglePause" :title="isPaused ? '继续' : '暂停'">
+        <button v-if="!route.query.assignmentId" class="ctrl-btn" @click="togglePause" :title="isPaused ? '继续' : '暂停'">
           <svg v-if="!isPaused" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>
           </svg>
@@ -84,11 +84,14 @@
         </Transition>
 
         <div class="input-bar">
+          <button type="button" class="text-answer-toggle" @click="textAnswerOpen=!textAnswerOpen" :aria-expanded="textAnswerOpen">{{textAnswerOpen?'收起文字输入':'文字作答'}}</button>
+          <label v-if="textAnswerOpen" class="text-answer">输入回答<textarea v-model="answer" rows="3" maxlength="10000" :disabled="isSubmitting||!sessionId" placeholder="可直接输入，或修改语音识别后的文字，再提交回答。"/></label>
           <MicrophoneControl
             ref="microphoneRef"
             :session-id="sessionId"
             :transcript="answer"
-            :disabled="isSubmitting"
+            :disabled="isSubmitting||!sessionId"
+            :allow-skip="!route.query.assignmentId"
             @transcript="appendSpeechTranscript"
             @processing="isSpeechProcessing = $event"
             @submit="submitAnswerFn"
@@ -174,6 +177,7 @@ const questionSkills = ref([])
 const difficultyLabels = { 1: '简单', 2: '中等', 3: '困难', 4: '困难' }
 
 const messages = ref([])
+const textAnswerOpen=ref(false)
 
 const evalItems = ref([
   { name: '表达能力', value: 0, color: '#10b981' },
@@ -240,12 +244,15 @@ onMounted(async () => {
       return
     }
 
-    const res = await startInterview({ jobId, durationSeconds })
+    const res = await startInterview({ jobId, durationSeconds, assignmentId:route.query.assignmentId?Number(route.query.assignmentId):undefined })
     sessionId.value = res.sessionId
+    if(res.finishable){autoFinished=true;await finishInterview(sessionId.value);releaseMediaDevices();await waitForReport(sessionId.value);return}
+    if(res.durationSeconds){totalDuration.value=res.durationSeconds;timeLeft.value=res.remainingSeconds??res.durationSeconds}
     jobTitle.value = res.jobName || '模拟面试'
 
     // Set first question
     if (res.question) {
+      currentQuestion.value=res.question.roundNo||1
       currentQuestionId.value = res.question.id
       questionTypes.value.push(mapQuestionType(res.question.type))
       questionDifficulties.value.push(difficultyLabels[res.question.difficulty] || '中等')
@@ -320,6 +327,12 @@ async function submitAnswerFn() {
       // Fetch the next question from the server
       try {
         const nextRes = await getNextQuestion(sessionId.value)
+        if(nextRes.nextAction==='FINISHABLE'){
+          await finishInterview(sessionId.value)
+          releaseMediaDevices()
+          await waitForReport(sessionId.value)
+          return
+        }
         if (nextRes.question) {
           currentQuestion.value++
           currentQuestionId.value = nextRes.question.id
@@ -372,6 +385,7 @@ async function submitAnswerFn() {
     }
   } catch (e) {
     console.error('Failed to submit answer:', e)
+    answer.value=userAnswer
     isAiTyping.value = false
     messages.value.push({
       role: 'ai',
@@ -466,7 +480,7 @@ async function endInterview() {
     }
   }
   // Fallback navigation
-  router.push('/history')
+  router.push(route.query.assignmentId?'/my/tasks/'+route.query.assignmentId:'/history')
 }
 
 function scrollToBottom() {
@@ -518,19 +532,25 @@ async function waitForReport(sid) {
     await new Promise(resolve => setTimeout(resolve, 1000))
     try {
       const status = await getReportStatus(sid)
+      if (status?.state === 'FAILED') {
+        alert('报告生成失败。请返回教学任务重试生成，已有训练记录会保留。')
+        router.push('/my/tasks/'+route.query.assignmentId)
+        return
+      }
       if (status?.ready && status.reportId) {
-        router.push(`/history/${status.reportId}`)
+        router.push({path:`/history/${status.reportId}`,query:{assignmentId:route.query.assignmentId}})
         return
       }
     } catch (error) {
       console.warn('Report is not ready yet:', error)
     }
   }
-  router.push('/history')
+  router.push(route.query.assignmentId?'/my/tasks/'+route.query.assignmentId:'/history')
 }
 </script>
 
 <style scoped>
+.text-answer-toggle{min-height:44px;border:0;background:transparent;color:var(--primary-600,#047857);font:inherit;cursor:pointer}.text-answer{display:block;font-size:13px}.text-answer textarea{display:block;width:100%;padding:10px 12px;margin:8px 0;border:1px solid var(--neutral-200,#cbd8d0);border-radius:8px;background:var(--surface-primary,#fff);color:inherit;font:inherit;resize:vertical;max-height:140px}.text-answer-toggle:focus-visible,.text-answer textarea:focus-visible{outline:2px solid #147b57;outline-offset:3px}
 .interview-page {
   height: 100dvh;
   overflow: hidden;
