@@ -196,7 +196,7 @@
             <button type="button" class="secondary-btn" @click="handleExport('pdf')">导出 PDF</button>
             <button type="button" class="secondary-btn" @click="handleExport('docx')">导出 Word</button>
           </div>
-          <router-link to="/jobs" class="primary-btn">再次练习</router-link>
+          <router-link to="/interview/ai" class="primary-btn">再次练习</router-link>
         </footer>
       </template>
     </main>

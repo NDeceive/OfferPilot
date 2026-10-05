@@ -16,7 +16,7 @@ FORM: A continuous editorial product journey, closely following the supplied V3 
     <header class="site-header" :class="{ 'nav-hidden': !navVisible, 'nav-scrolled': isScrolled }">
       <a class="brand" href="#top" aria-label="OfferPilot 首页">
         <LogoIcon :size="28" />
-        <span><strong>智面试场</strong><small>OfferPilot</small></span>
+        <span><strong>智面幻境</strong><small>OfferPilot</small></span>
       </a>
       <nav class="main-nav" aria-label="主导航">
         <a href="#features">功能</a>
@@ -165,7 +165,7 @@ FORM: A continuous editorial product journey, closely following the supplied V3 
     </main>
 
     <footer class="site-footer section-shell">
-      <div class="brand"><LogoIcon :size="25" /><span><strong>智面试场</strong><small>OfferPilot</small></span></div>
+      <div class="brand"><LogoIcon :size="25" /><span><strong>智面幻境</strong><small>OfferPilot</small></span></div>
       <nav><a href="#">隐私政策</a><a href="#">使用条款</a><a href="#">联系我们</a></nav>
       <p>© 2026 OfferPilot. 让你的路，走更远。</p>
     </footer>

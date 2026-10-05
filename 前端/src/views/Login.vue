@@ -108,6 +108,42 @@
         <p class="form-foot">
           还没有账号?<router-link to="/register" class="reg-link">立即注册</router-link>
         </p>
+
+        <!-- 服务器地址：手机 APK 靠局域网连开发机时，构建时写死的 IP 换了就得重新打包。
+             这里留一个能就地改的口子，现场换 WiFi 只要填一下。 -->
+        <div class="server-setting">
+          <button type="button" class="server-toggle" @click="showServer = !showServer">
+            服务器：{{ apiBaseLabel }}
+          </button>
+          <div v-if="showServer" class="server-panel">
+            <input
+              v-model="serverInput"
+              class="server-input"
+              type="text"
+              placeholder="http://192.168.1.50:8080/api"
+            />
+            <div class="server-actions">
+              <button type="button" class="server-save" @click="applyServer">保存</button>
+              <button type="button" class="server-reset" @click="resetServer">恢复默认</button>
+            </div>
+            <p class="server-hint">
+              改完立即生效，不用重装。留空保存 = 用构建时配置的地址。
+            </p>
+            <!-- 正常不用管这一项：连不上后端时会自己弹框问。放这儿是为了「明知现场
+                 没网」的时候能直接进去，不必先等一次连接失败。 -->
+            <label class="server-demo">
+              <input
+                type="checkbox"
+                :checked="demoState.active"
+                @change="toggleDemo($event.target.checked)"
+              />
+              <span>
+                离线演示模式
+                <small>不连后端，全部用内置演示数据</small>
+              </span>
+            </label>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -120,6 +156,8 @@ import { useUserStore } from '../store/user'
 import { login as loginApi } from '../api'
 import LogoIcon from '../components/ui/LogoIcon.vue'
 import AuthShowcase from '../components/auth/AuthShowcase.vue'
+import { getApiBase, setApiBase, getRuntimeApiBase } from '../utils/apiBase'
+import { demoState, setDemoActive } from '../utils/offlineDemo'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -127,6 +165,31 @@ const activeRole = ref('student')
 const showPwd = ref(false)
 const errorMsg = ref('')
 const loading = ref(false)
+
+// getApiBase() 读的是 localStorage，不是响应式的，所以用一个 ref 快照展示，
+// 保存后手动同步一次。
+const showServer = ref(false)
+const serverInput = ref(getRuntimeApiBase())
+const apiBaseLabel = ref(getApiBase())
+
+function applyServer() {
+  setApiBase(serverInput.value)
+  apiBaseLabel.value = getApiBase()
+  showServer.value = false
+  errorMsg.value = ''
+}
+
+function resetServer() {
+  serverInput.value = ''
+  setApiBase('')
+  apiBaseLabel.value = getApiBase()
+}
+
+function toggleDemo(value) {
+  setDemoActive(value)
+  // 开着演示模式时服务器地址就是个摆设，顺手把标签同步一下免得误会
+  apiBaseLabel.value = getApiBase()
+}
 
 const mouse = reactive({ x: -200, y: -200 })
 
@@ -703,6 +766,98 @@ async function handleLogin() {
   text-decoration: none;
 }
 .reg-link:hover { color: var(--accent-700); }
+
+/* === 服务器设置（手机端现场改地址用，故意做得不起眼） === */
+.server-setting {
+  margin-top: var(--space-5);
+  text-align: center;
+}
+.server-toggle {
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: var(--text-xs);
+  color: var(--neutral-400);
+  font-family: inherit;
+  word-break: break-all;
+}
+.server-toggle:hover { color: var(--neutral-600); }
+.server-panel {
+  margin-top: var(--space-3);
+  padding: var(--space-4);
+  background: var(--neutral-50);
+  border: 1px solid var(--neutral-200);
+  border-radius: var(--radius-sm);
+  text-align: left;
+}
+.server-input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--neutral-300);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-family: inherit;
+  box-sizing: border-box;
+}
+.server-input:focus {
+  outline: none;
+  border-color: var(--accent-500);
+}
+.server-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+.server-save,
+.server-reset {
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-family: inherit;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.server-save {
+  background: var(--accent-600);
+  color: #fff;
+}
+.server-save:hover { background: var(--accent-700); }
+.server-reset {
+  background: transparent;
+  border-color: var(--neutral-300);
+  color: var(--neutral-600);
+}
+.server-reset:hover { border-color: var(--neutral-400); }
+.server-hint {
+  margin: var(--space-3) 0 0;
+  font-size: var(--text-xs);
+  color: var(--neutral-400);
+  line-height: 1.5;
+}
+.server-demo {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--neutral-200);
+  cursor: pointer;
+}
+.server-demo input {
+  margin: 2px 0 0;
+  flex: none;
+  accent-color: var(--accent-600);
+}
+.server-demo span {
+  font-size: var(--text-xs);
+  color: var(--neutral-600);
+  line-height: 1.5;
+}
+.server-demo small {
+  display: block;
+  color: var(--neutral-400);
+}
 
 /* === Responsive === */
 @media (max-width: 900px) {

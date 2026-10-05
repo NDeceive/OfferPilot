@@ -121,6 +121,11 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   scroll-behavior: smooth;
+  /* 横向防线。用 clip 而不是 hidden：hidden 会把 html 变成滚动容器，
+     可能让内部的 position:fixed 底栏改为相对它定位；clip 不创建滚动容器。
+     上一行 hidden 是给不认识 clip 的老 WebView 兜底。 */
+  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 body {
@@ -129,6 +134,7 @@ body {
   color: var(--neutral-800);
   line-height: 1.6;
   overflow-x: hidden;
+  overflow-x: clip;
 }
 
 a {

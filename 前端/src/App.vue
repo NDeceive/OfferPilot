@@ -1,5 +1,6 @@
 <template>
   <div class="app">
+    <OfflineDemoOverlay />
     <router-view v-slot="{ Component }">
       <transition name="page" mode="out-in">
         <component :is="Component" />
@@ -9,6 +10,7 @@
 </template>
 
 <script setup>
+import OfflineDemoOverlay from './components/ui/OfflineDemoOverlay.vue'
 </script>
 
 <style>

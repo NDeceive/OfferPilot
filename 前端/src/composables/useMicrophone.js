@@ -30,6 +30,23 @@ export function useMicrophone({ onSegment } = {}) {
   const isRequesting = computed(() => status.value === 'requesting')
   const isReady = computed(() => Boolean(stream))
 
+  /**
+   * NotAllowedError 有几条来路：用户当场拒了、浏览器记着上次的「阻止」、地址不是安全来源……
+   * 只有第一种会弹窗。分得清就给准话——不然用户会对着一个永远不会出现的弹窗干等。
+   */
+  async function explainDenied() {
+    if (!window.isSecureContext) {
+      return '当前地址不是安全来源（需要 https 或 localhost），浏览器不会弹出麦克风授权。'
+    }
+    try {
+      const state = (await navigator.permissions.query({ name: 'microphone' })).state
+      if (state === 'denied') {
+        return '本站麦克风已被浏览器设为「阻止」，不会再弹窗：点地址栏左侧图标 → 权限 → 麦克风 → 允许，然后刷新页面。'
+      }
+    } catch { /* 个别浏览器不认 microphone 这个权限名，查不了就退回通用文案 */ }
+    return '麦克风权限被拒绝，请在浏览器地址栏中允许访问。'
+  }
+
   async function initializeMicrophone() {
     if (stream) return true
     if (!navigator.mediaDevices?.getUserMedia || !window.AudioContext) {
@@ -81,7 +98,7 @@ export function useMicrophone({ onSegment } = {}) {
       if (mediaGranted) {
         errorMessage.value = '录音组件初始化失败，请刷新页面后重试。'
       } else if (error?.name === 'NotAllowedError' || error?.name === 'SecurityError') {
-        errorMessage.value = '麦克风权限被拒绝，请在浏览器地址栏中允许访问。'
+        errorMessage.value = await explainDenied()
       } else if (error?.name === 'NotFoundError') {
         errorMessage.value = '没有找到可用的麦克风设备。'
       } else if (error?.name === 'NotReadableError' || error?.name === 'AbortError') {

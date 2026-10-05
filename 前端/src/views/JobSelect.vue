@@ -5,6 +5,7 @@
       <header class="page-header reveal">
         <h1 class="page-title">面试准备</h1>
         <p class="page-desc">{{ stepDescriptions[currentStep] }}</p>
+        <button type="button" class="mode-switch" @click="goAiPrep">对话录入 ⇄</button>
       </header>
 
       <!-- Step Indicator -->
@@ -623,7 +624,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import AppLayout from '../components/layout/AppLayout.vue'
 import JobLogo from '../components/jobs/JobLogo.vue'
 import { getJobList, getModules, getResumeFileProfile, getSkillTags, startInterview, updateResumeTags, uploadResumeFile } from '../api'
@@ -632,6 +633,12 @@ import { getJobList, getModules, getResumeFileProfile, getSkillTags, startInterv
 /*  State                                                              */
 /* ------------------------------------------------------------------ */
 const router = useRouter()
+const route = useRoute()
+
+/** 与 AI 对话页的「手动录入 ⇄」互为出口：这边是手动录入，那边是对话录入 */
+function goAiPrep() {
+  router.push('/interview/ai')
+}
 const currentStep = ref(0)
 const searchQuery = ref('')
 const activeFamily = ref('BE')
@@ -778,7 +785,14 @@ async function fetchJobs() {
   try {
     const data = await getJobList()
     jobs.value = (Array.isArray(data) ? data : []).map(mapJobFromBackend)
-    if (!selectedJob.value && jobs.value.length) {
+    // AI 对话页会带 ?job=<code> 过来（AiPrep.vue:611）。必须先落实它，
+    // 否则下面那行默认选中会把它盖掉——列表是异步的，只能在这里比对。
+    const wanted = String(route.query.job || '').trim()
+    const hit = wanted && jobs.value.find(job => job.directionCode === wanted)
+    if (hit) {
+      selectedJob.value = hit
+      activeFamily.value = hit.familyCode
+    } else if (!selectedJob.value && jobs.value.length) {
       selectedJob.value = jobs.value.find(job => job.familyCode === activeFamily.value) || jobs.value[0]
     }
   } catch (e) {
@@ -1218,6 +1232,13 @@ function scheduleObserve() {
 
 watch(currentStep, scheduleObserve)
 onMounted(() => {
+  // 消费 AI 对话页带来的 ?step=<n>（AiPrep.vue:611 一直在发，此前全被丢弃，
+  // 于是「对话完成 → 接力到训练目标」实际是回到第一步重来）。job=<code> 在 fetchJobs 里落实。
+  const step = Number(route.query.step)
+  if (Number.isInteger(step) && step >= 0 && step < stepsInfo.length) {
+    currentStep.value = step
+  }
+
   scheduleObserve()
   fetchJobs()
   fetchModules()
@@ -1258,6 +1279,30 @@ onUnmounted(() => { if (observer) observer.disconnect() })
   font-size: var(--text-base);
   color: var(--neutral-500);
   font-family: var(--font-body);
+}
+
+/* 手动 ⇄ 对话：这页是手动录入那条路，入口给回对话页。
+   与 AI 页右上角的「手动录入 ⇄」同款样式，只是放平在页头下 */
+.mode-switch {
+  display: inline-flex;
+  align-items: center;
+  margin-top: var(--space-3);
+  padding: 7px 16px;
+  border: 1px solid var(--neutral-200);
+  border-radius: 999px;
+  background: var(--neutral-50);
+  color: var(--neutral-700);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out-quart);
+}
+
+.mode-switch:hover {
+  border-color: var(--accent-500);
+  background: var(--accent-50);
+  color: var(--accent-600);
 }
 
 /* ===================================================================

@@ -49,7 +49,7 @@ FORM: Dense premium product dashboard; pointer effects reveal material depth wit
               <p>{{ overview.nextAction.description }}</p>
               <div class="action-row">
                 <router-link
-                  :to="overview.nextAction.route || '/jobs'"
+                  :to="overview.nextAction.route || '/interview/ai'"
                   class="primary-btn"
                 >
                   继续训练
@@ -115,7 +115,7 @@ FORM: Dense premium product dashboard; pointer effects reveal material depth wit
             <div v-else class="review-empty">
               <strong>完成一次训练后生成复盘</strong>
               <p>报告会展示优势、薄弱维度和下一步练习建议。</p>
-              <router-link to="/jobs">开始训练</router-link>
+              <router-link to="/interview/ai">开始训练</router-link>
             </div>
           </section>
         </div>
@@ -124,7 +124,7 @@ FORM: Dense premium product dashboard; pointer effects reveal material depth wit
           <section class="quick-panel panel reveal" style="--delay:100ms">
             <header class="quick-heading"><h2>快速开始</h2><p>选择一种方式进入下一次训练。</p></header>
             <div class="quick-grid">
-              <router-link to="/jobs" class="quick-card prediction">
+              <router-link to="/interview/ai" class="quick-card prediction">
                 <header><strong>面试押题</strong><span>›</span></header>
                 <div class="mini-ui">
                   <p><span>目标企业</span><b>字节跳动</b></p>
@@ -134,7 +134,7 @@ FORM: Dense premium product dashboard; pointer effects reveal material depth wit
                 <div class="sorting"><i></i><span>正在整理岗位要求…</span></div>
               </router-link>
 
-              <router-link to="/jobs" class="quick-card prepare">
+              <router-link to="/interview/ai" class="quick-card prepare">
                 <header><strong>准备新岗位</strong><span>›</span></header>
                 <div class="mini-ui">
                   <p><span>目标岗位</span><b>{{ shortJob }}</b><i>⌄</i></p>
@@ -175,7 +175,7 @@ FORM: Dense premium product dashboard; pointer effects reveal material depth wit
               <div><strong>{{ resumeLabel }}</strong><small>{{ resumeUpdatedLabel }}</small></div>
             </div>
             <div class="profile-actions">
-              <router-link to="/jobs" class="primary-btn">继续准备</router-link>
+              <router-link to="/interview/ai" class="primary-btn">继续准备</router-link>
               <router-link to="/jobs" class="secondary-btn">更换岗位</router-link>
             </div>
           </section>
@@ -196,7 +196,7 @@ FORM: Dense premium product dashboard; pointer effects reveal material depth wit
               <router-link :to="recordRoute(item)">{{ recordAction(item) }} <span>→</span></router-link>
             </article>
           </div>
-          <div v-else class="recent-empty"><span>暂无训练记录</span><router-link to="/jobs">开始第一次训练 →</router-link></div>
+          <div v-else class="recent-empty"><span>暂无训练记录</span><router-link to="/interview/ai">开始第一次训练 →</router-link></div>
         </section>
 
         <section class="overview-strip reveal" style="--delay:220ms">
@@ -225,7 +225,7 @@ const pageReady = ref(false)
 const resume = ref(null)
 const overview = ref({
   summary: { completedCount: 0, recentCount: 0, averageScore: 0, bestScore: 0, bestJobName: '', streakDays: 0 },
-  nextAction: { type: '', title: '', description: '', route: '/jobs' },
+  nextAction: { type: '', title: '', description: '', route: '/interview/ai' },
   trend: [],
   recentInterviews: [],
   latestInsight: null,

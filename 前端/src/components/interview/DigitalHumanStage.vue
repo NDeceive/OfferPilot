@@ -57,6 +57,7 @@
 
 <script setup>
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { demoState } from '../../utils/offlineDemo'
 
 const props = defineProps({
   text: {
@@ -302,7 +303,13 @@ function handleMessage(event) {
 
 function startConnectionTimeout() {
   clearTimeout(connectionTimer)
+  // 离线演示模式下别开这个超时：数字人 iframe 本来就连不上，两分钟后会翻成一条
+  // 红字「数字人连接异常」，挂在演示画面上很难看。停在「正在连接」比挂着报错体面，
+  // 也不必编一句「已就绪」的假话。面试流程本身不依赖它（题目由 messages 驱动）。
+  if (demoState.active) return
   connectionTimer = setTimeout(() => {
+    // 计时器是挂载时起的，两分钟内可能已经切进演示模式了，触发时再判一次
+    if (demoState.active) return
     if (connectionState.value === 'connecting') connectionState.value = 'error'
   }, 120000)
 }

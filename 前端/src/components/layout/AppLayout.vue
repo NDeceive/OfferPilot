@@ -116,9 +116,13 @@
     </header>
 
     <!-- Page Content -->
-    <main class="main-content">
+    <main class="main-content" :class="{ 'has-mobile-tabbar': showMobileTabBar }">
       <slot />
     </main>
+
+    <!-- 小屏补一个底部导航。走 AppLayout 的都是桌面页，原本在手机上只隐藏了顶栏链接、
+         没有任何返回/切换入口，用户从移动页跳进来就出不去。教师端不挂（路径对不上）。 -->
+    <MobileTabBar v-if="showMobileTabBar" />
   </div>
 </template>
 
@@ -126,6 +130,8 @@
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import LogoIcon from '../ui/LogoIcon.vue'
+import MobileTabBar from '../../mobile/components/MobileTabBar.vue'
+import { useIsMobile } from '../../mobile/composables/useIsMobile'
 
 import { useUserStore } from '../../store/user'
 
@@ -139,6 +145,8 @@ const userTriggerRef = ref(null)
 const dropdownRef = ref(null)
 
 const isTeacherRoute = computed(() => route.path.startsWith('/teacher'))
+const isMobile = useIsMobile()
+const showMobileTabBar = computed(() => isMobile.value && !isTeacherRoute.value)
 const userName = computed(() => userStore.nickname || userStore.username || '用户')
 const userEmail = computed(() => userStore.username || '')
 
@@ -572,6 +580,14 @@ onUnmounted(() => {
   padding-left: var(--space-6);
   padding-right: var(--space-6);
   min-height: 100dvh;
+}
+
+/* 挂了底部导航时：留出底栏高度 + 安全区，并把左右内边距收窄到与移动页一致（24 → 16）
+   否则 393px 下正文可用宽度只剩 393-48=345，比移动页的 353 还窄，看着更挤。 */
+.main-content.has-mobile-tabbar {
+  padding-left: var(--space-4);
+  padding-right: var(--space-4);
+  padding-bottom: calc(64px + 40px + env(safe-area-inset-bottom));
 }
 
 @media (max-width: 768px) {

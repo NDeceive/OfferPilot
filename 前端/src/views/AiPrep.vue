@@ -98,6 +98,22 @@
                   </template>
                 </div>
                 <p v-if="uploadError" class="ctl__err">{{ uploadError }}</p>
+                <button
+                  v-if="savedResume"
+                  type="button"
+                  class="saved-pick"
+                  :disabled="uploading || busy"
+                  @click="useSavedResume"
+                >
+                  <span class="saved-pick__text">
+                    <strong>用上次那份简历</strong>
+                    <small>
+                      <template v-if="savedResume.filename">{{ savedResume.filename }} · </template>
+                      已识别 {{ savedResume.skills.length }} 个技能
+                    </small>
+                  </span>
+                  <span class="saved-pick__go">使用 →</span>
+                </button>
                 <button class="link-btn" @click="openOnlineResume">
                   没有简历文件？在线填一份 →
                 </button>
@@ -144,7 +160,7 @@ import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import AppLayout from '../components/layout/AppLayout.vue'
 import OnlineResumeDialog from '../components/resume/OnlineResumeDialog.vue'
-import { getJobList, getAiStatus, uploadResumeFile } from '../api'
+import { getJobList, getAiStatus, uploadResumeFile, getMyResume, getResumeFileProfile } from '../api'
 import { postSse } from '../utils/sse'
 import { JOB_FAMILIES, mapJobFromBackend, isReadyJob } from '../utils/jobs'
 
@@ -201,6 +217,8 @@ const uploadedName = ref('')
 const uploadError = ref('')
 const uploading = ref(false)
 const isDragging = ref(false)
+/** 上次保存的简历；有值时上传区多给一条「直接用它」的路 */
+const savedResume = ref(null)
 
 let seq = 0
 let currentMsg = null
@@ -399,6 +417,9 @@ function settle(mine) {
 function revealControls() {
   typingId.value = 0
   controlsVisible.value = true
+  // 控件是挂上去了，但吐字结束那一刻的滚动位置是按旧内容算的——整块控件（拖拽区
+  // 一百多像素）会把新入口顶到折叠线以下。补一次滚动，让它们真的露出来。
+  scrollToEnd()
   applyAct()
 }
 
@@ -556,6 +577,44 @@ function onOnlineResumeSaved(payload) {
   advance('DONE', '用在线简历')
 }
 
+/* ------------------------------------------------------------------ */
+/*  已有简历：上次传过就不必再传一遍                                    */
+/* ------------------------------------------------------------------ */
+/** skills 在 /resume/mine 里是 JSON 数组字符串，在 file-profile 里已经是数组 */
+function parseResumeSkills(raw) {
+  if (!raw) return []
+  if (Array.isArray(raw)) return raw.map(String).filter(Boolean)
+  try {
+    const parsed = JSON.parse(raw)
+    if (Array.isArray(parsed)) return parsed.map(String).filter(Boolean)
+  } catch { /* 不是 JSON 就按分隔符切 */ }
+  return String(raw).split(/[,，、\n]/).map((s) => s.trim()).filter(Boolean)
+}
+
+/**
+ * 技能以 /resume/mine 为准 —— 它才是出题真正读的那份。file-profile 只用来补文件名：
+ * 在线简历没有 resume_file 行，那个接口会返回空画像（见记忆 ai-prep-online-resume）。
+ * 两个都失败就当作没有简历，上传区少一条路而已，不影响流程。
+ */
+async function loadSavedResume() {
+  const [mine, profile] = await Promise.allSettled([getMyResume(), getResumeFileProfile()])
+  const skills = parseResumeSkills(mine.status === 'fulfilled' ? mine.value?.skills : null)
+  if (!skills.length) { savedResume.value = null; return }
+  savedResume.value = {
+    skills,
+    filename: profile.status === 'fulfilled' ? (profile.value?.filename || '') : '',
+  }
+}
+
+/** 与在线简历同一条推进路径：出题读的是 resume 表的 skills，两条路同构 */
+function useSavedResume() {
+  if (!savedResume.value) return
+  extractedSkills.value = [...savedResume.value.skills]
+  uploadedName.value = savedResume.value.filename || '已保存的简历'
+  uploadError.value = ''
+  advance('DONE', '用上次那份简历')
+}
+
 function onFileChange(e) {
   const file = e.target.files?.[0]
   e.target.value = '' // 允许重复选择同一个文件
@@ -671,6 +730,7 @@ async function fetchStatus() {
 onMounted(() => {
   fetchJobs()
   fetchStatus()
+  loadSavedResume()
   startTurn('GREET')
 })
 
@@ -1054,6 +1114,63 @@ onUnmounted(() => {
   font-size: var(--text-xs);
   color: var(--neutral-500);
   font-family: var(--font-body);
+}
+
+/* 已有简历：与拖拽区并列的第二条路。比下面的文字链重、比上传区轻 */
+.saved-pick {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  width: 100%;
+  max-width: 460px;
+  margin-top: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--neutral-200);
+  border-radius: var(--radius-md);
+  background: var(--neutral-50);
+  font-family: var(--font-body);
+  text-align: left;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out-quart);
+}
+
+.saved-pick:hover:not(:disabled) {
+  border-color: var(--accent-500);
+  background: var(--accent-50);
+}
+
+.saved-pick:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.saved-pick__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.saved-pick__text strong {
+  color: var(--neutral-800);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.saved-pick__text small {
+  overflow: hidden;
+  color: var(--neutral-500);
+  font-size: var(--text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.saved-pick__go {
+  flex-shrink: 0;
+  color: var(--accent-600);
+  font-size: var(--text-xs);
+  font-weight: 600;
 }
 
 /* 解析结果 */

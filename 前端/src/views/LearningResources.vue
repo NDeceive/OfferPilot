@@ -17,8 +17,8 @@ FORM: Reference-led product workspace; one expanding step at a time preserves fo
         <JobLogo class="context-job-logo" v-bind="rolePresentation(currentContext)" />
         <div><small>根据当前训练岗位快速开始</small><strong>{{ currentContext.name }}</strong><span>最近重点：{{ currentFocus || '岗位知识与技术深度' }}</span></div>
         <nav aria-label="快速开始">
-          <router-link to="/jobs">面试押题</router-link>
-          <router-link to="/jobs">准备新岗位</router-link>
+          <router-link to="/interview/ai">面试押题</router-link>
+          <router-link to="/interview/ai">准备新岗位</router-link>
           <button type="button" @click="useCurrentContext">开始岗位专项 →</button>
         </nav>
       </section>
