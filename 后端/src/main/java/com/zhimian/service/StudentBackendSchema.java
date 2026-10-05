@@ -17,6 +17,8 @@ public class StudentBackendSchema {
     void initialize() {
         new ResourceDatabasePopulator(new ClassPathResource("db/student_backend.sql"))
                 .execute(jdbc.getDataSource());
+        new ResourceDatabasePopulator(new ClassPathResource("db/migration_teaching_linkage.sql"))
+                .execute(jdbc.getDataSource());
         new ResourceDatabasePopulator(new ClassPathResource("db/teaching_alignment.sql"))
                 .execute(jdbc.getDataSource());
     }

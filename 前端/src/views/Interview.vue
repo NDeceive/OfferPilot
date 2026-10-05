@@ -44,18 +44,17 @@
           />
         </div>
 
-        <section class="question-strip">
-          <div>
-            <strong>面试题</strong>
-            <p>{{ currentPrompt || '正在准备面试问题…' }}</p>
+        <div class="input-bar" :class="{ collapsed: !showTranscript }">
+          <div class="transcript-toolbar">
+            <span>回答记录</span>
+            <button
+              type="button"
+              aria-controls="interview-transcript"
+              :aria-expanded="showTranscript"
+              @click="showTranscript = !showTranscript"
+            >{{ showTranscript ? '收起回答记录' : '展开回答记录' }}</button>
           </div>
-          <button type="button" :aria-expanded="showTranscript" @click="showTranscript = !showTranscript">
-            {{ showTranscript ? '收起记录' : '展开回答记录' }}
-          </button>
-        </section>
-
-        <Transition name="transcript">
-          <div v-if="showTranscript" class="conversation-scroll" ref="messagesRef">
+          <div id="interview-transcript" v-show="showTranscript" class="conversation-scroll" ref="messagesRef">
             <div
               v-for="(msg, i) in messages"
               :key="i"
@@ -81,11 +80,6 @@
               <p>正在思考下一步问题……</p>
             </div>
           </div>
-        </Transition>
-
-        <div class="input-bar">
-          <button type="button" class="text-answer-toggle" @click="textAnswerOpen=!textAnswerOpen" :aria-expanded="textAnswerOpen">{{textAnswerOpen?'收起文字输入':'文字作答'}}</button>
-          <label v-if="textAnswerOpen" class="text-answer">输入回答<textarea v-model="answer" rows="3" maxlength="10000" :disabled="isSubmitting||!sessionId" placeholder="可直接输入，或修改语音识别后的文字，再提交回答。"/></label>
           <MicrophoneControl
             ref="microphoneRef"
             :session-id="sessionId"
@@ -161,7 +155,7 @@ const isAiTyping = ref(false)
 const isPaused = ref(false)
 const isSubmitting = ref(false)
 const isSpeechProcessing = ref(false)
-const showTranscript = ref(false)
+const showTranscript = ref(true)
 const evaluationReady = ref(false)
 const messagesRef = ref(null)
 const cameraPreviewRef = ref(null)
@@ -177,7 +171,6 @@ const questionSkills = ref([])
 const difficultyLabels = { 1: '简单', 2: '中等', 3: '困难', 4: '困难' }
 
 const messages = ref([])
-const textAnswerOpen=ref(false)
 
 const evalItems = ref([
   { name: '表达能力', value: 0, color: '#10b981' },
@@ -188,12 +181,6 @@ const evalItems = ref([
 const progressPercent = computed(() => totalDuration.value > 0
   ? ((totalDuration.value - timeLeft.value) / totalDuration.value) * 100
   : 0)
-const currentPrompt = computed(() => {
-  for (let index = messages.value.length - 1; index >= 0; index--) {
-    if (messages.value[index].role === 'ai') return messages.value[index].text
-  }
-  return ''
-})
 
 let timerInterval = null
 let autoFinished = false
@@ -716,7 +703,7 @@ async function waitForReport(sid) {
   gap: var(--space-4);
   scroll-behavior: smooth;
 }
-.vr-card { aspect-ratio: 16/9; background: var(--neutral-100); border-radius: var(--radius-lg); border: 1px solid var(--neutral-200); display: flex; align-items: center; justify-content: center; flex-shrink: 0; position: sticky; top: 0; z-index: 5; overflow: hidden; }
+.vr-card { aspect-ratio: 16/9; min-height: 170px; background: var(--neutral-100); border-radius: var(--radius-lg); border: 1px solid var(--neutral-200); display: flex; align-items: center; justify-content: center; flex-shrink: 0; position: sticky; top: 0; z-index: 5; overflow: hidden; }
 .info-card { background: var(--neutral-50); border-radius: var(--radius-lg); padding: var(--space-4); flex-shrink: 0; }
 .info-card-title { font-size: var(--text-sm); font-weight: 600; color: var(--neutral-700); margin-bottom: var(--space-3); }
 .q-head { display: flex; align-items: baseline; gap: var(--space-1); margin-bottom: var(--space-3); }
@@ -771,4 +758,50 @@ async function waitForReport(sid) {
 @media(max-width:1024px){.interview-page{height:auto;min-height:100dvh;overflow:auto}.interview-body{height:auto;min-height:calc(100dvh - 60px);grid-template-columns:1fr;grid-template-rows:auto auto;overflow:visible}.chat-panel{height:calc(100dvh - 60px);min-height:620px}.info-panel{height:auto;display:grid;grid-template-columns:200px 1fr 1fr;border-top:1px solid var(--neutral-200);border-left:0;overflow:visible}.vr-card{width:auto}.conversation-scroll{right:16px}.digital-human-stage{min-height:360px}}
 @media(max-width:700px){.topbar{padding:0 12px}.session-tag{max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.interview-body{margin-top:60px}.chat-panel{height:calc(100dvh - 60px);min-height:600px;padding:9px}.digital-human-stage{min-height:310px}.question-strip{min-height:82px;flex-basis:82px;padding:10px 12px}.question-strip button{display:none}.input-bar{height:72px;flex-basis:72px}.conversation-scroll{right:9px;bottom:84px;left:9px}.info-panel{display:flex;padding:10px;flex-direction:column}.vr-card{width:100%;max-width:none}.topbar-center{position:absolute;left:50%;transform:translateX(-50%)}.session-tag{display:none}}
 @media(prefers-reduced-motion:reduce){.transcript-enter-active,.transcript-leave-active{transition:none}}
+
+/* Pre-pull interview layout: the transcript and voice controls share a fixed lower panel. */
+.input-bar {
+  height: clamp(220px, 27vh, 280px);
+  flex: 0 0 auto;
+  padding: var(--space-3) var(--space-5);
+  overflow: hidden;
+}
+.input-bar.collapsed { height: 112px; }
+.transcript-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 0 0 26px;
+  color: var(--neutral-500);
+  font-size: 12px;
+}
+.transcript-toolbar button {
+  padding: 3px 8px;
+  border: 1px solid var(--neutral-200);
+  border-radius: 7px;
+  background: var(--surface-elevated);
+  color: var(--neutral-600);
+  font: inherit;
+  cursor: pointer;
+}
+.transcript-toolbar button:focus-visible { outline: 2px solid var(--accent-600); outline-offset: 2px; }
+.conversation-scroll {
+  position: static;
+  z-index: auto;
+  inset: auto;
+  max-height: none;
+  min-height: 0;
+  flex: 1;
+  padding: 2px var(--space-2) var(--space-2);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+.conversation-entry p { font-size: var(--text-sm); }
+@media (max-width: 700px) {
+  .input-bar { height: auto; min-height: 280px; padding-inline: var(--space-3); }
+  .input-bar.collapsed { min-height: 112px; }
+}
 </style>
