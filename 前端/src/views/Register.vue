@@ -11,11 +11,7 @@
     <div class="brand-panel">
       <div class="brand-content">
         <router-link to="/" class="brand-logo">
-          <LogoIcon :size="36" />
-          <span class="brand-name">
-            <span class="brand-cn">智面幻境</span>
-            <span class="brand-en">OfferPilot</span>
-          </span>
+          <BrandLogo variant="bilingual" :width="210" />
         </router-link>
 
         <h1 class="brand-title">从一次完整练习<br /><span class="title-accent">开始准备</span></h1>
@@ -123,7 +119,7 @@
 import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { register as registerApi } from '../api'
-import LogoIcon from '../components/ui/LogoIcon.vue'
+import BrandLogo from '../components/ui/BrandLogo.vue'
 import AuthShowcase from '../components/auth/AuthShowcase.vue'
 
 const router = useRouter()

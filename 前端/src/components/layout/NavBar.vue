@@ -2,27 +2,7 @@
   <nav class="navbar glass-medium">
     <div class="navbar-inner">
       <router-link to="/" class="logo">
-        <div class="logo-icon">
-          <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 8C12 8 20 16 20 20C20 24 12 32 12 32" stroke="url(#g1)" stroke-width="2.5" stroke-linecap="round"/>
-            <path d="M28 8C28 8 20 16 20 20C20 24 28 32 28 32" stroke="url(#g2)" stroke-width="2.5" stroke-linecap="round"/>
-            <circle cx="20" cy="20" r="4" fill="url(#g3)"/>
-            <defs>
-              <linearGradient id="g1" x1="12" y1="8" x2="12" y2="32">
-                <stop stop-color="#34d399"/>
-                <stop offset="1" stop-color="#059669"/>
-              </linearGradient>
-              <linearGradient id="g2" x1="28" y1="8" x2="28" y2="32">
-                <stop stop-color="#059669"/>
-                <stop offset="1" stop-color="#047857"/>
-              </linearGradient>
-              <radialGradient id="g3" cx="20" cy="20" r="4" gradientUnits="userSpaceOnUse">
-                <stop stop-color="#6ee7b7"/>
-                <stop offset="1" stop-color="#059669"/>
-              </radialGradient>
-            </defs>
-          </svg>
-        </div>
+        <LogoIcon :size="32" />
         <span class="logo-text">智面幻境</span>
       </router-link>
 
@@ -50,6 +30,8 @@
 </template>
 
 <script setup>
+import LogoIcon from '../ui/LogoIcon.vue'
+import LogoIcon from '../ui/LogoIcon.vue'
 </script>
 
 <style scoped>
@@ -159,7 +141,7 @@
   width: 36px;
   height: 36px;
   border-radius: var(--radius-full);
-  background: linear-gradient(135deg, var(--accent-500), var(--accent-600));
+  background: var(--accent-500);
   display: flex;
   align-items: center;
   justify-content: center;

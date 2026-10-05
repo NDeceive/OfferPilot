@@ -19,6 +19,7 @@
           <option value="all">全部岗位</option>
           <option v-for="category in jobCategories" :key="category" :value="category">{{ category }}</option>
         </select>
+        <select v-model="filterSource" class="filter-select" aria-label="训练记录来源"><option value="all">全部训练来源</option><option value="SELF">自主训练</option><option value="TEACHING">教学任务</option></select>
       </div>
     </div>
 
@@ -48,7 +49,7 @@
         :style="{ '--reveal-delay': i * 60 + 'ms' }"
       >
         <button
-          v-if="batchMode"
+          v-if="batchMode&&record.trainingSource==='SELF'"
           class="check-box"
           :class="{ checked: isSelected(record.id) }"
           :aria-pressed="isSelected(record.id)"
@@ -68,6 +69,7 @@
               </span>
             </div>
             <div class="record-meta">
+              <span class="meta-item">{{record.trainingSource==='TEACHING'?'教学任务 · '+record.taskTitle:'自主训练'}}</span>
               <span class="meta-item">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                 {{ record.date }}
@@ -78,7 +80,7 @@
               </span>
             </div>
           </div>
-          <div class="record-score" v-if="record.score">
+          <div class="record-score" v-if="record.score!=null">
             <span class="score-value" :class="getScoreClass(record.score)">{{ record.score }}</span>
             <span class="score-unit">分</span>
           </div>
@@ -91,7 +93,7 @@
         </div>
         <!-- Delete button - hidden in batch mode -->
         <button
-          v-if="!batchMode"
+          v-if="!batchMode&&record.trainingSource==='SELF'"
           class="delete-btn"
           title="删除此记录"
           @click.stop="confirmDelete(record)"
@@ -176,9 +178,10 @@ import { getJobPresentation } from '../utils/jobPresentation'
 const router = useRouter()
 const activeStatus = ref('全部')
 const filterJob = ref('all')
+const filterSource=ref('all')
 const currentPage = ref(1)
-const statusTabs = ['全部', '已完成', '进行中', '已中断']
-const statusMap = { completed: '已完成', in_progress: '进行中', interrupted: '已中断' }
+const statusTabs = ['全部', '已结束', '进行中', '已中断']
+const statusMap = { completed: '已结束', in_progress: '进行中', interrupted: '已中断' }
 const statusApiMap = { FINISHED: 'completed', ONGOING: 'in_progress', ABORTED: 'interrupted' }
 
 const records = ref([])
@@ -225,6 +228,7 @@ async function fetchRecords() {
       ...getJobPresentation(jobsById.get(String(item.jobId))),
       id: item.sessionId,
       reportId: item.reportId,
+      trainingSource:item.trainingSource||'SELF',taskTitle:item.taskTitle,assignmentId:item.assignmentId,
       date: formatDate(item.startTime),
       position: item.jobName || '未知岗位',
       category: item.category || '其他岗位',
@@ -245,11 +249,11 @@ async function fetchRecords() {
 const filteredRecords = computed(() => {
   return records.value.filter(r => {
     const matchStatus = activeStatus.value === '全部' ||
-      (activeStatus.value === '已完成' && r.status === 'completed') ||
+      (activeStatus.value === '已结束' && r.status === 'completed') ||
       (activeStatus.value === '进行中' && r.status === 'in_progress') ||
       (activeStatus.value === '已中断' && r.status === 'interrupted')
     const matchJob = filterJob.value === 'all' || r.category === filterJob.value
-    return matchStatus && matchJob
+    return matchStatus && matchJob && (filterSource.value==='all'||r.trainingSource===filterSource.value)
   })
 })
 
@@ -265,7 +269,9 @@ function getScoreClass(score) {
 
 function viewReport(record) {
   if (record.reportId) {
-    router.push(`/history/${record.reportId}`)
+    router.push({path:`/history/${record.reportId}`,query:record.assignmentId?{assignmentId:record.assignmentId}:{}})
+  } else if(record.assignmentId){
+    router.push('/my/tasks/'+record.assignmentId)
   }
 }
 
@@ -289,7 +295,7 @@ async function doDelete() {
 /* ==================== 批量管理 ==================== */
 const selectedCount = computed(() => selectedIds.size)
 const allSelected = computed(() =>
-  filteredRecords.value.length > 0 && filteredRecords.value.every(r => selectedIds.has(r.id))
+  filteredRecords.value.some(r=>r.trainingSource==='SELF') && filteredRecords.value.filter(r=>r.trainingSource==='SELF').every(r => selectedIds.has(r.id))
 )
 
 function isSelected(id) {
@@ -307,6 +313,7 @@ function exitBatch() {
 }
 
 function toggleSelect(id) {
+  if(records.value.find(r=>r.id===id)?.trainingSource!=='SELF')return
   if (selectedIds.has(id)) {
     selectedIds.delete(id)
   } else {
@@ -318,7 +325,7 @@ function toggleSelectAll() {
   if (allSelected.value) {
     selectedIds.clear()
   } else {
-    filteredRecords.value.forEach(r => selectedIds.add(r.id))
+    filteredRecords.value.filter(r=>r.trainingSource==='SELF').forEach(r => selectedIds.add(r.id))
   }
 }
 

@@ -1,0 +1,24 @@
+{
+  "students": [
+    {
+      "studentId": "2022501001",
+      "name": "张同学",
+      "classId": "software2501",
+      "className": "软件2501",
+      "major": "软件工程",
+      "targetRole": "Java后端开发",
+      "recent30dTrainingCount": 4,
+      "growthStatus": "IMPROVED",
+      "activeTaskCount": 2,
+      "overdueTaskCount": 0,
+      "mainConcern": "项目经历表达当前69/80，与目标仍差11分",
+      "lastTrainingAt": "2026-10-11T14:20:00+08:00"
+    }
+  ],
+  "abilitySnapshots": [
+    {"abilityId":"logic","label":"逻辑表达","currentValue":74,"targetValue":80,"gap":-6,"validRecordCount":8,"scoringModelVersion":"v1"},
+    {"abilityId":"project_expression","label":"项目经历表达","currentValue":69,"targetValue":80,"gap":-11,"validRecordCount":7,"scoringModelVersion":"v1"},
+    {"abilityId":"communication","label":"沟通表达","currentValue":76,"targetValue":80,"gap":-4,"validRecordCount":8,"scoringModelVersion":"v1"},
+    {"abilityId":"role_understanding","label":"岗位理解","currentValue":72,"targetValue":80,"gap":-8,"validRecordCount":6,"scoringModelVersion":"v1"}
+  ]
+}

@@ -62,7 +62,7 @@ try {
         }
         if (-not (Test-Port 3306)) { throw 'MySQL 未在 localhost:3306 运行。请先启动 MySQL，并按 README 初始化数据库。' }
         Write-Host '正在启动后端（8080）…'
-        $backendProcess = Start-Process -FilePath $env:ComSpec -ArgumentList '/d /c .\mvnw.cmd spring-boot:run' -WorkingDirectory $backend -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $logDir 'web-backend.log') -RedirectStandardError (Join-Path $logDir 'web-backend-error.log')
+        $backendProcess = Start-Process -FilePath $env:ComSpec -ArgumentList '/d /c .\mvnw.cmd clean spring-boot:run' -WorkingDirectory $backend -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $logDir 'web-backend.log') -RedirectStandardError (Join-Path $logDir 'web-backend-error.log')
         $started += $backendProcess
         Wait-Web 'http://localhost:8080/api/dashboard/overview' $backendProcess -Backend
     }

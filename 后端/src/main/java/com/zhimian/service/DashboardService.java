@@ -38,6 +38,7 @@ public class DashboardService {
     private final JobPositionMapper jobMapper;
     private final ResumeMapper resumeMapper;
     private final ReportService reportService;
+    private final ReportEligibilityService eligibility;
 
     public DashboardOverviewResponse getOverview() {
         Long userId = UserContext.getUserId();
@@ -50,11 +51,13 @@ public class DashboardService {
                         .eq(InterviewReport::getUserId, userId)
                         .orderByDesc(InterviewReport::getCreateTime));
         Map<Long, InterviewReport> reportsBySession = new HashMap<>();
+        var valid=eligibility.readySessions(userId,true);
+        reports=reports.stream().filter(report->valid.contains(report.getSessionId())).toList();
         reports.forEach(report -> reportsBySession.put(report.getSessionId(), report));
         Map<Long, JobPosition> jobs = loadJobs(sessions);
 
         DashboardOverviewResponse response = new DashboardOverviewResponse();
-        response.setSummary(buildSummary(sessions, reports, jobs));
+        response.setSummary(buildSummary(sessions.stream().filter(s->valid.contains(s.getId())).toList(), reports, jobs));
         response.setTrend(buildTrend(sessions, reportsBySession));
         response.setRecentInterviews(buildRecent(sessions, reportsBySession, jobs));
         response.setLatestInsight(buildLatestInsight(reports));
@@ -107,17 +110,16 @@ public class DashboardService {
         for (int i = 0; i < 30; i++) days.put(start.plusDays(i), new ArrayList<>());
         for (InterviewSession session : sessions) {
             LocalDate date = eventDate(session);
-            if (!"FINISHED".equals(session.getStatus()) || date == null || date.isBefore(start)) continue;
+            if (!"FINISHED".equals(session.getStatus()) || date == null || date.isBefore(start) || !days.containsKey(date)) continue;
             InterviewReport report = reportsBySession.get(session.getId());
-            days.get(date).add(report == null || report.getTotalScore() == null
-                    ? 0 : report.getTotalScore().doubleValue());
+            if(report != null && report.getTotalScore() != null)days.get(date).add(report.getTotalScore().doubleValue());
         }
         List<DashboardOverviewResponse.TrendDay> result = new ArrayList<>();
         days.forEach((date, scores) -> {
             DashboardOverviewResponse.TrendDay day = new DashboardOverviewResponse.TrendDay();
             day.setDate(date);
             day.setCount(scores.size());
-            day.setAverageScore(round1(scores.stream().filter(score -> score > 0)
+            day.setAverageScore(round1(scores.stream()
                     .mapToDouble(Double::doubleValue).average().orElse(0)));
             result.add(day);
         });

@@ -1,4 +1,4 @@
-import { getDashboardOverview, getJobList } from '../api'
+import { getDashboardOverview, getJobList, getCareerProfile } from '../api'
 
 const STORAGE_KEY = 'offerpilot.learning.session'
 
@@ -104,6 +104,7 @@ export async function loadLearningResources() {
     roles = fallbackRoles()
   }
   try { overview = await getDashboardOverview() } catch { /* Optional context. */ }
+  const profile = await getCareerProfile().catch(() => null)
   return {
     roles,
     families: roleFamilies.map(family => ({ ...family, count: roles.filter(role => role.code?.startsWith(`${family.code}-`)).length })),
@@ -111,6 +112,8 @@ export async function loadLearningResources() {
     recentSession: getStoredSession(),
     currentRole: roles.find(role => role.name === overview?.latestInsight?.jobName || role.name === overview?.recentInterviews?.[0]?.jobName) || null,
     currentFocus: overview?.latestInsight?.weakestDimension || '',
+    preferredRole: roles.find(role => role.id === profile?.targetJobId) || null,
+    preferredCompany: profile?.targetCompany || '',
     libraryCounts: { mistakes: 12, favorites: 8, recent: 5 },
   }
 }

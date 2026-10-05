@@ -29,7 +29,8 @@ __pycache__/
 *.pyc
 
 # ===== 本地配置 / IDE =====
-.claude/settings.local.json
+output/teaching-qa-auth.local.json
+/.claude/
 .idea/
 .vscode/
 *.iml
@@ -53,3 +54,24 @@ Thumbs.db
 !数字人/data/avatars/.gitkeep
 数字人/models/**
 !数字人/models/put models here.txt
+
+# Website-only source control: local design and delivery materials
+/.codex/
+/.impeccable/
+/brand-design/
+/designs/
+/migration-stage2-audit/
+/output/
+/docs/
+/*.docx
+/*.pptx
+/scripts/check-*
+/scripts/seed-teacher-demo.cjs
+/scripts/fixtures/
+/前端/android/
+/前端/assets/
+/前端/capacitor.config.json
+/前端/src/assets/generated/teacher-greeting.png
+
+/DESIGN.md
+/PRODUCT.md

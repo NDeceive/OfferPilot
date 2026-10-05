@@ -1,15 +1,12 @@
 <template>
-  <div class="app-layout">
+  <div class="app-layout" :class="{ 'teacher-shell': isTeacherRoute, 'class-insights-shell': route.path.startsWith('/teacher/classes'), 'training-task-shell': route.path.startsWith('/teacher/tasks') || route.path.startsWith('/teacher/students') || route.path.startsWith('/teacher/analytics') || route.path.startsWith('/teacher/reports') || route.path.startsWith('/teacher/account') }">
     <!-- Top Navigation -->
     <header class="topnav" :class="{ scrolled: isScrolled }">
       <div class="topnav-inner">
         <!-- Logo -->
         <router-link to="/" class="nav-logo">
-          <LogoIcon :size="28" />
-          <span class="nav-logo-text">
-            <span class="brand-cn">智面幻境</span>
-            <span class="brand-en">OfferPilot</span>
-          </span>
+          <BrandLogo :variant="isTeacherRoute ? 'en' : 'cn'" :width="isTeacherRoute ? 185 : 180" />
+          <span v-if="isTeacherRoute" class="brand-en">教师端</span>
         </router-link>
 
         <!-- Main Nav Links -->
@@ -17,11 +14,11 @@
           <router-link
             v-for="item in mainNav"
             :key="item.path"
-            :to="item.path"
+            :to="navTarget(item.path)"
             class="nav-link"
             :class="{ active: isNavActive(item) }"
           >
-            <span class="nav-link-icon" v-html="item.icon"></span>
+            <span v-if="!isTeacherRoute" class="nav-link-icon" v-html="item.icon"></span>
             <span>{{ item.label }}</span>
             <span v-if="item.badge" class="nav-link-badge">{{ item.badge }}</span>
           </router-link>
@@ -29,11 +26,9 @@
 
         <!-- Right Actions -->
         <div class="nav-actions">
-          <router-link to="/member" class="upgrade-pill">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="m4 7 4 4 4-7 4 7 4-4-2 10H6L4 7Z"/><path d="M7 20h10"/>
-            </svg>
-            Pro
+          <router-link :to="isTeacherRoute?'/teacher/messages':'/my/messages'" class="message-trigger" aria-label="消息中心" title="消息中心">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Z"/><path d="M10 21h4"/></svg>
+            <span>消息中心</span>
           </router-link>
           <!-- User Menu -->
           <button
@@ -47,7 +42,8 @@
             @click="toggleUserMenu"
           >
             <div class="user-avatar-sm">
-              <span>{{ userName.charAt(0) }}</span>
+              <img v-if="userStore.avatar" :src="userStore.avatar" alt="" />
+              <span v-else>{{ userName.charAt(0) }}</span>
             </div>
           </button>
 
@@ -55,18 +51,19 @@
           <Transition name="dropdown">
             <div v-if="userMenuOpen" id="user-menu" class="user-dropdown" ref="dropdownRef" role="menu">
               <div class="dropdown-header">
-                <div class="user-avatar-md"><span>{{ userName.charAt(0) }}</span></div>
+                <div class="user-avatar-md"><img v-if="userStore.avatar" :src="userStore.avatar" alt="" /><span v-else>{{ userName.charAt(0) }}</span></div>
                 <div>
                   <div class="dropdown-name">{{ userName }}</div>
                   <div class="dropdown-email">{{ userEmail }}</div>
                 </div>
               </div>
               <div class="dropdown-divider"></div>
-              <router-link to="/profile" class="dropdown-item" @click="userMenuOpen = false">
+              <router-link v-if="!isTeacherRoute" to="/my/classes" class="dropdown-item" @click="userMenuOpen=false">我的班级</router-link>
+              <router-link :to="isTeacherRoute?'/teacher/account':'/profile'" class="dropdown-item" @click="userMenuOpen = false">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                 个人中心
               </router-link>
-              <router-link to="/settings" class="dropdown-item" @click="userMenuOpen = false">
+              <router-link :to="isTeacherRoute?'/teacher/settings':'/settings'" class="dropdown-item" @click="userMenuOpen = false">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.32 9c.26.46.81.77 1.4.77H21a2 2 0 1 1 0 4h-.09c-.59 0-1.14.31-1.4.77z"/></svg>
                 设置
               </router-link>
@@ -103,7 +100,7 @@
           <router-link
             v-for="item in allNav"
             :key="item.path"
-            :to="item.path"
+            :to="navTarget(item.path)"
             class="mobile-nav-link"
             :class="{ active: isNavActive(item) }"
             @click="mobileOpen = false"
@@ -127,11 +124,13 @@
 </template>
 
 <script setup>
+import {teacherContext} from '../../services/teacherContext.js'
+import { getMe } from '../../api'
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import LogoIcon from '../ui/LogoIcon.vue'
 import MobileTabBar from '../../mobile/components/MobileTabBar.vue'
 import { useIsMobile } from '../../mobile/composables/useIsMobile'
+import BrandLogo from '../ui/BrandLogo.vue'
 
 import { useUserStore } from '../../store/user'
 
@@ -173,30 +172,17 @@ const studentNav = [
     label: '学习资源',
     icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg>',
   },
+  {path:'/my/tasks',label:'教学任务',icon:''},
 ]
 
 const teacherNav = [
-  {
-    path: '/teacher',
-    label: '班级概览',
-    icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>',
-  },
-  {
-    path: '/teacher/class',
-    label: '班级管理',
-    icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
-  },
-  {
-    path: '/teacher/tasks',
-    label: '任务发布',
-    icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
-  },
-  {
-    path: '/teacher/reports',
-    label: '报告分析',
-    icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10M6 20V4M18 20v-6"/></svg>',
-  },
+  { path: '/teacher/dashboard', label: '教学总览', activePaths: ['/teacher/activity', '/teacher/training-records', '/teacher/growth', '/teacher/reviews'] },
+  { path: '/teacher/classes', label: '班级洞察' },
+  { path: '/teacher/tasks', label: '训练任务' },
+  { path: '/teacher/students', label: '学生中心' },
+  { path: '/teacher/analytics', label: '数据分析' },
 ]
+const navTarget = path => isTeacherRoute.value ? { path, query: Object.fromEntries(Object.entries(teacherContext(route.query)).filter(([k])=>!k.startsWith('return')&&!k.startsWith('source'))) } : path
 
 const mainNav = computed(() => isTeacherRoute.value ? teacherNav : studentNav)
 const allNav = computed(() => [...(isTeacherRoute.value ? teacherNav : studentNav)])
@@ -237,6 +223,7 @@ function handleLogout() {
 }
 
 onMounted(() => {
+  if (!userStore.profileLoaded) getMe().then(user => { if (user) userStore.syncProfile(user) }).catch(() => {})
   document.addEventListener('click', handleClickOutside)
   document.addEventListener('keydown', handleKeydown)
   window.addEventListener('scroll', handleScroll, { passive: true })
@@ -250,6 +237,7 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.user-avatar-sm img,.user-avatar-md img{width:100%;height:100%;object-fit:cover;border-radius:inherit}
 .app-layout {
   min-height: 100dvh;
   background: var(--surface-primary);
@@ -378,28 +366,11 @@ onUnmounted(() => {
   position: relative;
 }
 
-.upgrade-pill {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-full);
-  background: var(--accent-50);
-  color: var(--accent-700);
-  font-size: 12px;
-  font-weight: 600;
-  text-decoration: none;
-  transition: all var(--duration-fast) var(--ease-out-expo);
-  border: 1px solid var(--accent-200);
-}
-
-.upgrade-pill:hover {
-  background: var(--accent-100);
-  color: var(--accent-800);
-  box-shadow: var(--shadow-accent);
-}
-
 /* User Trigger */
+.message-trigger{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-width:44px;min-height:44px;padding:0 10px;border-radius:8px;color:var(--neutral-600);text-decoration:none;font-size:14px;white-space:nowrap}
+.message-trigger:hover,.message-trigger.router-link-active{background:var(--neutral-100);color:var(--accent-600)}
+.message-trigger:focus-visible{outline:2px solid var(--accent-600);outline-offset:2px}
+@media(max-width:768px){.message-trigger{padding:0}.message-trigger span{display:none}}
 .user-trigger {
   display: grid;
   width: 44px;
@@ -422,7 +393,7 @@ onUnmounted(() => {
   width: 32px;
   height: 32px;
   border-radius: var(--radius-full);
-  background: linear-gradient(135deg, var(--accent-400), var(--accent-600));
+  background: var(--accent-500);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -435,7 +406,7 @@ onUnmounted(() => {
   width: 40px;
   height: 40px;
   border-radius: var(--radius-full);
-  background: linear-gradient(135deg, var(--accent-400), var(--accent-600));
+  background: var(--accent-500);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -598,9 +569,6 @@ onUnmounted(() => {
   .nav-links {
     display: none;
   }
-  .upgrade-pill {
-    display: none;
-  }
   .mobile-menu-btn {
     display: flex;
   }
@@ -624,4 +592,17 @@ onUnmounted(() => {
     margin-left: 0;
   }
 }
+/* Teacher surface overrides only; student layout remains unchanged. */
+.teacher-shell .topnav { background:#fff;backdrop-filter:none; }
+.teacher-shell .topnav-inner { max-width:1920px;padding-inline:clamp(28px,3.75vw,72px); }
+.teacher-shell .main-content { max-width:none;padding-inline:clamp(28px,3.75vw,72px);background:#f8f9f8; }
+.teacher-shell .nav-links { gap:clamp(18px,2.7vw,48px); }
+.teacher-shell .nav-link { font-size:15px; }
+.teacher-shell .brand-cn { font-size:22px; }
+.teacher-shell .brand-en { font-size:12px; }
+.teacher-shell .nav-link.active { background:#e1f3e9;color:#087f60; }
+.teacher-shell .nav-link.active::after { content:none; }
+.class-insights-shell .main-content{background:#fff}
+.training-task-shell .main-content{background:#fff}
+.teacher-shell .nav-link:hover{background:#f0f7f3;color:#087f60}
 </style>

@@ -18,7 +18,12 @@ public class RegisterRequest {
     @Size(min = 6, max = 20, message = "密码长度为 6-20 位")
     private String password;
 
+    @Size(max = 30)
     private String nickname;
+
+    @jakarta.validation.constraints.Email
+    @Size(max = 100)
+    private String email;
 
     // 安全说明：公开注册接口不再接受 role 字段。
     // 任何通过公开注册创建的账号一律为 STUDENT，管理员/教师/企业账号

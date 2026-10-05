@@ -9,7 +9,7 @@
       </div>
 
       <div class="voice-actions">
-        <button type="button" class="btn-ghost" :disabled="disabled" @click="requestSkip">
+        <button v-if="allowSkip" type="button" class="btn-ghost" :disabled="disabled" @click="requestSkip">
           跳过
         </button>
         <button
@@ -49,6 +49,7 @@ import { transcribeSpeech } from '../../api'
 import { useMicrophone } from '../../composables/useMicrophone'
 
 const props = defineProps({
+  allowSkip:{type:Boolean,default:true},
   sessionId: { type: Number, default: null },
   transcript: { type: String, default: '' },
   disabled: { type: Boolean, default: false },

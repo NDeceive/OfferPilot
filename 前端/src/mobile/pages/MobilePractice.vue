@@ -52,6 +52,7 @@ const loading = ref(true)
 const query = ref('')
 const roles = ref([])
 const currentRole = ref(null)
+const preferredCompany = ref('')
 const recentSession = ref(null)
 const selectedTopic = ref('')
 const topics = computed(() => getTopics(currentRole.value))
@@ -61,7 +62,8 @@ const progress = computed(() => Math.min(100, ((recentSession.value?.completed |
 onMounted(async () => {
   const data = await loadLearningResources()
   roles.value = data.roles
-  currentRole.value = data.currentRole || roles.value.find(role => role.code === 'BE-JAVA') || roles.value[0] || null
+  currentRole.value = data.preferredRole || data.currentRole || roles.value.find(role => role.code === 'BE-JAVA') || roles.value[0] || null
+  preferredCompany.value = data.preferredCompany || ''
   recentSession.value = data.recentSession
   selectedTopic.value = getTopics(currentRole.value)[0] || ''
   loading.value = false
@@ -69,7 +71,7 @@ onMounted(async () => {
 
 function continueTraining() { router.push(`/learning/session/${recentSession.value.id}`) }
 function startTopic(topic) {
-  const session = createTrainingSession({ role: currentRole.value, company: '不限公司', topic, trainingMode: 'interview', questionType: topic === '编程与算法' ? 'coding' : 'knowledge', questionCount: 20, difficulty: 'medium' })
+  const session = createTrainingSession({ role: currentRole.value, company: preferredCompany.value || '不限公司', topic, trainingMode: 'interview', questionType: topic === '编程与算法' ? 'coding' : 'knowledge', questionCount: 20, difficulty: 'medium' })
   router.push(`/learning/session/${session.id}`)
 }
 </script>

@@ -39,14 +39,28 @@ const routes = [
   { path: '/learning/session/:sessionId', name: 'TrainingSession', component: () => import('../views/TrainingSession.vue') },
   { path: '/profile', name: 'Profile', component: AdaptiveStudentView, meta: { mobileSurface: 'profile' } },
   { path: '/settings', name: 'Settings', component: () => import('../views/Settings.vue') },
-  { path: '/member', name: 'MemberCenter', component: () => import('../views/MemberCenter.vue') },
+  { path: '/member', redirect: '/home' },
 
-  // Teacher portal
+  ...['/my/classes','/my/tasks','/my/tasks/:id','/my/messages'].map(path=>({path,component:()=>import('../views/TeachingPortal.vue'),meta:{roles:['STUDENT']}})),
+  {path:'/teacher/messages',component:()=>import('../views/TeachingPortal.vue'),meta:{roles:['TEACHER','ADMIN']}},
+
+  // Teacher portal: all new pages retain the existing role guard.
+  { path: '/teacher', redirect: to => ({ path: '/teacher/dashboard', query: to.query }) },
   { path: '/teacher/dashboard', name: 'TeacherDashboard', component: () => import('../views/teacher/TeacherOverview.vue'), meta: { roles: ['TEACHER', 'ADMIN'] } },
-  { path: '/teacher/class', name: 'TeacherClass', component: () => import('../views/teacher/TeacherClass.vue'), meta: { roles: ['TEACHER', 'ADMIN'] } },
-  { path: '/teacher/students/:id', name: 'TeacherStudent', component: () => import('../views/teacher/TeacherStudent.vue'), meta: { roles: ['TEACHER', 'ADMIN'] } },
-  { path: '/teacher/tasks', name: 'TeacherTask', component: () => import('../views/teacher/TeacherTask.vue'), meta: { roles: ['TEACHER', 'ADMIN'] } },
-  { path: '/teacher/reports', name: 'TeacherReport', component: () => import('../views/teacher/TeacherReport.vue'), meta: { roles: ['TEACHER', 'ADMIN'] } },
+  ...['activity', 'training-records', 'growth', 'reviews'].map(surface => ({ path: '/teacher/' + surface, component: () => import('../views/teacher/TeacherWorkspace.vue'), meta: { roles: ['TEACHER', 'ADMIN'], teacherSurface: surface } })),
+  { path: '/teacher/class', redirect: to => ({ path: '/teacher/classes', query: to.query }), meta: { roles: ['TEACHER', 'ADMIN'] } },
+  { path: '/teacher/classes', component: () => import('../views/teacher/ClassInsights.vue'), meta: { roles: ['TEACHER', 'ADMIN'] } },
+  { path: '/teacher/classes/manage', component: () => import('../views/TeachingPortal.vue'), meta: { roles: ['TEACHER', 'ADMIN'] } },
+  { path: '/teacher/classes/:classId', component: () => import('../views/teacher/ClassInsights.vue'), meta: { roles: ['TEACHER', 'ADMIN'] } },
+  { path: '/teacher/classes/:classId/members', component: () => import('../views/teacher/ClassMembers.vue'), meta: { roles: ['TEACHER', 'ADMIN'] } },
+  { path:'/teacher/reports/:id',component:()=>import('../views/teacher/TeacherTrainingReport.vue'),meta:{roles:['TEACHER','ADMIN']} },
+  { path: '/teacher/analytics', component: () => import('../views/teacher/TeacherAnalytics.vue'), meta: { roles: ['TEACHER', 'ADMIN'] } },
+  { path: '/teacher/analytics/abilities', redirect: to => ({ path: '/teacher/analytics', query: { ...to.query, tab: 'roles', roleId: to.query.position || undefined, timeRange: to.query.period || undefined, classIds: to.query.classId || undefined } }), meta: { roles: ['TEACHER', 'ADMIN'] } },
+  ...['/teacher/students', '/teacher/students/:id'].map(path => ({ path, component: () => import('../views/teacher/StudentCenter.vue'), meta: { roles: ['TEACHER', 'ADMIN'] } })),
+  ...['/teacher/tasks', '/teacher/tasks/create', '/teacher/tasks/templates', '/teacher/tasks/:id/edit', '/teacher/tasks/:id'].map(path => ({ path, component: () => import('../views/teacher/TrainingTasks.vue'), meta: { roles: ['TEACHER', 'ADMIN'] } })),
+  { path:'/teacher/reports',redirect:to=>({path:'/teacher/analytics',query:{...to.query,tab:'overview'}}),meta:{roles:['TEACHER','ADMIN']} },
+  { path:'/teacher/account',component:()=>import('../views/teacher/TeacherAccount.vue'),meta:{roles:['TEACHER','ADMIN']} },
+  { path:'/teacher/settings',component:()=>import('../views/Settings.vue'),meta:{roles:['TEACHER','ADMIN']} },
 ]
 
 const router = createRouter({
@@ -84,6 +98,8 @@ router.beforeEach((to, from, next) => {
   if (to.meta.roles) {
     const role = currentRole()
     if (to.meta.roles.includes(role)) {
+      const liveAliases={'/teacher/growth':'/teacher/training-records','/teacher/tasks/templates':'/teacher/tasks/create'}
+      if(to.query.demo!=='1'&&liveAliases[to.path]){next({path:liveAliases[to.path],query:to.query,replace:true});return}
       next()
     } else {
       next('/home')

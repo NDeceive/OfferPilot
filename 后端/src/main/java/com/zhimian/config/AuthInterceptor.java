@@ -15,6 +15,8 @@ import org.springframework.web.servlet.HandlerInterceptor;
 public class AuthInterceptor implements HandlerInterceptor {
 
     private final JwtUtil jwtUtil;
+    private final com.zhimian.mapper.SysUserMapper users;
+    private final com.zhimian.service.AccountTokenService accountTokens;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
@@ -27,13 +29,22 @@ public class AuthInterceptor implements HandlerInterceptor {
             token = token.substring(7);
         }
         Claims claims = token == null ? null : jwtUtil.parseToken(token);
-        if (claims == null) {
+        com.zhimian.entity.SysUser user = null;
+        if (claims != null) {
+            try {
+                user = users.selectById(Long.valueOf(claims.getSubject()));
+                Number version = claims.get("version", Number.class);
+                if (user != null && (!Integer.valueOf(1).equals(user.getStatus()) ||
+                        accountTokens.version(user.getId()) != (version == null ? 0 : version.longValue()))) user = null;
+            } catch (NumberFormatException invalidSubject) { user = null; }
+        }
+        if (user == null) {
             response.setStatus(401);
             response.setContentType("application/json;charset=UTF-8");
             response.getWriter().write("{\"code\":401,\"message\":\"未登录或登录已过期\"}");
             return false;
         }
-        UserContext.set(Long.valueOf(claims.getSubject()), claims.get("role", String.class));
+        UserContext.set(user.getId(), user.getRole());
         return true;
     }
 

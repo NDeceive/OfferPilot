@@ -69,6 +69,10 @@ public class InterviewFlowService {
     private final ReportDimensionMapper dimensionMapper;
     private final ModulePreferenceService modulePreferenceService;
     private final ModuleScoreService moduleScoreService;
+    private final TeachingService teachingService;
+    private final ReportJobService reportJobs;
+    private final InterviewSnapshotService snapshots;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbc;
 
     // 新标签化题库
     private final SkillQuestionMapper skillQuestionMapper;
@@ -108,14 +112,28 @@ public class InterviewFlowService {
 
     // ============================ 1. 开始面试 ============================
 
+    @Transactional
     public InterviewStartResponse start(StartInterviewRequest req) {
+        if (req.getAssignmentId() != null) return startTeaching(req.getAssignmentId());
         Long userId = UserContext.getUserId();
+        Long existing=snapshots.existing(userId,req);
+        if(existing!=null) {
+            var restored=resume(existing);var session=sessionMapper.selectById(existing);
+            var response=new InterviewStartResponse();response.setSessionId(existing);
+            response.setDurationSeconds(session.getDurationSeconds());response.setRemainingSeconds((Integer)restored.get("remainingSeconds"));
+            response.setJobName(snapshots.job(existing,session.getJobId()).getName());
+            response.setFinishable(!STATUS_ONGOING.equals(restored.get("status")));
+            var prompt=(InterviewMessage)restored.get("currentQuestion");
+            if(prompt!=null){var q=new QuestionView();q.setId(prompt.getQuestionId());q.setContent(prompt.getContent());
+                q.setRoundNo(prompt.getRoundNo());q.setAbilityTag(prompt.getAbilityTag());q.setQuestionType(prompt.getQuestionType());response.setQuestion(q);}
+            return response;
+        }
         int difficulty = normalizeDifficulty(req.getDifficulty());
         int duration = (req.getDurationSeconds() != null && req.getDurationSeconds() > 0)
                 ? req.getDurationSeconds() : 1800; // 默认 30 分钟
 
         JobPosition job = jobMapper.selectById(req.getJobId());
-        if (job == null) {
+        if (job == null || !Integer.valueOf(1).equals(job.getStatus())) {
             throw new BizException("岗位不存在");
         }
 
@@ -161,6 +179,7 @@ public class InterviewFlowService {
             log.warn("未收到模块偏好或为空！req.getModulePreferences()={}", req.getModulePreferences());
         }
         sessionMapper.insert(session);
+        snapshots.capture(session.getId(),userId,req,job,resume);
 
         // 保存偏好必须在session.id生成之后
         if (moduleItems != null) {
@@ -179,22 +198,110 @@ public class InterviewFlowService {
         return resp;
     }
 
+    private QuestionView teachingQuestion(long id,String text,int round){var q=new QuestionView();q.setId(id);q.setContent(text);q.setRoundNo(round);q.setAbilityTag("综合能力");q.setQuestionType("SKILL");return q;}
+    private InterviewStartResponse startTeaching(long assignmentId){
+        var task=teachingService.prepareStart(assignmentId);var questions=teachingService.questions(task);
+        var response=new InterviewStartResponse();response.setJobName(String.valueOf(task.get("jobName")));response.setDurationSeconds(((Number)task.get("durationSeconds")).intValue());
+        if(task.get("resumeSessionId")!=null){
+            long sessionId=((Number)task.get("resumeSessionId")).longValue();teachingService.lockSession(sessionId);
+            var session=sessionMapper.selectById(sessionId);response.setRemainingSeconds((int)Math.max(0,response.getDurationSeconds()-java.time.Duration.between(session.getStartTime(),LocalDateTime.now()).getSeconds()));
+            var messages=askedMainMessages(sessionId);var last=messages.get(messages.size()-1);int round=last.getRoundNo();response.setSessionId(sessionId);
+            boolean answered=messageMapper.selectCount(new LambdaQueryWrapper<InterviewMessage>().eq(InterviewMessage::getSessionId,sessionId).eq(InterviewMessage::getRoundNo,round).eq(InterviewMessage::getRole,ROLE_CANDIDATE).eq(InterviewMessage::getMsgType,MSG_ANSWER))>0;
+            if(answered&&round<questions.size()&&response.getRemainingSeconds()>0){saveInterviewerMessage(sessionId,-(long)(round+1),MSG_MAIN,round+1,questions.get(round),"综合能力");response.setQuestion(teachingQuestion(-(round+1),questions.get(round),round+1));}
+            else if(answered&&round>=questions.size())response.setFinishable(true);
+            else response.setQuestion(teachingQuestion(last.getQuestionId(),last.getContent(),round));
+            return response;
+        }
+        var session=new InterviewSession();session.setUserId(UserContext.getUserId());session.setJobId(TeachingService.id(task,"jobId"));session.setDifficulty(((Number)task.get("difficulty")).intValue());session.setDurationSeconds(response.getDurationSeconds());session.setStartTime(LocalDateTime.now());session.setStatus(STATUS_ONGOING);session.setIsRetrain(0);session.setHasModulePreference(1);sessionMapper.insert(session);
+        var capturedRequest=new StartInterviewRequest();capturedRequest.setJobId(session.getJobId());capturedRequest.setDifficulty(session.getDifficulty());capturedRequest.setDurationSeconds(session.getDurationSeconds());snapshots.capture(session.getId(),UserContext.getUserId(),capturedRequest,jobMapper.selectById(session.getJobId()),null);
+        teachingService.snapshotTeaching(session.getId(),task);teachingService.attach(assignmentId,session.getId(),task);saveInterviewerMessage(session.getId(),-1L,MSG_MAIN,1,questions.get(0),"综合能力");response.setSessionId(session.getId());response.setQuestion(teachingQuestion(-1,questions.get(0),1));return response;
+    }
+    @Transactional
+    public void retryTeachingReport(long sessionId) {
+        lockOwnSession(sessionId);
+        if (teachingService.teachingSession(sessionId)) teachingService.retry(sessionId);
+        if (!"FAILED".equals(reportJobs.state(sessionId).get("state")))
+            throw new BizException("报告未失败或已在重试中");
+        reportJobs.retry(sessionId);
+    }
+
     // ============================ 2. 提交回答 ============================
 
+    @Transactional
     public InterviewStep answer(Long sessionId, AnswerRequest req) {
+        lockOwnSession(sessionId);
+        String hash;
+        try {
+            hash = java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256")
+                    .digest(objectMapper.writeValueAsBytes(req)));
+        } catch (Exception failure) { throw new IllegalStateException(failure); }
+        if (req.getRequestId()!=null && !req.getRequestId().isBlank()) {
+            var receipts=jdbc.queryForList("SELECT payload_hash,response_json FROM student_answer_receipt WHERE session_id=? AND request_id=?",sessionId,req.getRequestId());
+            if(!receipts.isEmpty()) {
+                if(!hash.equals(receipts.get(0).get("payload_hash"))) throw new BizException("请求编号已用于另一份回答");
+                try { return objectMapper.readValue((String)receipts.get(0).get("response_json"),InterviewStep.class); }
+                catch(Exception failure){throw new IllegalStateException(failure);}
+            }
+        }
+        var result=answerOnce(sessionId,req);
+        if(req.getRequestId()!=null && !req.getRequestId().isBlank()) {
+            try {
+                jdbc.update("INSERT INTO student_answer_receipt(session_id,request_id,payload_hash,response_json) VALUES (?,?,?,?)",
+                        sessionId,req.getRequestId(),hash,objectMapper.writeValueAsString(result));
+            } catch(com.fasterxml.jackson.core.JsonProcessingException failure){throw new IllegalStateException(failure);}
+        }
+        return result;
+    }
+
+    private InterviewStep answerOnce(Long sessionId, AnswerRequest req) {
+        lockOwnSession(sessionId);
+        teachingService.lockSession(sessionId);
         InterviewSession session = requireOngoingSession(sessionId);
 
-        InterviewMessage parentMain = messageMapper.selectOne(
-                new LambdaQueryWrapper<InterviewMessage>()
-                        .eq(InterviewMessage::getSessionId, sessionId)
-                        .eq(InterviewMessage::getQuestionId, req.getQuestionId())
-                        .eq(InterviewMessage::getRole, ROLE_INTERVIEWER)
-                        .eq(InterviewMessage::getMsgType, MSG_MAIN)
-                        .last("LIMIT 1"));
-        if (parentMain == null) {
-            throw new BizException("该题尚未提问，无法作答");
-        }
+        var askedMain = askedMainMessages(sessionId);
+        if (askedMain.isEmpty()) throw new BizException("该题尚未提问，无法作答");
+        InterviewMessage parentMain = askedMain.get(askedMain.size()-1);
+        if (!java.util.Objects.equals(parentMain.getQuestionId(), req.getQuestionId() == null ? 0L : req.getQuestionId()) ||
+                (req.getRoundNo() != null && !req.getRoundNo().equals(parentMain.getRoundNo())))
+            throw new BizException("只能提交当前问题，请刷新面试进度");
+        if (isTimeExceeded(session)) throw new BizException("训练时间已到，请结束训练并生成报告");
         int round = parentMain.getRoundNo();
+        if (req.isSkipped() && teachingService.teachingSession(sessionId)) throw new BizException("教学任务问题不能跳过");
+        if (!req.isSkipped() && (req.getAnswer() == null || req.getAnswer().isBlank())) throw new BizException("回答内容不能为空");
+
+        if (teachingService.teachingSession(sessionId)) {
+            if(isTimeExceeded(session))throw new BizException("训练时间已到，请结束训练并生成报告");
+            var asked = askedMainMessages(sessionId);
+            if (!parentMain.getId().equals(asked.get(asked.size()-1).getId()))
+                throw new BizException("只能提交当前任务问题");
+            var existing = messageMapper.selectList(new LambdaQueryWrapper<InterviewMessage>()
+                    .eq(InterviewMessage::getSessionId,sessionId).eq(InterviewMessage::getRoundNo,round)
+                    .eq(InterviewMessage::getRole,ROLE_CANDIDATE).eq(InterviewMessage::getMsgType,MSG_ANSWER));
+            if (existing.isEmpty()) saveMessage(sessionId,req.getQuestionId(),round,ROLE_CANDIDATE,MSG_ANSWER,req.getAnswer(),parentMain.getAbilityTag());
+            else if (!existing.get(0).getContent().equals(req.getAnswer())) throw new BizException("本题已提交，请进入下一题");
+            var step = new InterviewStep();
+            step.setNextAction(hasTimeLeft(session) ? ACTION_NEXT : ACTION_FINISHABLE);
+            return step;
+        }
+
+        var roundMessages = messageMapper.selectList(new LambdaQueryWrapper<InterviewMessage>()
+                .eq(InterviewMessage::getSessionId,sessionId).eq(InterviewMessage::getRoundNo,round)
+                .orderByAsc(InterviewMessage::getId));
+        var prompt = roundMessages.stream().filter(m -> ROLE_INTERVIEWER.equals(m.getRole())).reduce((a,b)->b).orElse(parentMain);
+        var previous = roundMessages.stream().filter(m -> ROLE_CANDIDATE.equals(m.getRole()) && m.getId()>prompt.getId()).findFirst().orElse(null);
+        if (req.getQuestionInstanceId()!=null && !req.getQuestionInstanceId().equals(prompt.getId()))
+            throw new BizException("问题已更新，请恢复面试进度");
+        if (previous != null) {
+            if (!java.util.Objects.equals(previous.getContent(), req.isSkipped() ? "[已跳过]" : req.getAnswer()))
+                throw new BizException("本题已提交，请进入下一题");
+            var repeated = new InterviewStep();
+            repeated.setNextAction(hasTimeLeft(session) ? ACTION_NEXT : ACTION_FINISHABLE);
+            return repeated;
+        }
+        if (req.isSkipped()) {
+            saveMessage(sessionId,parentMain.getQuestionId(),round,ROLE_CANDIDATE,"SKIPPED","[已跳过]",parentMain.getAbilityTag());
+            return next(sessionId);
+        }
 
         saveMessage(sessionId, req.getQuestionId(), round, ROLE_CANDIDATE, MSG_ANSWER,
                 req.getAnswer(), parentMain.getAbilityTag());
@@ -208,7 +315,7 @@ public class InterviewFlowService {
         boolean followupExists = messageMapper.selectCount(
                 new LambdaQueryWrapper<InterviewMessage>()
                         .eq(InterviewMessage::getSessionId, sessionId)
-                        .eq(InterviewMessage::getQuestionId, req.getQuestionId())
+                        .eq(InterviewMessage::getRoundNo, round)
                         .eq(InterviewMessage::getMsgType, MSG_FOLLOWUP)) > 0;
 
         InterviewStep step = new InterviewStep();
@@ -236,8 +343,37 @@ public class InterviewFlowService {
 
     // ============================ 3. 下一题 ============================
 
+    @Transactional
     public InterviewStep next(Long sessionId) {
+        lockOwnSession(sessionId);
+        teachingService.lockSession(sessionId);
         InterviewSession session = requireOngoingSession(sessionId);
+        Map<String,Object> teachingTask=teachingService.sessionTask(sessionId);
+        if(teachingTask!=null){
+            var step=new InterviewStep();
+            var questions=teachingService.questions(teachingTask);
+            int count=askedMainMessages(sessionId).size();
+            if(isTimeExceeded(session)||count>=questions.size()){step.setNextAction(ACTION_FINISHABLE);return step;}
+            // Do not skip unanswered task questions or duplicate next requests.
+            var current=askedMainMessages(sessionId).get(count-1);
+            if(messageMapper.selectCount(new LambdaQueryWrapper<InterviewMessage>().eq(InterviewMessage::getSessionId,sessionId).eq(InterviewMessage::getRoundNo,count).eq(InterviewMessage::getRole,ROLE_CANDIDATE).eq(InterviewMessage::getMsgType,MSG_ANSWER))==0){step.setNextAction(ACTION_NEXT);step.setQuestion(teachingQuestion(-count, current.getContent(),count));return step;}
+            saveInterviewerMessage(sessionId,-(long)(count+1),MSG_MAIN,count+1,questions.get(count),"综合能力");
+            step.setNextAction(ACTION_NEXT);step.setQuestion(teachingQuestion(-(count+1),questions.get(count),count+1));return step;
+        }
+        var chronological = messageMapper.selectList(new LambdaQueryWrapper<InterviewMessage>()
+                .eq(InterviewMessage::getSessionId,sessionId).orderByDesc(InterviewMessage::getId).last("LIMIT 1"));
+        if (!chronological.isEmpty() && ROLE_INTERVIEWER.equals(chronological.get(0).getRole())) {
+            var prompt=chronological.get(0); var pending=new InterviewStep();
+            if (MSG_FOLLOWUP.equals(prompt.getMsgType())) {
+                pending.setNextAction(ACTION_FOLLOWUP);pending.setFollowupQuestion(prompt.getContent());
+            } else {
+                pending.setNextAction(ACTION_NEXT); var q=new QuestionView();q.setId(prompt.getQuestionId());
+                q.setContent(prompt.getContent());q.setRoundNo(prompt.getRoundNo());q.setAbilityTag(prompt.getAbilityTag());
+                q.setQuestionType(prompt.getQuestionType());pending.setQuestion(q);
+            }
+            if(isTimeExceeded(session))pending.setNextAction(ACTION_FINISHABLE);
+            return pending;
+        }
         Set<Long> asked = askedMainQuestionIds(sessionId);
 
         InterviewStep step = new InterviewStep();
@@ -248,10 +384,10 @@ public class InterviewFlowService {
             return step;
         }
 
-        Resume resume = resumeService.getMine();
+        Resume resume = snapshots.resume(sessionId,session.getResumeId());
         List<String> userTags = extractTagsFromResume(resume);
         // 合并岗位标签，与start()保持一致，避免仅用用户标签导致候选不足
-        List<String> jobTags = extractTagsFromJob(jobMapper.selectById(session.getJobId()));
+        List<String> jobTags = extractTagsFromJob(snapshots.job(sessionId,session.getJobId()));
         List<SkillQuestion> candidates = candidateQuestionsByTags(
                 jobTags, userTags, session.getDifficulty());
 
@@ -287,53 +423,76 @@ public class InterviewFlowService {
 
     // ============================ 4. 结束面试 ============================
 
+    @Transactional
     public Long finish(Long sessionId) {
-        InterviewSession session = sessionMapper.selectById(sessionId);
-        if (session == null) {
-            throw new BizException("会话不存在");
-        }
-        if (!session.getUserId().equals(UserContext.getUserId())) {
-            throw new BizException("无权操作该会话");
-        }
+        lockOwnSession(sessionId);
+        var session=sessionMapper.selectById(sessionId);
+        if(teachingService.teachingSession(sessionId) && !teachingService.submitted(sessionId)) return sessionId;
         if (!STATUS_FINISHED.equals(session.getStatus())) {
-            session.setStatus(STATUS_FINISHED);
-            if (session.getEndTime() == null) {
-                session.setEndTime(LocalDateTime.now());
-            }
-            sessionMapper.updateById(session);
+            session.setStatus(STATUS_FINISHED);session.setEndTime(LocalDateTime.now());sessionMapper.updateById(session);
+            reportJobs.enqueue(sessionId);
         }
+        return sessionId;
+    }
 
-        // 异步生成报告（不阻塞返回，前端轮询 report-status 接口获取结果）
-        CompletableFuture.runAsync(() -> {
-            try {
-                Long reportId = reportService.generateForSession(session);
-                moduleScoreService.scoreAndUpdateReport(sessionId, reportId);
-                log.info("异步报告生成完成 sessionId={} reportId={}", sessionId, reportId);
-            } catch (Exception e) {
-                log.error("异步报告生成失败 sessionId={}", sessionId, e);
-            }
-        });
+    private void lockOwnSession(long sessionId) {
+        var rows=jdbc.queryForList("SELECT user_id FROM interview_session WHERE id=? FOR UPDATE",Long.class,sessionId);
+        if(rows.isEmpty() || !rows.get(0).equals(UserContext.getUserId())) throw new BizException("无权操作该会话");
+    }
 
-        return sessionId; // 立即返回 sessionId，前端用此轮询报告状态
+    @Transactional
+    public Map<String,Object> resume(long sessionId) {
+        lockOwnSession(sessionId);
+        var session=sessionMapper.selectById(sessionId);
+        int remaining=(int)Math.max(0,session.getDurationSeconds()-java.time.Duration.between(session.getStartTime(),LocalDateTime.now()).getSeconds());
+        if(STATUS_ONGOING.equals(session.getStatus()) && remaining==0) finish(sessionId);
+        var result=new java.util.LinkedHashMap<String,Object>();
+        result.put("sessionId",sessionId);result.put("status",sessionMapper.selectById(sessionId).getStatus());
+        result.put("durationSeconds",session.getDurationSeconds());result.put("remainingSeconds",remaining);
+        var messages=messageMapper.selectList(new LambdaQueryWrapper<InterviewMessage>().eq(InterviewMessage::getSessionId,sessionId).orderByAsc(InterviewMessage::getId));
+        result.put("messages",messages);
+        result.put("currentQuestion",messages.stream().filter(m->ROLE_INTERVIEWER.equals(m.getRole())).reduce((a,b)->b).orElse(null));
+        result.put("answered",!messages.isEmpty() && ROLE_CANDIDATE.equals(messages.get(messages.size()-1).getRole()));
+        result.put("reportState",reportState(sessionId));
+        return result;
     }
 
     /** 检查报告是否已生成完毕（含模块评分） */
     public boolean isReportReady(Long sessionId) {
+        requireOwnSession(sessionId);
+        var teachingState=teachingService.reportState(sessionId);
+        if(teachingState!=null)return Set.of("READY","INVALID").contains(teachingState.get("state"));
         InterviewReport report = reportService.getReportBySession(sessionId);
-        return report != null && report.getOverallMatchScore() != null;
+        return "READY".equals(reportJobs.state(sessionId).get("state"));
     }
 
     /** 获取已就绪的报告 ID */
     public Long getReadyReportId(Long sessionId) {
+        requireOwnSession(sessionId);
         InterviewReport report = reportService.getReportBySession(sessionId);
-        if (report != null && report.getOverallMatchScore() != null) {
+        if (isReportReady(sessionId) && report != null && report.getOverallMatchScore() != null) {
             return report.getId();
         }
         return null;
     }
 
+    private void requireOwnSession(Long sessionId) {
+        var session=sessionMapper.selectById(sessionId);
+        if(session==null||!session.getUserId().equals(UserContext.getUserId()))throw new BizException("无权查看该训练会话");
+    }
+
+    public Map<String,Object> reportState(Long sessionId) {
+        requireOwnSession(sessionId);
+        var state=teachingService.reportState(sessionId);
+        return state==null?reportJobs.state(sessionId):state;
+    }
+
     /** 删除面试会话及其关联数据（消息+报告+维度+追问记录），仅允许操作本人会话 */
+    @Transactional
     public void delete(Long sessionId) {
+        lockOwnSession(sessionId);
+        reportJobs.delete(sessionId);
+        if(teachingService.teachingSession(sessionId))throw new BizException("教学任务记录需保留，不能删除；个人自主训练可正常删除");
         InterviewSession session = sessionMapper.selectById(sessionId);
         if (session == null) {
             throw new BizException("会话不存在");
@@ -346,11 +505,18 @@ public class InterviewFlowService {
         if (report != null) {
             dimensionMapper.delete(new LambdaQueryWrapper<ReportDimension>()
                     .eq(ReportDimension::getReportId, report.getId()));
+            jdbc.update("DELETE FROM interview_module_score WHERE report_id=?",report.getId());
+            jdbc.update("DELETE FROM interview_score_provenance WHERE report_id=?",report.getId());
             reportMapper.deleteById(report.getId());
         }
         followupRecordService.deleteBySession(sessionId);
         messageMapper.delete(new LambdaQueryWrapper<InterviewMessage>()
                 .eq(InterviewMessage::getSessionId, sessionId));
+        jdbc.update("DELETE FROM interview_module_preference WHERE session_id=?",sessionId);
+        jdbc.update("DELETE FROM interview_score_config_snapshot WHERE session_id=?",sessionId);
+        jdbc.update("DELETE FROM student_answer_receipt WHERE session_id=?",sessionId);
+        jdbc.update("DELETE FROM student_interview_snapshot WHERE session_id=?",sessionId);
+        jdbc.update("DELETE FROM interview_training_context WHERE session_id=?",sessionId);
         sessionMapper.deleteById(sessionId);
     }
 
@@ -752,8 +918,8 @@ public class InterviewFlowService {
      * 构建体验式题目 InterviewStep。失败时返回 null，由调用方回退到题库选题。
      */
     private InterviewStep buildExperienceQuestionStep(InterviewSession session, int roundNo) {
-        Resume resume = resumeService.getMine();
-        JobPosition job = jobMapper.selectById(session.getJobId());
+        Resume resume = snapshots.resume(session.getId(),session.getResumeId());
+        JobPosition job = snapshots.job(session.getId(),session.getJobId());
         String jobName = (job != null) ? job.getName() : null;
         if (jobName == null || jobName.isBlank()) jobName = "该岗位";
         // 岗位能力项，用来把体验题的焦点技能框在岗位域内（否则会照着简历报出跑题的技术栈）

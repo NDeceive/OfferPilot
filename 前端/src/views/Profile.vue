@@ -132,6 +132,58 @@
           </div>
           <p class="card-foot">每次点「开始面试」都会建一条记录，中途退出不会自动结束，因此「进行中」会比实际练习次数多。</p>
         </div>
+
+        <!-- Career target -->
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title">求职目标</h2>
+            <span class="card-subtitle">带入面试准备与专项刷题</span>
+          </div>
+          <form class="career-form" @submit.prevent="saveCareer">
+            <label>
+              <span>默认目标岗位</span>
+              <select v-model="career.targetJobId" :disabled="!jobsLoaded">
+                <option :value="null">暂未确定</option>
+                <option v-for="job in jobs" :key="job.id" :value="job.id">{{ job.name || job.title }}</option>
+              </select>
+            </label>
+            <label>
+              <span>求职阶段</span>
+              <select v-model="career.stage">
+                <option value="">暂未选择</option>
+                <option>实习</option>
+                <option>校招</option>
+                <option>社招</option>
+              </select>
+            </label>
+            <label>
+              <span>目标公司（选填）</span>
+              <input v-model.trim="career.targetCompany" maxlength="100" placeholder="例如：正在准备的目标企业" />
+            </label>
+            <details class="career-education">
+              <summary>教育背景（选填）</summary>
+              <label>
+                <span>学校</span>
+                <input v-model.trim="career.school" maxlength="100" autocomplete="organization" />
+              </label>
+              <label>
+                <span>专业</span>
+                <input v-model.trim="career.major" maxlength="100" />
+              </label>
+              <label>
+                <span>毕业年份</span>
+                <input v-model.trim="career.graduationYear" inputmode="numeric" pattern="(?:19|20|21)[0-9]{2}" maxlength="4" placeholder="例如：2027" />
+              </label>
+            </details>
+            <div class="career-actions">
+              <button type="submit" class="career-save" :disabled="careerSaving || !careerLoaded">
+                {{ careerSaving ? '正在保存…' : '保存求职目标' }}
+              </button>
+              <span v-if="careerNotice" class="career-notice" role="status">{{ careerNotice }}</span>
+            </div>
+          </form>
+          <p class="card-foot">保存后，面试准备与专项刷题会默认带入这个方向，每次训练仍可临时调整。</p>
+        </div>
       </div>
     </div>
   </AppLayout>
@@ -139,7 +191,7 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { getInterviewRecords, getMe, getMyResume, getMyStats } from '../api'
+import { getCareerProfile, getInterviewRecords, getJobList, getMe, getMyResume, getMyStats, saveCareerProfile } from '../api'
 import { useUserStore } from '../store/user'
 import AppLayout from '../components/layout/AppLayout.vue'
 
@@ -249,15 +301,40 @@ const jobStats = computed(() => {
     .slice(0, 6) // 岗位族有 32 个，列太长得翻页，取场次最多的前 6 个
 })
 
+/* ---------- 求职目标：保存后喂给 preferredRole / preferredCompany / 预选岗位 ---------- */
+const jobs = ref([])
+const jobsLoaded = ref(false)
+const careerLoaded = ref(false)
+const careerSaving = ref(false)
+const careerNotice = ref('')
+const emptyCareer = () => ({ stage: '', school: '', major: '', graduationYear: '', targetJobId: null, targetCompany: '' })
+const career = ref(emptyCareer())
+
+async function saveCareer() {
+  careerSaving.value = true
+  careerNotice.value = ''
+  try {
+    const saved = await saveCareerProfile(career.value)
+    career.value = { ...emptyCareer(), ...saved }
+    careerNotice.value = '已保存，下次准备时自动带入。'
+  } catch (e) {
+    careerNotice.value = e.message || '保存失败，请重试。'
+  } finally {
+    careerSaving.value = false
+  }
+}
+
 onMounted(async () => {
   loading.value = true
   error.value = ''
-  // 三个请求分开结算：记录只喂日历和岗位表现，它失败不该让整页变成错误态
-  const [meRes, statsRes, resumeRes, recordsRes] = await Promise.allSettled([
+  // 各请求分开结算：记录只喂日历和岗位表现，它失败不该让整页变成错误态
+  const [meRes, statsRes, resumeRes, recordsRes, careerRes, jobsRes] = await Promise.allSettled([
     getMe(),
     getMyStats(),
     getMyResume(),
     getInterviewRecords(),
+    getCareerProfile(),
+    getJobList(),
   ])
 
   if (meRes.status === 'fulfilled') {
@@ -291,6 +368,16 @@ onMounted(async () => {
   }
 
   if (recordsRes.status === 'fulfilled') records.value = recordsRes.value || []
+
+  if (careerRes.status === 'fulfilled') {
+    careerLoaded.value = true
+    career.value = { ...emptyCareer(), ...careerRes.value }
+  }
+
+  if (jobsRes.status === 'fulfilled') {
+    jobsLoaded.value = true
+    jobs.value = Array.isArray(jobsRes.value) ? jobsRes.value : []
+  }
 
   loading.value = false
 })
@@ -351,6 +438,76 @@ onMounted(async () => {
   color: var(--neutral-500);
   line-height: 1.6;
 }
+
+/* Career target */
+.career-form {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.career-form label {
+  display: grid;
+  gap: 6px;
+  font-size: var(--text-sm);
+  color: var(--neutral-600);
+}
+
+.career-form select,
+.career-form input {
+  min-height: 42px;
+  padding: 0 var(--space-3);
+  color: var(--neutral-900);
+  background: var(--surface-elevated);
+  border: 1px solid var(--neutral-200);
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-size: var(--text-sm);
+}
+
+.career-form select:focus-visible,
+.career-form input:focus-visible {
+  outline: 2px solid var(--accent-500);
+  outline-offset: 2px;
+}
+
+.career-education {
+  padding-top: var(--space-3);
+  border-top: 1px dashed var(--neutral-200);
+}
+
+.career-education summary {
+  min-height: 32px;
+  color: var(--neutral-600);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.career-education summary + label {
+  margin-top: var(--space-3);
+}
+
+.career-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.career-save {
+  min-height: 42px;
+  padding: 0 var(--space-4);
+  color: #fff;
+  background: var(--accent-600);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.career-save:hover { background: var(--accent-500); }
+.career-save:disabled { opacity: .5; cursor: not-allowed; }
+.career-notice { font-size: var(--text-sm); color: var(--accent-600); }
 
 .profile-alert {
   margin-bottom: var(--space-4);

@@ -11,13 +11,22 @@
     />
 
     <template v-else>
+      <!-- 教学联动：训练来源筛选，先算「这个来源下有什么」，再看分组与统计 -->
+      <label class="mrec__source">训练来源
+        <select v-model="source" aria-label="训练记录来源">
+          <option value="all">全部训练来源</option>
+          <option value="SELF">自主训练</option>
+          <option value="TEACHING">教学任务</option>
+        </select>
+      </label>
+
       <!-- 概览：把 442 条流水收成三个数，一眼看出练了多少、练得怎么样 -->
       <section v-if="finished.length" class="mrec__stats">
         <div class="mrec__stat-row">
           <MobileScoreRing :value="avgScore" :size="72" :stroke="6" caption="平均分" />
           <div class="mrec__stat-text">
             <strong>{{ finished.length }} 场已完成</strong>
-            <p>最高 {{ maxScore }} 分 · 共 {{ records.length }} 条记录</p>
+            <p>最高 {{ maxScore }} 分 · 共 {{ sourced.length }} 条记录</p>
             <p class="mrec__stat-hint">{{ trendHint }}</p>
           </div>
         </div>
@@ -72,10 +81,12 @@
               </span>
             </header>
 
+            <p class="mrec__origin">{{ record.trainingSource === 'TEACHING' ? `教学任务${record.taskTitle ? ' · ' + record.taskTitle : ''}` : '自主训练' }}</p>
+
             <footer class="mrec__foot">
               <span>{{ statusLabel(record.status) }}</span>
-              <button type="button" :disabled="!record.reportId" @click="view(record)">
-                {{ record.reportId ? '查看报告 →' : '报告生成中' }}
+              <button type="button" :disabled="!record.reportId && !record.assignmentId" @click="view(record)">
+                {{ record.reportId ? '查看报告 →' : record.assignmentId ? '查看任务 →' : (record.status === 'ONGOING' ? '训练进行中' : '报告生成中') }}
               </button>
             </footer>
           </article>
@@ -109,29 +120,35 @@ const records = ref([])
 const loading = ref(true)
 const error = ref(false)
 const active = ref('finished')
+const source = ref('all')
 const visibleCount = ref(PAGE_SIZE)
 const sentinel = ref(null)
 let observer = null
 
-/* ---------------- 分组 ---------------- */
+/* ---------------- 来源与分组 ---------------- */
+/** 教学联动：先按训练来源过滤（自主训练 / 教学任务），分组、统计都以它为底 */
+const sourced = computed(() =>
+  source.value === 'all' ? records.value : records.value.filter((r) => r.trainingSource === source.value)
+)
+
 const finished = computed(() =>
-  records.value
+  sourced.value
     .filter((r) => r.status === 'FINISHED')
     .slice()
     .sort((a, b) => new Date(b.startTime || 0) - new Date(a.startTime || 0))
 )
-const ongoing = computed(() => records.value.filter((r) => r.status === 'ONGOING'))
+const ongoing = computed(() => sourced.value.filter((r) => r.status === 'ONGOING'))
 
 const tabs = computed(() => [
   { value: 'finished', label: '已完成', count: finished.value.length },
   { value: 'ongoing', label: '进行中', count: ongoing.value.length },
-  { value: 'all', label: '全部', count: records.value.length },
+  { value: 'all', label: '全部', count: sourced.value.length },
 ])
 
 const filtered = computed(() => {
   if (active.value === 'finished') return finished.value
   if (active.value === 'ongoing') return ongoing.value
-  return records.value
+  return sourced.value
 })
 
 const visible = computed(() => filtered.value.slice(0, visibleCount.value))
@@ -212,7 +229,7 @@ function observeSentinel() {
 }
 
 watch([() => filtered.value.length, visibleCount, sentinel], () => nextTick(observeSentinel))
-watch(active, () => {
+watch([active, source], () => {
   visibleCount.value = PAGE_SIZE
   window.scrollTo({ top: 0, behavior: 'smooth' })
 })
@@ -223,6 +240,10 @@ function switchTab(value) {
 
 /* ---------------- 展示 ---------------- */
 const emptyCopy = computed(() => {
+  // 记录不为空、但当前来源为空：引导切回全部来源，而不是劝人去开新面试
+  if (records.value.length && !sourced.value.length) {
+    return { title: '这个来源下还没有记录', description: '自主训练与教学任务分开展示，换个来源看看。', action: '查看全部来源', to: null }
+  }
   if (active.value === 'ongoing') {
     return { title: '没有进行中的面试', description: '所有开始的面试都已收尾。', action: '开始新一场', to: '/interview/ai' }
   }
@@ -233,7 +254,8 @@ const emptyCopy = computed(() => {
 })
 
 function onEmptyAction() {
-  router.push(emptyCopy.value.to)
+  if (emptyCopy.value.to) router.push(emptyCopy.value.to)
+  else source.value = 'all'
 }
 
 const STATUS_MAP = {
@@ -250,6 +272,7 @@ function iconBg(record) {
 
 function view(record) {
   if (record.reportId) router.push(`/history/${record.reportId}`)
+  else if (record.assignmentId) router.push(`/my/tasks/${record.assignmentId}`)
 }
 
 function formatDate(value) {
@@ -281,6 +304,31 @@ onUnmounted(disconnect)
 </script>
 
 <style scoped>
+.mrec__source {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 16px;
+  color: var(--m-text-secondary);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.mrec__source select {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 12px;
+  color: var(--m-text);
+  background: var(--m-surface);
+  border: 1px solid var(--m-border);
+  border-radius: var(--m-radius-input);
+  font: inherit;
+  font-size: 13.5px;
+}
+
+.mrec__source select:focus-visible { outline: 2px solid var(--m-primary); outline-offset: 2px; }
+
 .mrec__stats {
   margin-bottom: 20px;
   padding: 18px;
@@ -325,6 +373,7 @@ onUnmounted(disconnect)
 .mrec__title { flex: 1; min-width: 0; }
 .mrec__title h2 { font-size: 15px; line-height: 1.35; overflow-wrap: anywhere; }
 .mrec__title p { margin-top: 4px; color: var(--m-text-tertiary); font-size: 12px; }
+.mrec__origin { margin-top: 10px; color: var(--m-text-tertiary); font-size: 12px; }
 
 .mrec__badge { flex: 0 0 auto; padding: 5px 11px; border-radius: 999px; font-size: 11.5px; font-weight: 700; }
 .mrec__badge.is-ongoing { color: #b66b20; background: var(--m-accent-soft); }

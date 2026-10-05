@@ -45,6 +45,7 @@
 
               <!-- ② 选岗位 -->
               <template v-else-if="stage === 'PICK_JOB'">
+                <button v-if="preferredJob && isReadyJob(preferredJob)" class="primary-btn" @click="pickJob(preferredJob)">使用默认岗位：{{ preferredJob.title }}</button>
                 <div class="chips">
                   <button
                     v-for="f in families"
@@ -160,7 +161,7 @@ import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import AppLayout from '../components/layout/AppLayout.vue'
 import OnlineResumeDialog from '../components/resume/OnlineResumeDialog.vue'
-import { getJobList, getAiStatus, uploadResumeFile, getMyResume, getResumeFileProfile } from '../api'
+import { getJobList, getCareerProfile, getAiStatus, uploadResumeFile, getMyResume, getResumeFileProfile } from '../api'
 import { postSse } from '../utils/sse'
 import { JOB_FAMILIES, mapJobFromBackend, isReadyJob } from '../utils/jobs'
 
@@ -211,6 +212,7 @@ const confirmAct = ref(null)
 
 const jobs = ref([])
 const activeFamily = ref('')
+const preferredJob = ref(null)
 const selectedJob = ref(null)
 const extractedSkills = ref([])
 const uploadedName = ref('')
@@ -710,8 +712,10 @@ const controlsFor = computed(() => {
 
 async function fetchJobs() {
   try {
-    const data = await getJobList()
+    const [data, profile] = await Promise.all([getJobList(), getCareerProfile().catch(() => null)])
     jobs.value = (Array.isArray(data) ? data : []).map(mapJobFromBackend)
+    preferredJob.value = jobs.value.find(job => job.id === profile?.targetJobId) || null
+    if (preferredJob.value && !selectedJob.value) activeFamily.value = preferredJob.value.family
   } catch (e) {
     console.error('Failed to load jobs:', e)
   }
@@ -759,7 +763,7 @@ onUnmounted(() => {
   background: var(--surface-elevated);
   border: 1px solid var(--neutral-200);
   border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-sm);
   overflow: hidden;
 }
 
@@ -784,7 +788,7 @@ onUnmounted(() => {
   width: 38px;
   height: 38px;
   border-radius: var(--radius-full);
-  background: linear-gradient(135deg, var(--accent-400), var(--accent-600));
+  background: var(--accent-500);
   color: #fff;
   display: flex;
   align-items: center;
@@ -872,7 +876,7 @@ onUnmounted(() => {
   width: 30px;
   height: 30px;
   border-radius: var(--radius-full);
-  background: linear-gradient(135deg, var(--accent-400), var(--accent-600));
+  background: var(--accent-500);
   color: #fff;
   display: flex;
   align-items: center;
@@ -901,8 +905,8 @@ onUnmounted(() => {
 }
 
 .bubble--user {
-  background: var(--accent-500);
-  color: #fff;
+  background: var(--accent-50);
+  color: var(--accent-800);
   border-top-right-radius: var(--radius-xs);
 }
 
@@ -923,15 +927,15 @@ onUnmounted(() => {
   height: 5px;
   border-radius: var(--radius-full);
   background: var(--neutral-400);
-  animation: ai-bounce 1.2s infinite ease-in-out;
+  animation: ai-pulse 1.2s infinite ease-in-out;
 }
 
 .dots i:nth-child(2) { animation-delay: 0.15s; }
 .dots i:nth-child(3) { animation-delay: 0.3s; }
 
-@keyframes ai-bounce {
-  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
-  30%           { transform: translateY(-4px); opacity: 1; }
+@keyframes ai-pulse {
+  0%, 60%, 100% { opacity: 0.4; }
+  30%           { opacity: 1; }
 }
 
 .caret {
@@ -981,7 +985,7 @@ onUnmounted(() => {
   font-weight: 600;
   font-family: var(--font-body);
   cursor: pointer;
-  box-shadow: var(--shadow-accent);
+  box-shadow: none;
   transition: all var(--duration-fast) var(--ease-out-quart);
 }
 

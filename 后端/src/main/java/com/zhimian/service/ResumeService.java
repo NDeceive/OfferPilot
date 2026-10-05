@@ -59,8 +59,11 @@ public class ResumeService {
         Long userId = UserContext.getUserId();
         Resume resume = resumeMapper.selectOne(
                 new LambdaQueryWrapper<Resume>().eq(Resume::getUserId, userId).last("LIMIT 1"));
-        if (resume == null) return;
-        List<String> safeTags = (tags == null) ? Collections.emptyList() : tags;
+        if (resume == null) throw new com.zhimian.common.BizException("请先添加简历");
+        if (tags != null && (tags.size() > 30 || tags.stream().anyMatch(tag -> tag == null || tag.trim().isEmpty() || tag.length() > 40))) {
+            throw new com.zhimian.common.BizException("最多 30 个技能标签，每个 1-40 个字符");
+        }
+        List<String> safeTags = tags == null ? Collections.emptyList() : tags.stream().map(String::trim).distinct().toList();
 
         resume.setSkills(toJson(safeTags));
         // keywords 必须跟着一起收窄。出题读的是 skills + keywords 的并集

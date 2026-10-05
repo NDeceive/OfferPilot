@@ -627,7 +627,7 @@ import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppLayout from '../components/layout/AppLayout.vue'
 import JobLogo from '../components/jobs/JobLogo.vue'
-import { getJobList, getModules, getResumeFileProfile, getSkillTags, startInterview, updateResumeTags, uploadResumeFile } from '../api'
+import { getJobList, getCareerProfile, getModules, getResumeFileProfile, getSkillTags, startInterview, updateResumeTags, uploadResumeFile } from '../api'
 
 /* ------------------------------------------------------------------ */
 /*  State                                                              */
@@ -783,17 +783,13 @@ async function fetchJobs() {
   jobsLoading.value = true
   jobsError.value = ''
   try {
-    const data = await getJobList()
+    const [data, profile] = await Promise.all([getJobList(), getCareerProfile().catch(() => null)])
     jobs.value = (Array.isArray(data) ? data : []).map(mapJobFromBackend)
-    // AI 对话页会带 ?job=<code> 过来（AiPrep.vue:611）。必须先落实它，
-    // 否则下面那行默认选中会把它盖掉——列表是异步的，只能在这里比对。
-    const wanted = String(route.query.job || '').trim()
-    const hit = wanted && jobs.value.find(job => job.directionCode === wanted)
-    if (hit) {
-      selectedJob.value = hit
-      activeFamily.value = hit.familyCode
-    } else if (!selectedJob.value && jobs.value.length) {
-      selectedJob.value = jobs.value.find(job => job.familyCode === activeFamily.value) || jobs.value[0]
+    if (!selectedJob.value && jobs.value.length) {
+      const requestedJob = jobs.value.find(job => job.directionCode === route.query.job)
+      selectedJob.value = requestedJob || jobs.value.find(job => job.id === profile?.targetJobId) || jobs.value.find(job => job.familyCode === activeFamily.value) || jobs.value[0]
+      activeFamily.value = selectedJob.value.familyCode
+      if (requestedJob && route.query.from === 'ai' && route.query.step === '2') currentStep.value = 2
     }
   } catch (e) {
     console.error('Failed to load jobs:', e)
@@ -1000,7 +996,10 @@ function simulateExtract() {
 async function fetchSavedResume() {
   try {
     const data = await getResumeFileProfile()
-    if (data?.filename) savedResume.value = data
+    if (data?.filename) {
+      savedResume.value = data
+      if (route.query.from === 'ai') useSavedResume()
+    }
   } catch (_) {
     // Existing resume data is optional.
   }
@@ -1336,7 +1335,7 @@ onUnmounted(() => { if (observer) observer.disconnect() })
 .module-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
 .module-option { position: relative; min-height: 106px; padding: var(--space-4); border: 1px solid var(--neutral-200); border-radius: var(--radius-lg); background: rgba(255,255,255,.74); cursor: pointer; transition: border-color .2s ease, background .2s ease, transform .2s ease; }
 .module-option:hover { border-color: var(--accent-300); transform: translateY(-1px); }
-.module-option.is-selected { border-color: var(--accent-400); background: linear-gradient(145deg, rgba(236,253,245,.95), rgba(255,255,255,.92)); box-shadow: 0 8px 24px rgba(5, 72, 57, .07); }
+.module-option.is-selected { border-color: var(--accent-400); background: var(--surface-mint); box-shadow: 0 8px 24px rgba(5, 72, 57, .07); }
 .module-option.is-disabled { opacity: .48; cursor: not-allowed; transform: none; }
 .module-option input { position: absolute; opacity: 0; pointer-events: none; }
 .module-option__check { position: absolute; right: 12px; top: 12px; width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; background: var(--neutral-100); color: transparent; font-size: 12px; }
@@ -1349,7 +1348,7 @@ onUnmounted(() => { if (observer) observer.disconnect() })
   top: calc(var(--nav-height) + var(--space-6));
   overflow: hidden;
   border-color: #c9ddd4;
-  background: linear-gradient(155deg, #edf6f1 0%, #e2f0e9 100%);
+  background: var(--surface-mint);
   color: #173f34;
   box-shadow: 0 18px 44px rgba(29, 78, 62, .09);
 }
@@ -1723,12 +1722,12 @@ onUnmounted(() => { if (observer) observer.disconnect() })
 
 .duration-wheel__fade--top {
   top: 0;
-  background: linear-gradient(to bottom, color-mix(in srgb, var(--accent-500) 3%, var(--neutral-50)) 20%, transparent);
+  background: linear-gradient(to bottom, var(--surface-mint) 20%, transparent);
 }
 
 .duration-wheel__fade--bottom {
   bottom: 0;
-  background: linear-gradient(to top, color-mix(in srgb, var(--accent-500) 3%, var(--neutral-50)) 20%, transparent);
+  background: linear-gradient(to top, var(--surface-mint) 20%, transparent);
 }
 
 .duration-dialog__range {

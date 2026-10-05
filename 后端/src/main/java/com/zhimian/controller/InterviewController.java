@@ -59,6 +59,17 @@ public class InterviewController {
         return Result.success(flowService.start(req));
     }
 
+    @GetMapping("/{sessionId}/resume")
+    public Result<java.util.Map<String,Object>> resume(@PathVariable long sessionId) {
+        return Result.success(flowService.resume(sessionId));
+    }
+
+    @PostMapping("/{sessionId}/report-retry")
+    public Result<Void> retry(@PathVariable long sessionId) {
+        flowService.retryTeachingReport(sessionId);
+        return Result.success();
+    }
+
     /** 提交回答：保存回答并按规则决定是否追问 */
     @PostMapping("/{sessionId}/answer")
     public Result<InterviewStep> answer(@PathVariable Long sessionId,
@@ -83,7 +94,9 @@ public class InterviewController {
     public Result<java.util.Map<String, Object>> reportStatus(@PathVariable Long sessionId) {
         boolean ready = flowService.isReportReady(sessionId);
         Long reportId = ready ? flowService.getReadyReportId(sessionId) : null;
-        return Result.success(java.util.Map.of("ready", ready, "reportId", reportId != null ? reportId : 0));
+        var status=new java.util.LinkedHashMap<String,Object>(flowService.reportState(sessionId));
+        status.put("ready",ready);status.put("reportId",reportId!=null?reportId:0);
+        return Result.success(status);
     }
 
     /**
