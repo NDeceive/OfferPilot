@@ -67,6 +67,26 @@ OfferPilot/
 - **Maven Wrapper**：仓库内置 `后端/mvnw.cmd`，无需单独安装 Maven
 - **智谱 API Key**：大模型追问与语音转写共用，通过后端环境变量注入；严禁写入前端或仓库
 
+### 配置智谱 API Key（每位使用者自行输入）
+
+1. 在智谱开放平台创建你自己的 API Key，并了解对应模型的计费规则。
+2. Windows 用户运行项目根目录的 `一键启动网页.bat`。首次启动后端且未检测到密钥时，启动窗口会询问是否配置；选择 `Y` 或直接回车，再在隐藏输入框中粘贴密钥。输入不会显示，也不会写入项目文件。选择 `n` 可以跳过，但语音识别不可用。
+3. 启动器会将密钥保存到**当前 Windows 用户环境变量**，供下次启动使用，并传给本次启动的后端。用户环境变量仍是本机可读取的凭据，请只在可信电脑上使用。更换密钥后须重启后端。
+4. 如果手动启动后端，可在同一个 PowerShell 窗口用隐藏输入设置仅当前窗口有效的环境变量，再运行 `cd 后端` 和 `.\mvnw.cmd spring-boot:run`：
+
+   ```powershell
+   $secureKey = Read-Host '智谱 API Key' -AsSecureString
+   $keyPointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureKey)
+   try {
+       $env:ZHIPU_API_KEY = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($keyPointer)
+   } finally {
+       [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($keyPointer)
+       Remove-Variable secureKey, keyPointer -ErrorAction SilentlyContinue
+   }
+   ```
+
+若启动器发现后端已经运行，它不能给正在运行的进程补充密钥；请关闭后端后重新启动。没有配置密钥时，动态追问会回退到 RULE，但语音转写无法使用。**不要把密钥填入前端 `.env`、提交到 GitHub，或发给他人。**
+
 ## 数据库初始化
 
 1. 确保本地 MySQL 8 已启动。
@@ -125,7 +145,7 @@ cd 后端
 - 日志仅输出到控制台。
 - 若未配置 `ZHIPU_API_KEY` 或大模型调用失败，动态追问自动回退到 RULE；语音转写需要有效密钥。
 - 后端会检查 `8010` 端口；数字人未运行时自动启动 `数字人/start_offerpilot_digital_human.bat`。
-- 数字人首次启动会从项目 GitHub Release 下载模型和头像资源，随后创建 Python 3.10 虚拟环境并安装依赖，耗时较长；进度见 `后端/logs/digital-human.log`。
+- 数字人首次启动会从项目 GitHub Release 下载 Wav2Lip 模型、基础头像和当前使用的 `offerpilot_interviewer_v2` 头像资源（这些大文件不进入 Git 历史），随后创建 Python 3.10 虚拟环境并安装依赖，耗时较长；进度见 `后端/logs/digital-human.log`。
 - 后端关闭时，只关闭由本次后端启动的数字人实例。
 - 后端服务地址：`http://localhost:8080`
 

@@ -45,6 +45,52 @@ function Wait-Web([string]$Address, $Process, [switch]$Backend) {
     throw "等待服务启动超时，请查看日志：$logDir"
 }
 
+function Initialize-ZhipuKey([bool]$BackendAlreadyRunning) {
+    $configuredKey = [Environment]::GetEnvironmentVariable('ZHIPU_API_KEY', 'Process')
+    if (-not [string]::IsNullOrWhiteSpace($configuredKey)) { return }
+    $savedKey = [Environment]::GetEnvironmentVariable('ZHIPU_API_KEY', 'User')
+    if (-not [string]::IsNullOrWhiteSpace($savedKey)) {
+        [Environment]::SetEnvironmentVariable('ZHIPU_API_KEY', $savedKey, 'Process')
+        return
+    }
+    if ($SmokeTest) { return }
+
+    if ($BackendAlreadyRunning) {
+        Write-Warning '后端已经运行，无法在当前启动窗口为它注入智谱 API Key。若语音识别提示未配置，请关闭后端，重新运行一键启动网页并按提示输入。'
+        return
+    }
+
+    Write-Host '语音识别和智能追问需要你自己的智谱 API Key；不配置也可启动，但语音识别不可用。'
+    $choice = Read-Host '现在配置智谱 API Key，并仅保存到当前 Windows 用户环境变量供下次启动使用？(Y/n)'
+    if ($choice -match '^[nN]') {
+        Write-Warning '已跳过智谱 API Key 配置；语音识别将不可用。配置方法见 README「配置智谱 API Key」。'
+        return
+    }
+
+    $secureKey = Read-Host '请输入智谱 API Key（输入不会显示）' -AsSecureString
+    $keyPointer = [IntPtr]::Zero
+    try {
+        $keyPointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureKey)
+        $plainKey = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($keyPointer)
+        if ([string]::IsNullOrWhiteSpace($plainKey)) {
+            Write-Warning '未输入 API Key；语音识别将不可用。'
+            return
+        }
+        [Environment]::SetEnvironmentVariable('ZHIPU_API_KEY', $plainKey, 'Process')
+        try {
+            [Environment]::SetEnvironmentVariable('ZHIPU_API_KEY', $plainKey, 'User')
+            Write-Host '智谱 API Key 已保存到当前 Windows 用户环境变量，后端即将使用；不会写入项目文件。' -ForegroundColor Green
+        } catch {
+            Write-Warning '密钥仅对本次启动有效；保存到当前 Windows 用户环境变量失败，请按 README 手动配置。'
+        }
+    } finally {
+        if ($keyPointer -ne [IntPtr]::Zero) {
+            [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($keyPointer)
+        }
+        Remove-Variable plainKey, secureKey -ErrorAction SilentlyContinue
+    }
+}
+
 try {
     Write-Host 'OfferPilot 一键启动' -ForegroundColor Cyan
     Write-Host '首次启动可能需要几分钟，请稍候。'
@@ -52,6 +98,7 @@ try {
     $frontendReady = Test-WebReady $url
     if (-not $backendReady -and (Test-Port 8080)) { throw '8080 端口已被占用，但后端尚未就绪。请检查已有服务后重试。' }
     if (-not $frontendReady -and (Test-Port 5173)) { throw '5173 端口已被占用，但不是就绪的 OfferPilot 网页。请检查已有服务后重试。' }
+    Initialize-ZhipuKey $backendReady
     New-Item -ItemType Directory -Path $logDir -Force | Out-Null
 
     if (-not $backendReady) {

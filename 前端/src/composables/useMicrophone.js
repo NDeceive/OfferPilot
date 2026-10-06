@@ -1,4 +1,5 @@
 import { computed, onUnmounted, ref } from 'vue'
+import { createSilenceAutoSubmit } from './silenceAutoSubmit'
 
 const TARGET_SAMPLE_RATE = 16000
 const SPEECH_THRESHOLD = 0.018
@@ -7,7 +8,7 @@ const MIN_VOICED_MS = 280
 const MAX_SEGMENT_MS = 28000
 const PRE_ROLL_MS = 300
 
-export function useMicrophone({ onSegment } = {}) {
+export function useMicrophone({ onSegment, onAnswerEnd } = {}) {
   const status = ref('idle')
   const level = ref(0)
   const isSpeaking = ref(false)
@@ -25,6 +26,7 @@ export function useMicrophone({ onSegment } = {}) {
   let segmentStartedAt = 0
   let lastVoiceAt = 0
   let voicedDurationMs = 0
+  const autoSubmit = createSilenceAutoSubmit()
 
   const isMicOn = computed(() => status.value === 'open')
   const isRequesting = computed(() => status.value === 'requesting')
@@ -95,6 +97,7 @@ export function useMicrophone({ onSegment } = {}) {
 
   async function openMicrophone() {
     if (!stream) return initializeMicrophone()
+    autoSubmit.reset()
     await audioContext?.resume()
     stream.getAudioTracks().forEach((track) => { track.enabled = true })
     status.value = 'open'
@@ -106,6 +109,7 @@ export function useMicrophone({ onSegment } = {}) {
     if (!stream) return
     if (flush) finishSegment()
     else resetSegment()
+    autoSubmit.reset()
     stream.getAudioTracks().forEach((track) => { track.enabled = false })
     status.value = 'muted'
     isSpeaking.value = false
@@ -128,11 +132,15 @@ export function useMicrophone({ onSegment } = {}) {
     const rms = Math.sqrt(energy / chunk.length)
     level.value = Math.min(1, level.value * 0.62 + rms * 8 * 0.38)
     const hasVoice = rms >= SPEECH_THRESHOLD
+    const answerEnded = autoSubmit.observe({ voiced: hasVoice, frameDurationMs: chunkDurationMs, now })
 
     if (!segmentStartedAt) {
       preRollChunks.push(chunk)
       trimPreRoll(audioContext.sampleRate)
-      if (!hasVoice) return
+      if (!hasVoice) {
+        if (answerEnded) onAnswerEnd?.()
+        return
+      }
 
       segmentStartedAt = now
       lastVoiceAt = now
@@ -150,12 +158,14 @@ export function useMicrophone({ onSegment } = {}) {
       isSpeaking.value = true
     } else if (now - lastVoiceAt >= SILENCE_TO_FINISH_MS) {
       finishSegment()
+      if (answerEnded) onAnswerEnd?.()
       return
     }
 
     if (now - segmentStartedAt >= MAX_SEGMENT_MS) {
       finishSegment()
     }
+    if (answerEnded) onAnswerEnd?.()
   }
 
   function trimPreRoll(inputSampleRate) {
@@ -196,6 +206,7 @@ export function useMicrophone({ onSegment } = {}) {
     requestId++
     if (flush) finishSegment()
     else resetSegment()
+    autoSubmit.reset()
     cleanupAudioGraph()
     status.value = 'idle'
     errorMessage.value = ''

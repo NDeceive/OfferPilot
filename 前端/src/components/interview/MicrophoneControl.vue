@@ -29,7 +29,7 @@
           :style="{ '--voice-level': level }"
           :disabled="isRequesting || disabled"
           :title="statusText"
-          @click="toggleMicrophone"
+          @click="handleToggleMicrophone"
         >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
@@ -44,7 +44,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import { transcribeSpeech } from '../../api'
 import { useMicrophone } from '../../composables/useMicrophone'
 
@@ -60,7 +60,7 @@ const pendingCount = ref(0)
 const recognitionError = ref('')
 let uploadQueue = Promise.resolve()
 let generation = 0
-let submitRequested = false
+const submitRequested = ref(false)
 
 const {
   status,
@@ -72,14 +72,15 @@ const {
   toggleMicrophone,
   muteMicrophone,
   stopMicrophone: stopDevice,
-} = useMicrophone({ onSegment: queueTranscription })
+} = useMicrophone({ onSegment: queueTranscription, onAnswerEnd: requestAutoSubmit })
 
 const errorMessage = computed(() => recognitionError.value || deviceError.value)
 const statusText = computed(() => {
   if (isRequesting.value) return '正在申请麦克风权限...'
+  if (submitRequested.value && pendingCount.value > 0) return '正在等待识别完成后提交...'
   if (pendingCount.value > 0) return '正在识别语音...'
-  if (isSpeaking.value) return '正在讲话，停顿后自动识别'
-  if (isMicOn.value) return '麦克风已开启，请开始回答'
+  if (isSpeaking.value) return '正在讲话，停顿 7 秒后自动提交'
+  if (isMicOn.value) return '麦克风已开启，回答后停顿 7 秒自动提交'
   if (status.value === 'muted') return '麦克风已静音，点击开麦'
   return '点击开启麦克风'
 })
@@ -98,35 +99,53 @@ function queueTranscription(blob, duration) {
     .catch((error) => {
       if (currentGeneration === generation) {
         recognitionError.value = error.response?.data?.message || error.message || '语音识别失败，请重试。'
-        submitRequested = false
+        submitRequested.value = false
       }
     })
-    .finally(() => {
+    .finally(async () => {
       if (currentGeneration !== generation) return
       pendingCount.value = Math.max(0, pendingCount.value - 1)
       if (pendingCount.value === 0) {
         emit('processing', false)
-        if (submitRequested && !recognitionError.value) {
-          submitRequested = false
-          emit('submit')
+        if (submitRequested.value && !recognitionError.value) {
+          submitRequested.value = false
+          await nextTick()
+          if (currentGeneration !== generation) return
+          if (props.transcript.trim()) emit('submit')
+          else recognitionError.value = '没有识别到回答，请重新开麦后再试。'
         }
       }
     })
 }
 
 function requestSubmit() {
-  if (props.disabled) return
-  submitRequested = true
+  if (props.disabled || submitRequested.value) return
+  submitRequested.value = true
   if (isMicOn.value) muteMicrophone()
   if (pendingCount.value === 0) {
-    submitRequested = false
-    emit('submit')
+    submitRequested.value = false
+    if (props.transcript.trim()) emit('submit')
+    else recognitionError.value = '没有识别到回答，请重新开麦后再试。'
   }
+}
+
+function requestAutoSubmit() {
+  // A failed ASR segment must remain recoverable instead of submitting a partial answer.
+  if (recognitionError.value) {
+    muteMicrophone({ flush: false })
+    return
+  }
+  requestSubmit()
+}
+
+function handleToggleMicrophone() {
+  if (!isMicOn.value) recognitionError.value = ''
+  toggleMicrophone()
 }
 
 async function requestSkip() {
   generation++
-  submitRequested = false
+  submitRequested.value = false
   pendingCount.value = 0
   emit('processing', false)
   await stopDevice()
@@ -135,7 +154,7 @@ async function requestSkip() {
 
 async function stopMicrophone() {
   generation++
-  submitRequested = false
+  submitRequested.value = false
   pendingCount.value = 0
   emit('processing', false)
   await stopDevice()

@@ -108,6 +108,12 @@ defineExpose({ stopCamera })
   background: #111827;
 }
 
+.camera-preview:not(.active) {
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+}
+
 .camera-video {
   width: 100%;
   height: 100%;
@@ -123,6 +129,10 @@ defineExpose({ stopCamera })
   padding: 12px;
   color: var(--neutral-400);
   text-align: center;
+}
+
+.camera-preview:not(.active) .camera-placeholder {
+  padding: 0;
 }
 
 .camera-title {
@@ -169,6 +179,11 @@ defineExpose({ stopCamera })
   display: flex;
   justify-content: center;
   gap: 6px;
+}
+
+.camera-preview:not(.active) .camera-actions {
+  position: static;
+  flex: 0 0 auto;
 }
 
 .camera-btn {
