@@ -234,7 +234,7 @@ function applyEmbeddedLayout() {
       #video {
         width: 100% !important;
         height: 100% !important;
-        object-fit: cover !important;
+        object-fit: contain !important;
         object-position: center center !important;
       }
       .status { display: none !important; }

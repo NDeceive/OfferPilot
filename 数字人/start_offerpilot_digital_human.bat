@@ -1,15 +1,8 @@
 @echo off
 cd /d "%~dp0"
 
-if not exist ".\models\wav2lip.pth" (
-  powershell -NoProfile -ExecutionPolicy Bypass -File ".\setup_offerpilot_assets.ps1"
-  if errorlevel 1 exit /b 1
-)
-
-if not exist ".\data\avatars\wav2lip256_avatar1" (
-  powershell -NoProfile -ExecutionPolicy Bypass -File ".\setup_offerpilot_assets.ps1"
-  if errorlevel 1 exit /b 1
-)
+powershell -NoProfile -ExecutionPolicy Bypass -File ".\setup_offerpilot_assets.ps1"
+if errorlevel 1 exit /b 1
 
 set "PYTHON_EXE="
 if exist ".\envs\nerfstream\python.exe" set "PYTHON_EXE=.\envs\nerfstream\python.exe"
@@ -38,4 +31,6 @@ for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":8010" ^| findstr "LISTENING
 
 timeout /t 2 /nobreak >nul
 
-"%PYTHON_EXE%" ".\app.py" --transport webrtc --model wav2lip --listenport 8010
+rem GTX 1650 Ti: batch 4 measured faster than batch 16 and reduces the audio/video queue latency.
+if not defined OFFERPILOT_BATCH_SIZE set "OFFERPILOT_BATCH_SIZE=4"
+"%PYTHON_EXE%" ".\app.py" --transport webrtc --model wav2lip --batch_size %OFFERPILOT_BATCH_SIZE% --listenport 8010

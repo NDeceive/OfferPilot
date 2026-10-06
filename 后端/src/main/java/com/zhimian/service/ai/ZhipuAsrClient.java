@@ -32,7 +32,7 @@ public class ZhipuAsrClient {
 
     public SpeechTranscriptResponse transcribe(byte[] audio, String filename, double duration) {
         if (!properties.isUsable()) {
-            throw new BizException("语音识别尚未配置，请先设置 ZHIPU_API_KEY");
+            throw new BizException("语音识别未配置：请运行“一键启动网页.bat”输入自己的智谱 API Key，然后重启后端；手动配置方法见 README。");
         }
 
         try {
