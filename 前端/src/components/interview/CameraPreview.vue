@@ -1,55 +1,88 @@
 <template>
-  <div class="camera-preview" :class="{ active: isActive }">
-    <video
-      v-show="isActive"
-      ref="videoRef"
-      class="camera-video"
-      autoplay
-      muted
-      playsinline
-    ></video>
-
-    <div v-if="!isActive" class="camera-placeholder">
-      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-        <path d="M23 7l-7 5 7 5V7z"/>
-        <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
-      </svg>
-      <span class="camera-title">摄像头预览</span>
-      <span class="camera-hint">
-        {{ status === 'error' ? errorMessage : '画面仅在本地显示，不会上传' }}
-      </span>
-    </div>
-
-    <span v-if="isActive" class="camera-live">
-      <span class="live-dot"></span>
-      摄像头已开启
-    </span>
-
-    <div class="camera-actions">
+  <div class="camera-preview" :class="{ active: isActive, compact }">
+    <template v-if="compact">
       <button
         type="button"
-        class="camera-btn primary"
+        class="cam-chip"
         :disabled="isRequesting"
+        :title="cameraButtonText"
         @click="toggleCamera"
       >
-        {{ cameraButtonText }}
+        <video
+          v-show="isActive"
+          ref="videoRef"
+          class="camera-video"
+          autoplay
+          muted
+          playsinline
+        ></video>
+        <span v-if="isActive" class="cam-chip-dot"></span>
+        <template v-else>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M23 7l-7 5 7 5V7z"/>
+            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+          </svg>
+          <span class="cam-chip-label">{{ isRequesting ? '开启中…' : '摄像头' }}</span>
+        </template>
       </button>
-      <button
-        v-if="isActive && devices.length > 1"
-        type="button"
-        class="camera-btn"
-        :disabled="isRequesting"
-        @click="switchCamera"
-      >
-        切换设备
-      </button>
-    </div>
+    </template>
+
+    <template v-else>
+      <video
+        v-show="isActive"
+        ref="videoRef"
+        class="camera-video"
+        autoplay
+        muted
+        playsinline
+      ></video>
+
+      <div v-if="!isActive" class="camera-placeholder">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M23 7l-7 5 7 5V7z"/>
+          <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+        </svg>
+        <span class="camera-title">摄像头预览</span>
+        <span class="camera-hint">
+          {{ status === 'error' ? errorMessage : '画面仅在本地显示，不会上传' }}
+        </span>
+      </div>
+
+      <span v-if="isActive" class="camera-live">
+        <span class="live-dot"></span>
+        摄像头已开启
+      </span>
+
+      <div class="camera-actions">
+        <button
+          type="button"
+          class="camera-btn primary"
+          :disabled="isRequesting"
+          @click="toggleCamera"
+        >
+          {{ cameraButtonText }}
+        </button>
+        <button
+          v-if="isActive && devices.length > 1"
+          type="button"
+          class="camera-btn"
+          :disabled="isRequesting"
+          @click="switchCamera"
+        >
+          切换设备
+        </button>
+      </div>
+    </template>
   </div>
 </template>
 
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { useCamera } from '../../composables/useCamera'
+
+defineProps({
+  compact: { type: Boolean, default: false },
+})
 
 const videoRef = ref(null)
 const {
@@ -197,5 +230,66 @@ defineExpose({ stopCamera })
 .camera-btn:disabled {
   cursor: wait;
   opacity: 0.65;
+}
+
+/* 紧凑模式：输入栏里的小摄像头开关（手机端） */
+.camera-preview.compact {
+  background: transparent;
+}
+
+.cam-chip {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 0;
+  overflow: hidden;
+  border: 1.5px dashed var(--neutral-300);
+  border-radius: 12px;
+  background: var(--surface-elevated);
+  color: var(--neutral-500);
+  font: inherit;
+  cursor: pointer;
+}
+
+.cam-chip:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.cam-chip .camera-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+
+.cam-chip-label {
+  font-size: 10px;
+  line-height: 1.1;
+}
+
+.cam-chip-dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent-400);
+  box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.18);
+}
+
+.camera-preview.compact.active .cam-chip {
+  border-style: solid;
+  border-color: var(--accent-400);
+  background: #111827;
 }
 </style>

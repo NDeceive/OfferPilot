@@ -42,6 +42,7 @@
             :text="digitalHumanText"
             :speech-key="digitalHumanSpeechKey"
           />
+          <span class="stage-caption">AI 面试官</span>
         </div>
 
         <section class="question-strip">
@@ -84,7 +85,12 @@
         </Transition>
 
         <div class="input-bar">
-          <button type="button" class="text-answer-toggle" @click="textAnswerOpen=!textAnswerOpen" :aria-expanded="textAnswerOpen">{{textAnswerOpen?'收起文字输入':'文字作答'}}</button>
+          <div class="answer-head">
+            <button type="button" class="text-answer-toggle" @click="textAnswerOpen=!textAnswerOpen" :aria-expanded="textAnswerOpen">{{textAnswerOpen?'收起文字输入':'文字作答'}}</button>
+            <div v-if="isMobile" class="mobile-cam-chip">
+              <CameraPreview ref="cameraPreviewRef" compact />
+            </div>
+          </div>
           <label v-if="textAnswerOpen" class="text-answer">输入回答<textarea v-model="answer" rows="3" maxlength="10000" :disabled="isSubmitting||!sessionId" placeholder="可直接输入，或修改语音识别后的文字，再提交回答。"/></label>
           <MicrophoneControl
             ref="microphoneRef"
@@ -101,7 +107,7 @@
       </div>
 
       <aside class="info-panel">
-        <div class="vr-card">
+        <div v-if="!isMobile" class="vr-card">
           <CameraPreview ref="cameraPreviewRef" />
         </div>
 
@@ -145,9 +151,11 @@ import { startInterview, submitAnswer, getNextQuestion, finishInterview, getRepo
 import CameraPreview from '../components/interview/CameraPreview.vue'
 import DigitalHumanStage from '../components/interview/DigitalHumanStage.vue'
 import MicrophoneControl from '../components/interview/MicrophoneControl.vue'
+import { useIsMobile } from '../mobile/composables/useIsMobile'
 
 const router = useRouter()
 const route = useRoute()
+const isMobile = useIsMobile()
 
 // --- Session state ---
 const sessionId = ref(null)
@@ -766,9 +774,24 @@ async function waitForReport(sid) {
 }
 
 /* Interview V2 — video-first execution workspace */
-.topbar{height:58px;padding:0 28px}.progress-track{top:58px;height:2px}.interview-body{grid-template-columns:minmax(0,1fr) 310px;margin-top:60px;height:calc(100dvh - 60px);background:#fff}.chat-panel{position:relative;padding:14px 16px 10px;gap:10px;background:#fff}.digital-human-stage{min-height:0;flex:1;padding:0;border-radius:16px;background:#e3ebf6}.digital-human-stage :deep(.digital-human){border-radius:16px}.question-strip{display:flex;min-height:76px;flex:0 0 76px;align-items:center;justify-content:space-between;gap:20px;padding:11px 16px;border-radius:13px;background:#f8faf9}.question-strip>div{min-width:0}.question-strip strong{display:block;margin-bottom:4px;color:var(--accent-700);font-size:11px}.question-strip p{display:-webkit-box;margin:0;overflow:hidden;color:var(--neutral-800);font-size:13px;line-height:1.45;-webkit-box-orient:vertical;-webkit-line-clamp:2}.question-strip button{flex:0 0 auto;padding:6px 9px;border:1px solid var(--neutral-200);border-radius:7px;background:#fff;color:var(--neutral-600);font:inherit;font-size:10px;cursor:pointer}.input-bar{height:68px;flex:0 0 68px;padding:5px 4px 0;border-top:1px solid var(--neutral-200);background:#fff}.conversation-scroll{position:absolute;z-index:12;right:16px;bottom:82px;left:16px;max-height:220px;overflow-y:auto;padding:10px 12px;border:1px solid var(--neutral-200);border-radius:12px;background:rgba(255,255,255,.97);box-shadow:0 16px 38px rgba(25,55,45,.12);backdrop-filter:blur(8px)}.conversation-entry{padding:8px 10px}.conversation-entry p{margin:0;font-size:12px}.transcript-enter-active,.transcript-leave-active{transition:opacity 180ms ease,transform 240ms cubic-bezier(.16,1,.3,1)}.transcript-enter-from,.transcript-leave-to{opacity:0;transform:translateY(8px)}.info-panel{height:100%;padding:14px;gap:12px;background:#fbfcfb}.vr-card{position:relative;top:auto;width:100%;aspect-ratio:16/9;border:0;border-radius:14px;background:#f4f5f6}.info-card{padding:16px;border:1px solid rgba(25,80,60,.06);border-radius:14px;background:#f8faf9}.q-num{font-family:inherit;font-size:18px}.q-progress{height:2px}.q-row{padding:4px 0}.ql,.qv{font-size:12px}.eval-list{gap:11px}.eval-track{height:5px}.eval-val{font-family:inherit}.eval-footnote{margin-bottom:0}.timer{font-family:inherit;font-size:17px}.session-tag{font-size:12px}.end-btn{min-height:36px}.ctrl-btn{height:36px}
+.topbar{height:58px;padding:0 28px}.progress-track{top:58px;height:2px}.interview-body{grid-template-columns:minmax(0,1fr) 310px;margin-top:60px;height:calc(100dvh - 60px);background:#fff}.chat-panel{position:relative;padding:14px 16px 10px;gap:10px;background:#fff}.digital-human-stage{min-height:0;flex:1;padding:0;border-radius:16px;background:#e3ebf6}.digital-human-stage :deep(.digital-human){border-radius:16px}.question-strip{display:flex;min-height:76px;flex:0 0 76px;align-items:center;justify-content:space-between;gap:20px;padding:11px 16px;border-radius:13px;background:#f8faf9}.question-strip>div{min-width:0}.question-strip strong{display:block;margin-bottom:4px;color:var(--accent-700);font-size:11px}.question-strip p{display:-webkit-box;margin:0;overflow:hidden;color:var(--neutral-800);font-size:13px;line-height:1.45;-webkit-box-orient:vertical;-webkit-line-clamp:2}.question-strip button{flex:0 0 auto;padding:6px 9px;border:1px solid var(--neutral-200);border-radius:7px;background:#fff;color:var(--neutral-600);font:inherit;font-size:10px;cursor:pointer}.input-bar{height:auto;flex:0 0 auto;padding:5px 4px 0;border-top:1px solid var(--neutral-200);background:#fff}.conversation-scroll{flex:0 0 auto;min-height:0;max-height:220px;overflow-y:auto;padding:10px 12px;border:1px solid var(--neutral-200);border-radius:12px;background:rgba(255,255,255,.97);box-shadow:0 10px 24px rgba(25,55,45,.10)}.conversation-entry{padding:8px 10px}.conversation-entry p{margin:0;font-size:12px}.transcript-enter-active,.transcript-leave-active{transition:opacity 180ms ease,transform 240ms cubic-bezier(.16,1,.3,1)}.transcript-enter-from,.transcript-leave-to{opacity:0;transform:translateY(8px)}.info-panel{height:100%;padding:14px;gap:12px;background:#fbfcfb}.vr-card{position:relative;top:auto;width:100%;aspect-ratio:16/9;border:0;border-radius:14px;background:#f4f5f6}.info-card{padding:16px;border:1px solid rgba(25,80,60,.06);border-radius:14px;background:#f8faf9}.q-num{font-family:inherit;font-size:18px}.q-progress{height:2px}.q-row{padding:4px 0}.ql,.qv{font-size:12px}.eval-list{gap:11px}.eval-track{height:5px}.eval-val{font-family:inherit}.eval-footnote{margin-bottom:0}.timer{font-family:inherit;font-size:17px}.session-tag{font-size:12px}.end-btn{min-height:36px}.ctrl-btn{height:36px}
 
 @media(max-width:1024px){.interview-page{height:auto;min-height:100dvh;overflow:auto}.interview-body{height:auto;min-height:calc(100dvh - 60px);grid-template-columns:1fr;grid-template-rows:auto auto;overflow:visible}.chat-panel{height:calc(100dvh - 60px);min-height:620px}.info-panel{height:auto;display:grid;grid-template-columns:200px 1fr 1fr;border-top:1px solid var(--neutral-200);border-left:0;overflow:visible}.vr-card{width:auto}.conversation-scroll{right:16px}.digital-human-stage{min-height:360px}}
-@media(max-width:700px){.topbar{padding:0 12px}.session-tag{max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.interview-body{margin-top:60px}.chat-panel{height:calc(100dvh - 60px);min-height:600px;padding:9px}.digital-human-stage{min-height:310px}.question-strip{min-height:82px;flex-basis:82px;padding:10px 12px}.question-strip button{display:none}.input-bar{height:72px;min-height:0;flex-basis:72px}.conversation-scroll{right:9px;bottom:84px;left:9px}.info-panel{display:flex;padding:10px;flex-direction:column}.vr-card{width:100%;max-width:none}.topbar-center{position:absolute;left:50%;transform:translateX(-50%)}.session-tag{display:none}}
+@media(max-width:700px){.topbar{padding:0 12px}.session-tag{max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.interview-body{margin-top:60px}.chat-panel{height:calc(100dvh - 60px);min-height:600px;padding:9px}.digital-human-stage{min-height:310px}.question-strip{min-height:82px;flex-basis:82px;padding:10px 12px}.question-strip button{display:none}.input-bar{height:auto;min-height:0;flex-basis:auto}.conversation-scroll{right:9px;bottom:84px;left:9px}.info-panel{display:flex;padding:10px;flex-direction:column}.vr-card{width:100%;max-width:none}.topbar-center{position:absolute;left:50%;transform:translateX(-50%)}.session-tag{display:none}}
 @media(prefers-reduced-motion:reduce){.transcript-enter-active,.transcript-leave-active{transition:none}}
+
+/* 移动端面试布局（断点与 useIsMobile 一致）：数字人缩小置顶，作答区收口到底部 */
+.stage-caption{display:none}
+.answer-head{display:flex;flex-direction:column}
+@media(max-width:767.98px){
+  .digital-human-stage{flex:0 0 auto;min-height:0;display:flex;flex-direction:column;align-items:center;gap:6px;border-radius:0;background:transparent}
+  .digital-human-stage :deep(.digital-human){width:100%;max-width:360px;height:auto;aspect-ratio:1920/768}
+  .stage-caption{display:block;color:var(--neutral-500);font-size:11px;line-height:1}
+  .question-strip{margin-top:auto}
+  .input-bar{gap:8px}
+  .answer-head{flex-direction:row;gap:8px}
+  .answer-head .text-answer-toggle{flex:1;min-height:48px;border:1.5px solid rgba(4,120,87,.32);border-radius:12px;background:#eef7f2;color:var(--primary-600,#047857);font-weight:700;font-size:13px}
+  .text-answer-toggle[aria-expanded="true"]{background:#e2f1e9;border-color:rgba(4,120,87,.5)}
+  .mobile-cam-chip{flex:0 0 auto;display:flex;width:84px}
+}
 </style>
