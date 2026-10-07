@@ -1,6 +1,5 @@
 import { getDashboardOverview, getJobList, getCareerProfile } from '../api'
-
-const STORAGE_KEY = 'offerpilot.learning.session'
+import request from '../utils/request'
 
 const roleSeed = [
   ['BE-JAVA', 'Java后端开发工程师', '后端开发', 'Java / JVM / Spring / 数据库 / 分布式'],
@@ -105,16 +104,17 @@ export async function loadLearningResources() {
   }
   try { overview = await getDashboardOverview() } catch { /* Optional context. */ }
   const profile = await getCareerProfile().catch(() => null)
+  const practice = await request.get('/practice/overview').catch(() => null)
   return {
     roles,
     families: roleFamilies.map(family => ({ ...family, count: roles.filter(role => role.code?.startsWith(`${family.code}-`)).length })),
     companies,
-    recentSession: getStoredSession(),
+    recentSession: practice?.recentSession || null,
     currentRole: roles.find(role => role.name === overview?.latestInsight?.jobName || role.name === overview?.recentInterviews?.[0]?.jobName) || null,
     currentFocus: overview?.latestInsight?.weakestDimension || '',
     preferredRole: roles.find(role => role.id === profile?.targetJobId) || null,
     preferredCompany: profile?.targetCompany || '',
-    libraryCounts: { mistakes: 12, favorites: 8, recent: 5 },
+    libraryCounts: practice?.libraryCounts || { mistakes: 0, favorites: 0, recent: 0 },
   }
 }
 
@@ -131,42 +131,15 @@ export function topicQuestionTypes(topic) {
 }
 
 export function createTrainingSession(config) {
-  const session = {
-    id: Date.now(),
-    ...config,
-    currentQuestionIndex: 0,
-    questionList: [demoQuestion],
-    stage: 'ASK',
-    startedAt: new Date().toISOString(),
-    completed: 0,
-    judgeMode: 'local-demo',
-    code: demoQuestion.starter,
-  }
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(session))
-  return session
+  return request.post('/practice/sessions', {
+    jobId: Number(config.role.id), company: config.company, topic: config.topic,
+    trainingMode: config.trainingMode, questionType: config.questionType,
+    questionCount: config.questionCount, difficulty: config.difficulty,
+  })
 }
 
-export function getTrainingSession(id) {
-  const session = getStoredSession()
-  return session && String(session.id) === String(id) ? session : null
-}
-
-export function saveTrainingSession(session) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(session))
-}
-
-export function runLocalDemo(code, examples = demoQuestion.examples) {
-  const implementsMap = /HashMap|Map\s*</.test(code) && /return\s+new\s+int\s*\[\]/.test(code)
-  if (!implementsMap) {
-    return { mode: 'local-demo', passed: false, message: '本地演示检查未找到完整的 HashMap 解法。它不代表真实 Judge 结果。', cases: [] }
-  }
-  return {
-    mode: 'local-demo', passed: true,
-    message: '以下为本地演示用例检查，非真实 Judge 隐藏测试。',
-    cases: examples.map((item, index) => ({ ...item, name: `示例 ${index + 1}`, output: item.expected, status: '演示通过' })),
-  }
-}
-
-function getStoredSession() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null') } catch { return null }
-}
+export const getTrainingSession = (id) => request.get(`/practice/sessions/${id}`)
+export const answerPracticeQuestion = (sessionId, questionId, answer) => request.post(`/practice/sessions/${sessionId}/questions/${questionId}/answers`, { answer })
+export const runJudgeCode = (sessionId, questionId, sourceCode, language = 'java') => request.post(`/practice/sessions/${sessionId}/questions/${questionId}/run`, { sourceCode, language })
+export const finishTrainingSession = (sessionId) => request.post(`/practice/sessions/${sessionId}/finish`)
+export const togglePracticeFavorite = (questionId) => request.post(`/practice/questions/${questionId}/favorite`)
