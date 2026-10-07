@@ -28,7 +28,7 @@ FORM: Interview-led coding cockpit derived from the supplied reference, preservi
           </section>
 
           <section class="question-panel">
-            <header><div><strong>当前题目</strong><span>{{ question.type === 'coding' ? '编程题' : '知识问答' }}</span><span>{{ question.difficulty }}</span><span>高频</span></div><button type="button" :aria-pressed="favorite" @click="favorite = !favorite">{{ favorite ? '★ 已收藏' : '☆ 收藏' }}</button></header>
+            <header><div><strong>当前题目</strong><span>{{ question.type === 'coding' ? '编程题' : '知识问答' }}</span><span>{{ difficultyLabel(question.difficulty) }}</span><span>高频</span></div><button type="button" :aria-pressed="favorite" @click="toggleFavorite">{{ favorite ? '★ 已收藏' : '☆ 收藏' }}</button></header>
             <h2>{{ question.title }}</h2>
             <p>{{ question.description }}</p>
             <ul><li v-for="item in question.constraints" :key="item">{{ item }}</li></ul>
@@ -48,7 +48,7 @@ FORM: Interview-led coding cockpit derived from the supplied reference, preservi
               <footer v-else><button class="voice-button" type="button" @click="addThought">◉ 说明思路</button><button type="button" @click="showClarify = !showClarify; showHint = false">确认题意</button><button type="button" @click="requestHint">请求提示</button></footer>
             </template>
             <section v-else class="review-panel">
-              <p><b>代码结果</b><span>{{ runResult?.passed ? '本地演示用例已完成' : '未运行真实 Judge' }}</span></p>
+              <p><b>本题结果</b><span>{{ runResult?.passed ? '提交结果已保存' : '尚未通过判题或提交回答' }}</span></p>
               <p><b>做得好的</b><span>能够识别哈希表的空间换时间思路，并完成对应实现。</span></p>
               <p><b>可以加强</b><span>继续练习对平均复杂度和边界条件的完整说明。</span></p>
               <button type="button" @click="nextQuestion">下一题 →</button><button type="button" @click="restartSimilar">再练一道同类题</button>
@@ -57,19 +57,24 @@ FORM: Interview-led coding cockpit derived from the supplied reference, preservi
         </aside>
 
         <section class="coding-column">
-          <div class="editor-card">
+          <div v-if="question.type === 'coding'" class="editor-card">
             <header><select aria-label="编程语言"><option>Java 17</option></select><span>◇ 已载入代码模板</span><nav><button type="button" @click="resetCode">↶ 重置</button><button type="button" @click="toggleEditorHelp">编辑器设置</button></nav></header>
             <MonacoCodeEditor v-model="code" :highlighted-lines="highlightedLines" />
             <footer><button class="run-button" type="button" @click="runCode">▷ 运行代码</button><button class="submit-button" type="button" @click="submitCode">提交代码</button><button type="button" @click="consoleTab = 'input'">{ } 自定义输入</button></footer>
           </div>
+          <div v-else class="editor-card knowledge-editor">
+            <header><span>知识题作答</span><span>提交后将持久化保存，并显示参考答案</span></header>
+            <textarea v-model="knowledgeAnswer" placeholder="请结构化说明你的理解、关键原理与边界条件…"></textarea>
+            <footer><button class="submit-button" type="button" @click="submitKnowledge">提交回答</button></footer>
+          </div>
 
           <section class="console-card" :class="{ collapsed: stage === 'FOLLOW_UP' }">
-            <nav><button v-for="tab in consoleTabs" :key="tab.key" type="button" :class="{ active: consoleTab === tab.key }" @click="consoleTab = tab.key">{{ tab.label }}</button><span v-if="runResult" class="demo-badge">本地演示检查</span></nav>
+            <nav><button v-for="tab in consoleTabs" :key="tab.key" type="button" :class="{ active: consoleTab === tab.key }" @click="consoleTab = tab.key">{{ tab.label }}</button><span v-if="runResult" class="demo-badge">{{ question.type === 'coding' ? 'Judge0 真实判题' : '回答已保存' }}</span></nav>
             <div v-if="consoleTab === 'tests'" class="test-output">
-              <p v-if="!runResult" class="console-empty">点击“运行代码”检查示例。项目尚未接入真实 Judge，不会伪造耗时、内存或隐藏测试结果。</p>
+              <p v-if="!runResult" class="console-empty">{{ question.type === 'coding' ? '点击“运行代码”调用自部署 Judge0 CE。未启用时会明确提示，不会生成伪结果。' : '提交回答后可在这里查看得分与参考答案。' }}</p>
               <template v-else><p class="result-note">{{ runResult.message }}</p><article v-for="item in runResult.cases" :key="item.name"><b>✓ {{ item.name }}</b><span>输入：{{ item.input }}</span><span>输出：{{ item.output }}</span><strong>{{ item.status }}</strong></article></template>
             </div>
-            <div v-else-if="consoleTab === 'input'" class="custom-input"><label for="customInput">自定义输入</label><textarea id="customInput" v-model="customInput" placeholder="nums = [2,7,11,15], target = 9"></textarea><p>未接入 Judge 时仅保存输入，不生成伪执行结果。</p></div>
+            <div v-else-if="consoleTab === 'input'" class="custom-input"><label for="customInput">自定义输入</label><textarea id="customInput" v-model="customInput" placeholder="当前题目的自定义标准输入"></textarea><p>当前版本先执行题目预设用例；自定义输入不会伪造执行结果。</p></div>
             <div v-else class="submission-list"><p v-if="!submissions.length">暂无提交记录。</p><p v-for="item in submissions" :key="item.time"><span>{{ item.time }}</span><b>{{ item.label }}</b></p></div>
           </section>
         </section>
@@ -79,7 +84,7 @@ FORM: Interview-led coding cockpit derived from the supplied reference, preservi
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppLayout from '../components/layout/AppLayout.vue'
 import DigitalHumanStage from '../components/interview/DigitalHumanStage.vue'
@@ -87,7 +92,7 @@ import MicrophoneControl from '../components/interview/MicrophoneControl.vue'
 import JobLogo from '../components/jobs/JobLogo.vue'
 import CompanyLogo from '../components/learning/CompanyLogo.vue'
 import MonacoCodeEditor from '../components/learning/MonacoCodeEditor.vue'
-import { getTrainingSession, runLocalDemo, saveTrainingSession } from '../services/learningResources'
+import { answerPracticeQuestion, finishTrainingSession, getTrainingSession, runJudgeCode, togglePracticeFavorite } from '../services/learningResources'
 import { getJobPresentation } from '../utils/jobPresentation'
 
 const route = useRoute()
@@ -104,6 +109,7 @@ const hintCount = ref(0)
 const consoleTab = ref('tests')
 const runResult = ref(null)
 const customInput = ref('')
+const knowledgeAnswer = ref('')
 const submissions = ref([])
 const speechKey = ref(0)
 const spokenPrompt = ref('')
@@ -115,30 +121,38 @@ const consoleTabs = [{ key: 'tests', label: '测试结果' }, { key: 'input', la
 const clarifyOptions = ['输入一定有解吗？', '可以使用额外空间吗？', '下标顺序有要求吗？']
 const hints = ['遍历数组时，考虑如何快速查找 target - nums[i]。', '用 HashMap 记录已遍历元素的值与下标。', '先查找补数，再将当前元素放入 Map，可避免重复使用同一下标。']
 let timer
-let saveTimer
 
-const question = computed(() => session.value.questionList[session.value.currentQuestionIndex])
-const shortRole = computed(() => session.value.role.name.replace('开发工程师', '').trim())
+const question = computed(() => session.value?.questionList?.[session.value.currentIndex || 0] || session.value?.questionList?.[0] || {})
+const shortRole = computed(() => session.value?.role?.name?.replace('开发工程师', '').trim() || '')
 const rolePresentation = computed(() => { const item = getJobPresentation(session.value?.role || {}); return { iconKey: item.iconKey, tone: item.themeKey } })
 const stageIndex = computed(() => stages.findIndex(item => item.key === stage.value))
 const elapsedLabel = computed(() => `${String(Math.floor(elapsed.value / 60)).padStart(2,'0')}:${String(elapsed.value % 60).padStart(2,'0')}`)
 const currentHint = computed(() => hints[Math.max(0, hintCount.value - 1)] || '')
+const difficultyNames = { 1: '基础', 2: '中等', 3: '困难' }
+const submissionLabels = { ACCEPTED: '判题通过', FAILED: '判题未通过', REVIEWED: '回答已通过', NEEDS_REVIEW: '回答需完善' }
+function difficultyLabel(value) { return difficultyNames[Number(value)] || value || '' }
+function formatSubmission(item = {}) {
+  const time = item.createdAt ? String(item.createdAt).replace('T', ' ').slice(0, 16) : ''
+  let label = submissionLabels[item.status] || item.status || '已提交'
+  if (item.score != null) label += ` · ${item.score}分`
+  return { ...item, time, label }
+}
 const interviewerCaption = computed(() => stage.value === 'FOLLOW_UP' ? '请解释你的复杂度分析与技术取舍。' : '你可以先说一下思路，或者直接开始编写代码。')
 
-onMounted(() => {
-  session.value = getTrainingSession(route.params.sessionId)
-  if (!session.value) { router.replace('/learning'); return }
-  code.value = session.value.code || question.value.starter
-  stage.value = session.value.stage || 'ASK'
-  spokenPrompt.value = dialogue.value[0].text
-  timer = setInterval(() => elapsed.value++, 1000)
-})
-
-watch(code, value => {
-  if (!session.value) return
-  saveLabel.value = '正在保存…'
-  clearTimeout(saveTimer)
-  saveTimer = setTimeout(() => { session.value.code = value; saveTrainingSession(session.value); saveLabel.value = '已自动保存' }, 500)
+onMounted(async () => {
+  try {
+    session.value = await getTrainingSession(route.params.sessionId)
+    if (!session.value?.questionList?.length) { router.replace('/learning'); return }
+    code.value = question.value.starter || ''
+    favorite.value = Boolean(question.value.favorite)
+    submissions.value = (session.value.submissions || []).map(formatSubmission)
+    spokenPrompt.value = question.value.description || dialogue.value[0].text
+    dialogue.value = [{ role: 'ai', text: spokenPrompt.value }]
+    timer = setInterval(() => elapsed.value++, 1000)
+  } catch (error) {
+    alert(error.message || '训练记录读取失败')
+    router.replace('/learning')
+  }
 })
 
 function speak(text) { spokenPrompt.value = text; speechKey.value++ }
@@ -146,28 +160,44 @@ function addThought() { dialogue.value.push({ role: 'me', text: '我准备使用
 function clarify(text) { dialogue.value.push({ role: 'me', text }, { role: 'ai', text: '输入保证有唯一解，可以使用额外空间，返回下标顺序不限。' }); showClarify.value = false; stage.value = 'CODING' }
 function requestHint() { showHint.value = true; showClarify.value = false; nextHint() }
 function nextHint() { if (hintCount.value < hints.length) hintCount.value++ }
-function runCode() { stage.value = 'CODING'; consoleTab.value = 'tests'; runResult.value = runLocalDemo(code.value, question.value.examples) }
-function submitCode() {
-  runCode()
-  submissions.value.unshift({ time: new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}), label: runResult.value.passed ? '本地演示检查完成' : '待继续修改' })
-  if (!runResult.value.passed) { dialogue.value.push({ role: 'ai', text: '当前本地示例检查尚未完成，可以继续检查实现与边界情况。' }); return }
+async function runCode() {
+  stage.value = 'CODING'; consoleTab.value = 'tests'; saveLabel.value = 'Judge0 正在判题…'
+  try {
+    runResult.value = await runJudgeCode(session.value.id, question.value.id, code.value, question.value.language || 'java')
+    submissions.value.unshift({ time: new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}), label: runResult.value.passed ? 'Judge0 判题通过' : 'Judge0 判题未通过' })
+    saveLabel.value = '结果已保存'
+    return runResult.value
+  } catch (error) { saveLabel.value = '判题未完成'; alert(error.message || '在线判题失败'); return null }
+}
+async function submitCode() {
+  const result = await runCode()
+  if (!result) return
+  if (!result.passed) { dialogue.value.push({ role: 'ai', text: '真实 Judge0 用例尚未全部通过，可以继续检查实现与边界情况。' }); return }
   stage.value = 'FOLLOW_UP'
   const followUp = question.value.followUps[0]
   highlightedLines.value = [followUp.lineStart, followUp.lineEnd]
   dialogue.value.push({ role: 'ai', text: followUp.text })
   speak(followUp.text)
-  session.value.stage = stage.value; saveTrainingSession(session.value)
+}
+async function submitKnowledge() {
+  if (!knowledgeAnswer.value.trim()) return alert('请先填写回答')
+  try {
+    const result = await answerPracticeQuestion(session.value.id, question.value.id, knowledgeAnswer.value)
+    runResult.value = { passed: result.passed, message: `${result.message} 得分：${result.score}。参考答案：${result.referenceAnswer}`, cases: [] }
+    stage.value = 'REVIEW'; saveLabel.value = '回答已保存'
+  } catch (error) { alert(error.message || '提交失败') }
 }
 function appendTranscript(text) { transcript.value += text; dialogue.value.push({ role: 'me', text }) }
 function submitVoiceAnswer() { dialogue.value.push({ role: 'ai', text: '回答已记录。哈希表的平均 O(1) 来自哈希定位与良好的冲突控制。' }); finishReview() }
-function finishReview() { stage.value = 'REVIEW'; highlightedLines.value = []; session.value.stage = stage.value; session.value.completed = Math.min(session.value.questionCount, (session.value.completed || 0) + 1); saveTrainingSession(session.value) }
+function finishReview() { stage.value = 'REVIEW'; highlightedLines.value = [] }
 function resetCode() { if (confirm('确定恢复初始代码模板吗？')) code.value = question.value.starter }
 function toggleEditorHelp() { alert('Monaco 已启用语法高亮、自动缩进、括号匹配、搜索与 Tab 缩进。') }
 function nextQuestion() { router.push('/learning') }
 function restartSimilar() { code.value = question.value.starter; stage.value = 'ASK'; runResult.value = null; submissions.value = []; dialogue.value = dialogue.value.slice(0,1) }
-function endTraining() { if (confirm('结束当前训练并返回学习资源吗？')) router.push('/learning') }
+async function toggleFavorite() { try { const result = await togglePracticeFavorite(question.value.id); favorite.value = result.favorite } catch (error) { alert(error.message || '收藏失败') } }
+async function endTraining() { if (!confirm('结束当前训练并返回学习资源吗？')) return; try { await finishTrainingSession(session.value.id) } finally { router.push('/learning') } }
 
-onBeforeUnmount(() => { clearInterval(timer); clearTimeout(saveTimer) })
+onBeforeUnmount(() => { clearInterval(timer) })
 </script>
 
 <style scoped>

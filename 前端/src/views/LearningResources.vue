@@ -176,10 +176,14 @@ function useCurrentContext() { selectedRole.value = currentContext.value; select
 function typeLabel(value) { return ({ all: '全部', knowledge: '知识问答', coding: '编程题' })[value] || '知识问答' }
 function topicHint(topic) { return topic === '编程与算法' ? '算法、数据结构与现场实现' : `聚焦 ${topic} 核心考点` }
 function rolePresentation(role) { const item = getJobPresentation(role || {}); return { iconKey: item.iconKey, tone: item.themeKey } }
-function startTraining() {
+async function startTraining() {
   if (!canStart.value) return
-  const session = createTrainingSession({ role: selectedRole.value, company: selectedCompany.value, topic: selectedTopic.value, trainingMode: trainingMode.value, questionType: questionType.value, questionCount: questionCount.value, difficulty: difficulty.value })
-  router.push(`/learning/session/${session.id}`)
+  try {
+    const session = await createTrainingSession({ role: selectedRole.value, company: selectedCompany.value, topic: selectedTopic.value, trainingMode: trainingMode.value, questionType: questionType.value, questionCount: questionCount.value, difficulty: difficulty.value })
+    router.push(`/learning/session/${session.id}`)
+  } catch (error) {
+    alert(error.message || '训练创建失败，请确认后端题库已初始化。')
+  }
 }
 </script>
 

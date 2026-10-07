@@ -13,6 +13,7 @@
 - **动态追问**：基于智谱 GLM 大模型对考生回答实时生成追问；不可用时自动回退到内置规则（RULE）追问，保证流程不中断。
 - **语音回答**：支持微信通话式开麦/静音、自动分句，并通过 GLM-ASR 转换为可编辑文字。
 - **多维评分报告**：面试结束自动生成五维能力评分（专业知识掌握 / 项目实践表达 / 逻辑表达能力 / 岗位匹配程度 / 动态追问应对），含雷达图与优势 / 不足 / 建议。
+- **专项刷题**：知识题作答、代码提交、收藏与训练历史均按用户持久化保存；编程题可接入自部署 Judge0 CE 进行真实判题。
 - **训练闭环**：历史记录可回看报告，支持针对性复训。
 - **追问记录分析**：持久化每次追问，并提供 AI / RULE 来源占比等统计，便于评估追问质量。
 
@@ -115,6 +116,14 @@ OfferPilot/
    该脚本会创建技能标签、技能题目和题目标签关系表，并导入 57 个标签与 71 道题。
    重复执行会重建这三张技能题库表，但不会删除用户、简历或面试数据。
 
+5. 执行专项刷题的增量迁移（不会删除既有数据）：
+
+   ```powershell
+   mysql -u root -p zhimian < 后端/src/main/resources/db/migration_v5_practice.sql
+   ```
+
+   专项训练会从第 4 步的技能题库抽取知识题，并将每次训练、回答、代码提交和收藏单独保存。
+
 ## 环境变量
 
 后端通过环境变量注入配置，开发环境多数项有安全默认值，**生产环境必须显式注入敏感项**。
@@ -128,6 +137,10 @@ OfferPilot/
 | `ZHIPU_API_KEY` | 智谱 API Key（LLM 与 ASR 共用） | 空（AI 走 RULE，语音转写不可用） | **必须注入，无默认值** |
 | `ZHIPU_LLM_MODEL` | 智谱大模型名称 | `glm-4.7-flash` | 可覆盖 |
 | `ZHIPU_ASR_MODEL` | 智谱语音识别模型 | `glm-asr-2512` | 可覆盖 |
+| `JUDGE_ENABLED` | 是否启用自部署 Judge0 CE | `false` | 按需设为 `true` |
+| `JUDGE_BASE_URL` | 自部署 Judge0 CE 的服务地址 | 空 | 启用判题时必须注入 |
+| `JUDGE_AUTH_TOKEN` | Judge0 网关 `X-Auth-Token`（如有） | 空 | 按需注入 |
+| `JUDGE_LANGUAGE_JAVA` | 当前 Judge0 部署中 Java 17 的 `language_id` | `62` | 部署后用 `/languages` 校验 |
 | `CORS_ALLOWED_ORIGINS` | 允许的前端跨域来源（逗号分隔） | 本地 Vite 地址 | 固定白名单（默认空 = 不放行） |
 | `SPRING_PROFILES_ACTIVE` | 激活的配置 profile | 默认（dev） | 设为 `prod` |
 | `LOG_PATH` | 生产日志输出目录 | 不适用（开发仅控制台） | 默认 `logs`，可覆盖 |
@@ -147,6 +160,7 @@ cd 后端
 - 后端会检查 `8010` 端口；数字人未运行时自动启动 `数字人/start_offerpilot_digital_human.bat`。
 - 数字人首次启动会从项目 GitHub Release 下载 Wav2Lip 模型、基础头像和当前使用的 `offerpilot_interviewer_v2` 头像资源（这些大文件不进入 Git 历史），随后创建 Python 3.10 虚拟环境并安装依赖，耗时较长；进度见 `后端/logs/digital-human.log`。
 - 后端关闭时，只关闭由本次后端启动的数字人实例。
+- Judge0 默认关闭，因此不会改变已部署服务的网络行为。启用前请在独立 Linux/容器环境部署 Judge0 CE，并通过它的 `/languages` 接口确认 Java 的 `language_id`；不要使用公共判题实例处理用户代码。
 - 后端服务地址：`http://localhost:8080`
 
 ## 后端启动 — 生产环境（prod profile）

@@ -37,6 +37,12 @@ ai:
 asr:
   api-key: ${ZHIPU_API_KEY}
 
+# 仅部署自有 Judge0 CE 后再显式打开；留空/false 不影响既有线上服务。
+judge:
+  enabled: ${JUDGE_ENABLED:false}
+  base-url: ${JUDGE_BASE_URL:}
+  auth-token: ${JUDGE_AUTH_TOKEN:}
+
 # 生产环境默认由进程管理器或容器编排数字人服务；需要同机拉起时可显式开启。
 digital-human:
   launcher:
