@@ -18,22 +18,41 @@
         </div>
       </div>
       <div class="topbar-right">
-        <button v-if="!route.query.assignmentId" class="ctrl-btn" @click="togglePause" :title="isPaused ? '继续' : '暂停'">
+        <button type="button" class="camera-toggle-btn" :class="{ 'is-active': liveExpression.cameraActive }" :aria-pressed="!!liveExpression.cameraActive" :disabled="liveExpression.requesting || expressionEnding" :aria-label="liveExpression.cameraActive ? '关闭摄像头' : '打开摄像头'" :title="liveExpression.cameraActive ? '关闭摄像头' : '打开摄像头'" @click="liveExpression.cameraActive ? cameraPreviewRef?.stopCamera() : cameraPreviewRef?.startCamera()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="12" height="14" rx="2"/><path d="m15 10 6-4v12l-6-4"/></svg>
+          <span class="camera-label-desktop">{{ liveExpression.requesting ? '正在打开…' : liveExpression.cameraActive ? '关闭摄像头' : '打开摄像头' }}</span><span class="camera-label-mobile">{{ liveExpression.requesting ? '打开中…' : liveExpression.cameraActive ? '关摄像头' : '开摄像头' }}</span>
+        </button>
+        <button v-if="!route.query.assignmentId" class="ctrl-btn" :disabled="pauseChanging || expressionEnding || isSubmitting || isSpeechProcessing" @click="togglePause" :aria-label="isPaused ? '继续面试' : '暂停面试'" :title="isPaused ? '继续' : '暂停'">
           <svg v-if="!isPaused" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>
           </svg>
           <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polygon points="5 3 19 12 5 21 5 3"/>
           </svg>
+          <span class="pause-label">{{ isPaused ? '继续' : '暂停' }}</span>
         </button>
-        <button class="end-btn" @click="endInterview">结束面试</button>
+        <button class="end-btn" :disabled="expressionEnding" @click="endInterview">{{ sessionFinished ? '已结束' : expressionEnding ? '正在结束…' : '结束面试' }}</button>
       </div>
     </header>
 
     <div class="progress-track">
       <div class="progress-fill" :style="{ width: progressPercent + '%' }"></div>
     </div>
-
+    <div v-if="sessionFinished" class="mobile-expression-status completion-status" role="status"><strong>面试已结束</strong><span>报告后台生成中</span><button type="button" @click="leaveFinishedInterview">查看面试记录</button></div>
+    <div v-else class="mobile-expression-status" role="status">
+      <div class="expression-status-content"><span v-if="finishError" class="finish-error">{{ finishError }}</span><span>当前表情</span><strong>{{ liveExpression.label }}</strong><span v-if="liveExpression.probability != null">{{ Math.round(liveExpression.probability * 100) }}%</span><span v-if="liveExpression.state !== 'active'" class="live-expression-detail">{{ liveExpression.status }}</span></div>
+      <details class="camera-tools"><summary>设备与记录 <span aria-hidden="true">⌄</span></summary><div>
+        <strong class="settings-heading">设备设置</strong>
+        <p v-if="liveExpression.cameraError">{{ liveExpression.cameraError }}</p>
+        <button v-if="liveExpression.cameraActive && liveExpression.deviceCount > 1" type="button" @click="cameraPreviewRef?.switchCamera()">切换摄像头</button>
+        <p v-else>使用当前默认摄像头</p>
+        <button v-if="liveExpression.state === 'error'" type="button" @click="cameraPreviewRef?.retryExpressions()">重试表情识别</button>
+        <button v-if="liveExpression.state === 'syncing'" type="button" @click="syncExpressionClock">重新同步时间</button>
+        <strong class="settings-heading">表情记录</strong>
+        <p>仅保存分类概率与时间，画面在本地处理。</p>
+        <ExpressionUploadStatus ref="expressionUploadRef" :session-id="sessionId" />
+      </div></details>
+    </div>
     <div class="interview-body">
       <div class="chat-panel">
         <div class="digital-human-stage" aria-label="AI 面试官视频">
@@ -84,19 +103,25 @@
             ref="microphoneRef"
             :session-id="sessionId"
             :transcript="answer"
-            :disabled="isSubmitting||!sessionId"
+            :disabled="isSubmitting || isPaused || pauseChanging || expressionEnding || needsNextQuestion || !sessionId"
+            :paused="isPaused || pauseChanging"
             :allow-skip="!route.query.assignmentId"
             @transcript="appendSpeechTranscript"
             @processing="isSpeechProcessing = $event"
             @submit="submitAnswerFn"
             @skip="skipQuestion"
           />
+          <button v-if="needsNextQuestion" type="button" class="next-question-retry" :disabled="isSubmitting" @click="recoverNextQuestion">{{ isSubmitting ? '正在恢复…' : '回答已保存，重试加载下一题' }}</button>
         </div>
       </div>
 
       <aside class="info-panel">
-        <div class="vr-card">
-          <CameraPreview ref="cameraPreviewRef" />
+        <div class="camera-module">
+          <CameraPreview ref="cameraPreviewRef" :session-id="sessionId" :question-id="currentQuestionId"
+            :round-no="currentQuestion" :paused="isPaused || pauseChanging || isSubmitting || expressionEnding || needsNextQuestion" :server-offset="serverOffset" :clock-ready="clockReady"
+            @expression-sample="recordExpression" @expression-state="liveExpression = $event" @retry-clock="syncExpressionClock">
+
+          </CameraPreview>
         </div>
 
         <div class="info-card">
@@ -135,7 +160,9 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { startInterview, submitAnswer, getNextQuestion, finishInterview, getReportStatus, getSessionMessages } from '../api'
+import { pollInterviewReport } from '../utils/interviewCompletion'
+import { startInterview, submitAnswer, getNextQuestion, finishInterview as finishInterviewRequest, getExpressionContext, setInterviewPaused, getReportStatus, getInterviewResume } from '../api'
+import ExpressionUploadStatus from '../components/interview/ExpressionUploadStatus.vue'
 import CameraPreview from '../components/interview/CameraPreview.vue'
 import DigitalHumanStage from '../components/interview/DigitalHumanStage.vue'
 import MicrophoneControl from '../components/interview/MicrophoneControl.vue'
@@ -163,6 +190,55 @@ const microphoneRef = ref(null)
 const digitalHumanRef = ref(null)
 const digitalHumanText = ref('')
 const digitalHumanSpeechKey = ref(0)
+const expressionEnding = ref(false)
+const sessionFinished=ref(false), finishError=ref('')
+let finishPromise, reportWaitPromise
+const expressionUploadRef = ref(null)
+const serverOffset = ref(0)
+const clockReady = ref(false)
+const pauseChanging = ref(false)
+const needsNextQuestion = ref(false)
+const liveExpression = ref({ label: '等待开启' })
+let pendingAnswerRequest = null
+let pendingSkipRequest = null
+watch(sessionId, sid => { if (sid) syncExpressionClock() })
+async function syncExpressionClock() {
+  clockReady.value = false
+  const sid = sessionId.value
+  if (!sid) return
+  const before = Date.now()
+  try {
+    const context = await getExpressionContext(sid)
+    if (sid !== sessionId.value) return
+    serverOffset.value = context.serverTime - (before + Date.now()) / 2
+    clockReady.value = true
+  } catch (error) { console.warn('Expression clock sync failed', error) }
+}
+function recordExpression(sample) {
+  if (expressionEnding.value) return
+  expressionUploadRef.value?.add(sample)
+}
+function finishInterview(sid) {
+  if (finishPromise) return finishPromise
+  if (sessionFinished.value) return Promise.resolve(sid)
+  expressionEnding.value=true; finishError.value=''
+  finishPromise=(async()=>{
+    try {
+      try { cameraPreviewRef.value?.stopExpressions() } catch(error) { console.warn('Stop sampling failed',error) }
+      try { Promise.resolve(expressionUploadRef.value?.flush()).catch(error=>console.warn('Expression upload deferred',error)) } catch(error) { console.warn('Expression upload deferred',error) }
+      try { await finishInterviewRequest(sid) }
+      catch(error) {
+        // The server may have committed even when its response was lost.
+        let state
+        try { state=await getInterviewResume(sid,{timeout:3000}) } catch {}
+        if(state?.status!=='FINISHED')throw error
+      }
+      sessionFinished.value=true
+      return sid
+    } catch(error) { expressionEnding.value=false; finishError.value='结束结果暂未确认，请检查网络后重试。'; throw error }
+  })().finally(()=>{ finishPromise=null })
+  return finishPromise
+}
 
 const questionTypes = ref([])
 const questionDifficulties = ref([])
@@ -186,7 +262,7 @@ let timerInterval = null
 let autoFinished = false
 
 watch([timeLeft, isSubmitting], ([seconds, submitting]) => {
-  if (seconds <= 0 && sessionId.value && !submitting && !autoFinished) {
+  if (seconds <= 0 && sessionId.value && !submitting && !autoFinished && !expressionEnding.value) {
     autoFinished = true
     autoFinishInterview()
   }
@@ -210,23 +286,32 @@ onMounted(async () => {
     if (existingSessionId) {
       sessionId.value = existingSessionId
       jobTitle.value = String(route.query.jobName || '模拟面试')
-      const routeQuestion = String(route.query.question || '').trim()
-      if (routeQuestion) {
-        currentQuestionId.value = Number(route.query.questionId) || null
-        questionTypes.value.push(mapQuestionType(route.query.questionType))
-        questionDifficulties.value.push(difficultyLabels[route.query.questionDifficulty] || '中等')
-        questionSkills.value.push(String(route.query.questionSkill || '综合能力'))
-        messages.value.push({ role: 'ai', text: routeQuestion, followup: false })
-        speakQuestion(routeQuestion)
-      } else {
-        const history = await getSessionMessages(existingSessionId)
-        const records = Array.isArray(history) ? history : []
-        const firstQuestion = records.find(item => item.role === 'INTERVIEWER' && item.msgType === 'MAIN')
-        if (firstQuestion) {
-          currentQuestionId.value = firstQuestion.questionId
-          messages.value.push({ role: 'ai', text: firstQuestion.content, followup: false })
-          speakQuestion(firstQuestion.content)
-        }
+      const resumed = await getInterviewResume(existingSessionId)
+      if (resumed.status !== 'ONGOING') autoFinished = true
+      totalDuration.value = resumed.durationSeconds || durationSeconds
+      timeLeft.value = resumed.remainingSeconds ?? totalDuration.value
+      isPaused.value = !!resumed.paused
+      if (resumed.status !== 'ONGOING') {
+        expressionEnding.value = true
+        releaseMediaDevices()
+        expressionUploadRef.value?.flush()
+        await waitForReport(existingSessionId)
+        return
+      }
+      const prompt = resumed.currentQuestion
+      const records = resumed.messages || []
+      messages.value = records.map(item => ({ role: item.role === 'INTERVIEWER' ? 'ai' : 'user', text: item.content, followup: item.msgType === 'FOLLOWUP' }))
+      for (const item of records.filter(item => item.role === 'INTERVIEWER' && item.msgType === 'MAIN')) {
+        const index = (item.roundNo || 1) - 1
+        questionTypes.value[index] = mapQuestionType(item.msgType)
+        questionDifficulties.value[index] = '中等'
+        questionSkills.value[index] = item.abilityTag || '综合能力'
+      }
+      if (prompt) {
+        currentQuestion.value = prompt.roundNo || 1
+        currentQuestionId.value = prompt.questionId
+        if (resumed.answered) { needsNextQuestion.value = true; await recoverNextQuestion() }
+        else if (!isPaused.value) speakQuestion(prompt.content)
       }
       return
     }
@@ -281,7 +366,7 @@ function formatTime(seconds) {
 
 // --- Submit answer via API ---
 async function submitAnswerFn() {
-  if (!answer.value.trim() || isSubmitting.value || isSpeechProcessing.value || !sessionId.value) return
+  if (!answer.value.trim() || isSubmitting.value || isSpeechProcessing.value || isPaused.value || expressionEnding.value || needsNextQuestion.value || !sessionId.value) return
   const userAnswer = answer.value.trim()
 
   // Push user message
@@ -293,10 +378,13 @@ async function submitAnswerFn() {
   scrollToBottom()
 
   try {
+    if (!pendingAnswerRequest || pendingAnswerRequest.answer !== userAnswer || pendingAnswerRequest.roundNo !== currentQuestion.value) {
+      pendingAnswerRequest = { questionId: currentQuestionId.value, roundNo: currentQuestion.value, answer: userAnswer, requestId: crypto.randomUUID() }
+    }
     const res = await submitAnswer(sessionId.value, {
-      questionId: currentQuestionId.value,
-      answer: userAnswer,
+      ...pendingAnswerRequest,
     })
+    pendingAnswerRequest = null
 
     isAiTyping.value = false
 
@@ -311,6 +399,7 @@ async function submitAnswerFn() {
       })
       speakQuestion(followupText)
     } else if (res.nextAction === 'NEXT') {
+      needsNextQuestion.value = true
       // Fetch the next question from the server
       try {
         const nextRes = await getNextQuestion(sessionId.value)
@@ -321,7 +410,8 @@ async function submitAnswerFn() {
           return
         }
         if (nextRes.question) {
-          currentQuestion.value++
+          needsNextQuestion.value = false
+          currentQuestion.value = nextRes.question.roundNo || currentQuestion.value + 1
           currentQuestionId.value = nextRes.question.id
           questionTypes.value.push(mapQuestionType(nextRes.question.type))
           questionDifficulties.value.push(difficultyLabels[nextRes.question.difficulty] || '中等')
@@ -359,7 +449,7 @@ async function submitAnswerFn() {
         console.error('Failed to finish interview:', finishErr)
         messages.value.push({
           role: 'ai',
-          text: '面试结束但报告生成失败，你可以稍后在面试记录中查看。',
+          text: sessionFinished.value ? '面试已结束，你可以稍后在面试记录中查看报告。' : '结束结果暂未确认，请检查网络后再次点击结束面试。',
           followup: false,
         })
       }
@@ -386,21 +476,28 @@ async function submitAnswerFn() {
 }
 
 async function skipQuestion() {
-  if (isSubmitting.value || isSpeechProcessing.value || !sessionId.value) return
+  if (isSubmitting.value || isSpeechProcessing.value || isPaused.value || expressionEnding.value || needsNextQuestion.value || !sessionId.value) return
   isSubmitting.value = true
   isAiTyping.value = true
   scrollToBottom()
 
   try {
-    const res = await submitAnswer(sessionId.value, {
+    if (!pendingSkipRequest || pendingSkipRequest.roundNo !== currentQuestion.value) pendingSkipRequest = {
       questionId: currentQuestionId.value,
+      roundNo: currentQuestion.value,
+      skipped: true,
+      requestId: crypto.randomUUID(),
       answer: '',
-    })
+    }
+    let res = await submitAnswer(sessionId.value, pendingSkipRequest)
+    pendingSkipRequest = null
+    if (res.nextAction === 'NEXT' && !res.question) { needsNextQuestion.value = true; res = await getNextQuestion(sessionId.value) }
 
     isAiTyping.value = false
 
     if (res.nextAction === 'NEXT' && res.question) {
-      currentQuestion.value++
+      needsNextQuestion.value = false
+      currentQuestion.value = res.question.roundNo || currentQuestion.value + 1
       currentQuestionId.value = res.question.id
       questionTypes.value.push(mapQuestionType(res.question.type))
       questionDifficulties.value.push(difficultyLabels[res.question.difficulty] || '中等')
@@ -415,6 +512,11 @@ async function skipQuestion() {
       }
       messages.value.push({ role: 'ai', text: followupText, followup: true })
       speakQuestion(followupText)
+    } else if (res.nextAction === 'FINISHABLE') {
+      await finishInterview(sessionId.value)
+      releaseMediaDevices()
+      await waitForReport(sessionId.value)
+      return
     } else if (res.nextAction === 'FINISHED') {
       releaseMediaDevices()
       messages.value.push({
@@ -450,12 +552,41 @@ function normalizeFollowupQuestion(value) {
   return String(value?.content || value?.followUpQuestion || value?.question || '').trim()
 }
 
-function togglePause() {
-  isPaused.value = !isPaused.value
-  if (isPaused.value) digitalHumanRef.value?.stop()
+async function recoverNextQuestion() {
+  if (!sessionId.value || isPaused.value) return
+  isSubmitting.value = true
+  try {
+    const step = await getNextQuestion(sessionId.value)
+    if (step.nextAction === 'FINISHABLE') { await finishInterview(sessionId.value); releaseMediaDevices(); await waitForReport(sessionId.value); return }
+    if (step.question) {
+      const q=step.question
+      currentQuestion.value=q.roundNo || currentQuestion.value+1
+      currentQuestionId.value=q.id
+      const index=currentQuestion.value-1
+      questionTypes.value[index]=mapQuestionType(q.type)
+      questionDifficulties.value[index]=difficultyLabels[q.difficulty] || '中等'
+      questionSkills.value[index]=q.abilityTag || '综合能力'
+      messages.value.push({role:'ai',text:q.content,followup:false})
+      speakQuestion(q.content)
+      needsNextQuestion.value=false
+    }
+  } catch { needsNextQuestion.value=true }
+  finally { isSubmitting.value=false }
+}
+async function togglePause() {
+  if (!sessionId.value || pauseChanging.value) return
+  pauseChanging.value=true
+  try {
+    if (!isPaused.value) { digitalHumanRef.value?.stop(); await microphoneRef.value?.stopMicrophone() }
+    const result=await setInterviewPaused(sessionId.value,!isPaused.value)
+    isPaused.value=result.paused
+    timeLeft.value=result.remainingSeconds
+  } catch (error) { messages.value.push({role:'ai',text:error.message || '暂停状态更新失败，请重试。',followup:false}) }
+  finally { pauseChanging.value=false }
 }
 
 async function endInterview() {
+  if(expressionEnding.value)return
   releaseMediaDevices()
   if (sessionId.value) {
     try {
@@ -464,6 +595,9 @@ async function endInterview() {
       return
     } catch (e) {
       console.error('Failed to finish interview:', e)
+      messages.value.push({ role: 'ai', text: '结束面试失败，请检查网络后再次点击结束面试。', followup: false })
+      scrollToBottom()
+      return
     }
   }
   // Fallback navigation
@@ -492,7 +626,7 @@ async function autoFinishInterview() {
     console.error('Auto-finish failed:', e)
     messages.value.push({
       role: 'ai',
-      text: '面试结束但报告生成失败，你可以稍后在面试记录中查看。',
+      text: sessionFinished.value ? '面试已结束，你可以稍后在面试记录中查看报告。' : '结束结果暂未确认，请检查网络后再次点击结束面试。',
       followup: false,
     })
   } finally {
@@ -509,34 +643,29 @@ function speakQuestion(text) {
 }
 
 function releaseMediaDevices() {
-  cameraPreviewRef.value?.stopCamera()
-  microphoneRef.value?.stopMicrophone()
-  digitalHumanRef.value?.close()
+  for(const release of [()=>cameraPreviewRef.value?.stopCamera(),()=>microphoneRef.value?.stopMicrophone(),()=>digitalHumanRef.value?.close()]) {
+    try { release() } catch(error) { console.warn('Media cleanup failed',error) }
+  }
 }
 
-async function waitForReport(sid) {
-  for (let attempt = 0; attempt < 60; attempt++) {
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    try {
-      const status = await getReportStatus(sid)
-      if (status?.state === 'FAILED') {
-        alert('报告生成失败。请返回教学任务重试生成，已有训练记录会保留。')
-        router.push('/my/tasks/'+route.query.assignmentId)
-        return
-      }
-      if (status?.ready && status.reportId) {
-        router.push({path:`/history/${status.reportId}`,query:{assignmentId:route.query.assignmentId}})
-        return
-      }
-    } catch (error) {
-      console.warn('Report is not ready yet:', error)
-    }
-  }
-  router.push(route.query.assignmentId?'/my/tasks/'+route.query.assignmentId:'/history')
+function completionDestination() { return route.query.assignmentId ? '/my/tasks/'+route.query.assignmentId : '/history' }
+function leaveFinishedInterview() { return router.push(completionDestination()) }
+function waitForReport(sid) {
+  if(reportWaitPromise)return reportWaitPromise
+  sessionFinished.value=true
+  const origin=route.fullPath
+  reportWaitPromise=(async()=>{
+    const status=await pollInterviewReport(config=>getReportStatus(sid,config),{cancelled:()=>route.fullPath!==origin})
+    if(route.fullPath!==origin)return
+    if(status?.ready && status.reportId) { await router.push({path:'/history/'+status.reportId,query:{assignmentId:route.query.assignmentId}});return }
+    await leaveFinishedInterview()
+  })().finally(()=>{reportWaitPromise=null})
+  return reportWaitPromise
 }
 </script>
 
 <style scoped>
+.expression-note { margin:8px 0; font-size:12px; line-height:1.6; color:var(--neutral-600); }
 .text-answer-toggle{min-height:44px;border:0;background:transparent;color:var(--primary-600,#047857);font:inherit;cursor:pointer}.text-answer{display:block;font-size:13px}.text-answer textarea{display:block;width:100%;padding:10px 12px;margin:8px 0;border:1px solid var(--neutral-200,#cbd8d0);border-radius:8px;background:var(--surface-primary,#fff);color:inherit;font:inherit;resize:vertical;max-height:140px}.text-answer-toggle:focus-visible,.text-answer textarea:focus-visible{outline:2px solid #147b57;outline-offset:3px}
 .interview-page {
   height: 100dvh;
@@ -804,4 +933,47 @@ async function waitForReport(sid) {
   .input-bar { height: auto; min-height: 280px; padding-inline: var(--space-3); }
   .input-bar.collapsed { min-height: 112px; }
 }
-</style>
+.camera-module { min-width:0; flex:none; }
+.mobile-expression-status { display:none; }
+.next-question-retry { min-height:44px; padding:8px 12px; border:1px solid var(--accent-600); border-radius:8px; background:var(--surface-primary); color:var(--accent-700); font:inherit; cursor:pointer; }
+.ctrl-btn,.end-btn { min-height:44px; min-width:44px; }
+.ctrl-btn:focus-visible,.end-btn:focus-visible,.next-question-retry:focus-visible { outline:2px solid var(--accent-600); outline-offset:3px; }
+@media (min-width:701px) and (max-width:1024px) {
+  .info-panel { grid-template-columns:minmax(240px,1fr) minmax(0,1fr); align-items:start; }
+  .camera-module { grid-row:span 2; }
+  .info-card { min-width:0; }
+}
+@media (max-width:700px) {
+  .mobile-expression-status { position:fixed; top:58px; left:0; right:0; z-index:15; display:flex; align-items:center; gap:10px; min-height:42px; padding:8px 12px; border-bottom:1px solid var(--neutral-200); background:var(--surface-primary); font-size:13px; color:var(--neutral-600); }
+  .mobile-expression-status strong { color:var(--accent-700); }
+  .interview-body { margin-top:102px; }
+  .chat-panel { height:calc(100dvh - 102px); }
+  .camera-module { width:100%; }
+}
+  .mobile-expression-status { position:fixed; top:60px; left:0; right:0; z-index:15; display:flex; align-items:center; gap:10px; height:48px; padding:0 28px; background:var(--surface-primary,#fff); border-bottom:1px solid var(--neutral-200,#e5e7eb); font-size:14px; color:var(--neutral-600,#4b5563); }
+  .mobile-expression-status strong { color:var(--accent-700,#047857); }
+  .mobile-expression-status button { min-height:44px; margin-left:auto; border:0; background:transparent; color:var(--accent-700,#047857); font:inherit; cursor:pointer; padding:0 10px; }
+  .mobile-expression-status button:focus-visible { outline:2px solid var(--accent-600,#059669); }
+  .interview-body { margin-top:108px; height:calc(100dvh - 108px); }
+  @media(max-width:1024px) { .interview-body { height:auto; min-height:calc(100dvh - 108px); } .chat-panel { height:calc(100dvh - 108px); } }
+  @media(max-width:700px) { .mobile-expression-status { top:60px; padding:0 12px; gap:8px; font-size:13px; } .live-expression-detail { display:none; } .chat-panel { height:calc(100dvh - 108px); } }
+.camera-tools { margin-left:auto; position:relative; } .camera-tools summary { min-height:44px; display:flex; align-items:center; cursor:pointer; padding:0 8px; } .camera-tools>div { position:absolute; right:0; top:48px; width:min(300px,calc(100vw - 24px)); padding:16px; border:1px solid var(--neutral-200); border-radius:12px; background:var(--surface-primary,#fff); box-shadow:0 6px 20px rgba(20,35,28,.08); } .camera-tools p { font-size:13px; line-height:1.6; } .camera-tools button { margin:0; }
+.camera-toggle-btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-width:44px; min-height:44px; padding:8px 12px; border:1px solid var(--neutral-200); border-radius:8px; background:var(--surface-primary,#fff); color:var(--neutral-700); font:inherit; font-size:14px; cursor:pointer; }
+.camera-toggle-btn:hover { background:var(--neutral-100); }
+@media(max-width:700px) { .camera-toggle-btn { padding:8px; } .camera-toggle-btn span { display:none; } .topbar-center { position:static; left:auto; transform:none; } .topbar-right { gap:6px; } .timer { font-size:14px; } .timer svg { display:none; } }
+.camera-toggle-btn { border-color:var(--accent-600,#059669); background:var(--accent-600,#059669); color:#fff; font-weight:600; padding:8px 14px; }
+.camera-toggle-btn:hover { background:var(--accent-700,#047857); }
+.camera-toggle-btn.is-active { background:var(--accent-50,#ecfdf5); color:var(--accent-700,#047857); border-color:var(--accent-300,#6ee7b7); }
+.camera-toggle-btn.is-active:hover { background:var(--accent-100,#d1fae5); }
+.camera-toggle-btn:focus-visible { outline:2px solid var(--accent-700,#047857); outline-offset:3px; }
+.camera-label-mobile { display:none; }
+.topbar .ctrl-btn { width:auto; padding:8px 12px; display:inline-flex; align-items:center; justify-content:center; gap:6px; font:inherit; font-size:14px; }
+.expression-status-content { display:flex; align-items:center; gap:10px; min-width:0; }
+.camera-tools summary { gap:8px; color:var(--neutral-600); font-size:13px; white-space:nowrap; }
+.camera-tools[open] summary { color:var(--accent-700); }
+.settings-heading { display:block; margin:8px 0; font-size:14px; }
+.camera-tools>div { color:var(--neutral-700); }
+.camera-tools button { display:block; width:100%; border:1px solid var(--neutral-200); border-radius:8px; margin:8px 0; text-align:left; }
+@media(max-width:700px) { .camera-toggle-btn { gap:6px; padding:8px; font-size:12px; } .camera-toggle-btn .camera-label-desktop { display:none; } .camera-toggle-btn .camera-label-mobile { display:inline; } .expression-status-content { gap:6px; font-size:12px; } .camera-tools summary { padding:0 4px; font-size:12px; } .topbar .end-btn { padding:8px; font-size:12px; } .pause-label { display:none; } .topbar .ctrl-btn { width:44px; padding:8px; } }
+.finish-error { color:var(--color-error,#b91c1c); font-size:13px; } .completion-status { gap:12px; } .completion-status button { margin-left:auto; }
+.expression-status-content:has(.finish-error)>:not(.finish-error) { display:none; } .finish-error { font-size:12px; line-height:1.4; overflow-wrap:anywhere; } .expression-status-content:has(.finish-error) { flex:1; } </style>

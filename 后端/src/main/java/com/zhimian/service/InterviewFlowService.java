@@ -427,6 +427,7 @@ public class InterviewFlowService {
     public Long finish(Long sessionId) {
         lockOwnSession(sessionId);
         var session=sessionMapper.selectById(sessionId);
+        settlePause(sessionId);
         if(teachingService.teachingSession(sessionId) && !teachingService.submitted(sessionId)) return sessionId;
         if (!STATUS_FINISHED.equals(session.getStatus())) {
             session.setStatus(STATUS_FINISHED);session.setEndTime(LocalDateTime.now());sessionMapper.updateById(session);
@@ -444,17 +445,45 @@ public class InterviewFlowService {
     public Map<String,Object> resume(long sessionId) {
         lockOwnSession(sessionId);
         var session=sessionMapper.selectById(sessionId);
-        int remaining=(int)Math.max(0,session.getDurationSeconds()-java.time.Duration.between(session.getStartTime(),LocalDateTime.now()).getSeconds());
+        int remaining=remainingSeconds(session);
         if(STATUS_ONGOING.equals(session.getStatus()) && remaining==0) finish(sessionId);
         var result=new java.util.LinkedHashMap<String,Object>();
         result.put("sessionId",sessionId);result.put("status",sessionMapper.selectById(sessionId).getStatus());
         result.put("durationSeconds",session.getDurationSeconds());result.put("remainingSeconds",remaining);
+        result.put("paused",isPaused(sessionId));result.put("serverTime",System.currentTimeMillis());
         var messages=messageMapper.selectList(new LambdaQueryWrapper<InterviewMessage>().eq(InterviewMessage::getSessionId,sessionId).orderByAsc(InterviewMessage::getId));
         result.put("messages",messages);
         result.put("currentQuestion",messages.stream().filter(m->ROLE_INTERVIEWER.equals(m.getRole())).reduce((a,b)->b).orElse(null));
         result.put("answered",!messages.isEmpty() && ROLE_CANDIDATE.equals(messages.get(messages.size()-1).getRole()));
         result.put("reportState",reportState(sessionId));
         return result;
+    }
+
+    @Transactional
+    public Map<String,Object> pause(long sessionId, boolean paused) {
+        lockOwnSession(sessionId);
+        var session=sessionMapper.selectById(sessionId);
+        if (!STATUS_ONGOING.equals(session.getStatus())) throw new BizException("面试已结束");
+        if (teachingService.teachingSession(sessionId)) throw new BizException("教学任务不支持暂停");
+        if (paused && !isPaused(sessionId)) {
+            if (remainingSeconds(session)==0) throw new BizException("训练时间已到，请结束面试");
+            jdbc.update("INSERT INTO interview_pause_state(session_id,paused_at) VALUES (?,NOW()) ON DUPLICATE KEY UPDATE paused_at=NOW()",sessionId);
+        } else if (!paused) settlePause(sessionId);
+        return Map.of("paused",isPaused(sessionId),"remainingSeconds",remainingSeconds(session),"serverTime",System.currentTimeMillis());
+    }
+
+    private boolean isPaused(long sessionId) {
+        return jdbc.queryForObject("SELECT COUNT(*) FROM interview_pause_state WHERE session_id=? AND paused_at IS NOT NULL",Long.class,sessionId)>0;
+    }
+    private long pausedSeconds(long sessionId) {
+        var values=jdbc.queryForList("SELECT paused_seconds + IF(paused_at IS NULL,0,TIMESTAMPDIFF(SECOND,paused_at,NOW())) FROM interview_pause_state WHERE session_id=?",Long.class,sessionId);
+        return values.isEmpty()?0:values.get(0);
+    }
+    private int remainingSeconds(InterviewSession session) {
+        return (int)Math.max(0,session.getDurationSeconds()-java.time.Duration.between(session.getStartTime(),LocalDateTime.now()).getSeconds()+pausedSeconds(session.getId()));
+    }
+    private void settlePause(long sessionId) {
+        jdbc.update("UPDATE interview_pause_state SET paused_seconds=paused_seconds+TIMESTAMPDIFF(SECOND,paused_at,NOW()),paused_at=NULL WHERE session_id=? AND paused_at IS NOT NULL",sessionId);
     }
 
     /** 检查报告是否已生成完毕（含模块评分） */
@@ -518,6 +547,8 @@ public class InterviewFlowService {
         jdbc.update("DELETE FROM student_interview_snapshot WHERE session_id=?",sessionId);
         jdbc.update("DELETE FROM interview_training_context WHERE session_id=?",sessionId);
         sessionMapper.deleteById(sessionId);
+        jdbc.update("DELETE FROM interview_expression_sample WHERE session_id=?", sessionId);
+        jdbc.update("DELETE FROM interview_pause_state WHERE session_id=?",sessionId);
     }
 
     /** 批量删除面试会话；单条失败不影响其余会话。 */
@@ -765,7 +796,7 @@ public class InterviewFlowService {
      * 检查面试是否超时（基于 durationSeconds 与 startTime 计算）。
      */
     private boolean isTimeExceeded(InterviewSession session) {
-        return isTimeExceeded(session, LocalDateTime.now());
+        return isTimeExceeded(session, LocalDateTime.now().minusSeconds(pausedSeconds(session.getId())));
     }
 
     static boolean isTimeExceeded(InterviewSession session, LocalDateTime now) {
@@ -781,6 +812,7 @@ public class InterviewFlowService {
         if (session == null) throw new BizException("会话不存在");
         if (!session.getUserId().equals(UserContext.getUserId())) throw new BizException("无权操作该会话");
         if (!STATUS_ONGOING.equals(session.getStatus())) throw new BizException("面试已结束");
+        if (isPaused(sessionId)) throw new BizException("面试已暂停，请先继续");
         return session;
     }
 

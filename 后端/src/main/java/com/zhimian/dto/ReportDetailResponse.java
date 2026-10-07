@@ -14,6 +14,7 @@ import java.util.List;
 public class ReportDetailResponse {
     private Long reportId;
     private Long sessionId;
+    private java.util.Map<String, Object> expressions;
     private Long jobId;
     private String jobName;
     private BigDecimal totalScore;

@@ -15,6 +15,8 @@ public class StudentBackendSchema {
 
     @PostConstruct
     void initialize() {
+        new ResourceDatabasePopulator(new ClassPathResource("db/migration_expressions.sql"))
+                .execute(jdbc.getDataSource());
         new ResourceDatabasePopulator(new ClassPathResource("db/student_backend.sql"))
                 .execute(jdbc.getDataSource());
         new ResourceDatabasePopulator(new ClassPathResource("db/migration_teaching_linkage.sql"))

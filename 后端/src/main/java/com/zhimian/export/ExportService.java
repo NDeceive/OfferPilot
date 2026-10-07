@@ -85,6 +85,7 @@ public class ExportService {
                 writePdfSection(writer, "三、表现优势", report.getStrengths());
                 writePdfSection(writer, "四、待改进项", report.getWeaknesses());
                 writePdfSection(writer, "五、提升建议", report.getSuggestions());
+                writePdfSection(writer, "六、表情回顾", expressionSummary(report));
             }
             document.save(output);
             return output.toByteArray();
@@ -126,6 +127,7 @@ public class ExportService {
             addDocxSection(document, "三、表现优势", report.getStrengths());
             addDocxSection(document, "四、待改进项", report.getWeaknesses());
             addDocxSection(document, "五、提升建议", report.getSuggestions());
+            addDocxSection(document, "六、表情回顾", expressionSummary(report));
 
             document.write(output);
             return output.toByteArray();
@@ -134,6 +136,43 @@ public class ExportService {
             throw new ExportException("Word 生成失败：" + e.getMessage());
         }
     }
+
+    private static List<String> expressionSummary(ReportDetailResponse report) {
+        var lines = new java.util.ArrayList<String>();
+        var data=report.getExpressions();
+        if(data==null || !(data.get("summary") instanceof java.util.Map<?,?> summary)) {
+            return List.of("本次未记录表情数据，不补造历史记录。");
+        }
+        int total=number(summary.get("sampleCount")), valid=number(summary.get("detectedCount"));
+        lines.add("有效人脸采样："+valid+" / "+total+" 次；未检测到人脸："+number(summary.get("missingCount"))+" 次。");
+        if(valid>0) lines.add("分类不明确："+number(summary.get("uncertainCount"))+" 次，占检出人脸样本 "+String.format(java.util.Locale.ROOT,"%.1f%%",number(summary.get("uncertainCount"))*100.0/valid));
+        if(valid>0 && summary.get("dominantCounts") instanceof java.util.Map<?,?> counts) {
+            String[] keys={"neutral","happy","sad","angry","fearful","disgusted","surprised"};
+            String[] labels={"平静","开心","低落","生气","害怕","厌恶","惊讶"};
+            for(int index=0;index<keys.length;index++) {
+                int count=number(counts.get(keys[index]));
+                lines.add(labels[index]+"："+count+" 次，占有效样本 "+String.format(java.util.Locale.ROOT,"%.1f%%",count*100.0/valid));
+            }
+        } else lines.add("没有有效人脸样本，不能判断主要表情。");
+        if(data.get("questions") instanceof List<?> questions) {
+            for(Object item:questions) if(item instanceof java.util.Map<?,?> question && question.get("summary") instanceof java.util.Map<?,?> questionSummary) {
+                String main=number(questionSummary.get("detectedCount"))>0?"分类不明确":"无有效样本";
+                if(questionSummary.get("dominantCounts") instanceof java.util.Map<?,?> counts) {
+                    int uncertain=number(questionSummary.get("uncertainCount"));
+                    int max=Math.max(uncertain,counts.values().stream().mapToInt(ExportService::number).max().orElse(0));
+                    if(max>0) {
+                        var labels=java.util.Map.of("neutral","平静","happy","开心","sad","低落","angry","生气","fearful","害怕","disgusted","厌恶","surprised","惊讶");
+                        main=com.zhimian.service.ExpressionService.KEYS.stream().filter(key->number(counts.get(key))==max).map(labels::get).collect(java.util.stream.Collectors.joining("、"));
+                        if(uncertain==max) main=main.isEmpty()?"分类不明确":main+"、分类不明确";
+                    }
+                }
+                lines.add("第 "+question.get("roundNo")+" 题："+main+"；有效采样 "+number(questionSummary.get("detectedCount"))+" / "+number(questionSummary.get("sampleCount"))+" 次。问题："+safe(question.get("question")));
+            }
+        }
+        lines.add("最高概率不足45%或前两类差值不足12个百分点时，计为分类不明确。占比按检出人脸样本次数计算，不代表面试时长占比。表情分类不推断真实情绪，不参与能力评分；交互时间线请在网页查看。");
+        return lines;
+    }
+    private static int number(Object value) { return value instanceof Number n ? n.intValue() : 0; }
 
     private static void writePdfSection(PdfWriter writer, String title, List<String> items) throws IOException {
         writer.write(title, 15, 22);

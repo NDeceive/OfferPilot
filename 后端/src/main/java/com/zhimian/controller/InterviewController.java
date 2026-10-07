@@ -46,6 +46,24 @@ public class InterviewController {
     private final FollowUpService followUpService;
     private final InterviewSessionMapper sessionMapper;
     private final InterviewMessageMapper messageMapper;
+    private final com.zhimian.service.ExpressionService expressionService;
+
+    @PostMapping("/{sessionId}/expressions")
+    public Result<java.util.Map<String,Object>> expressions(@PathVariable long sessionId,
+            @Valid @RequestBody com.zhimian.dto.ExpressionBatchRequest request) {
+        return Result.success(expressionService.save(sessionId, request));
+    }
+
+    @GetMapping("/{sessionId}/expression-context")
+    public Result<java.util.Map<String,Object>> expressionContext(@PathVariable long sessionId) {
+        return Result.success(expressionService.context(sessionId));
+    }
+
+    public record PauseRequest(@jakarta.validation.constraints.NotNull Boolean paused) {}
+    @PostMapping("/{sessionId}/pause")
+    public Result<java.util.Map<String,Object>> pause(@PathVariable long sessionId, @Valid @RequestBody PauseRequest request) {
+        return Result.success(flowService.pause(sessionId, request.paused()));
+    }
 
     /** 当前用户的面试记录列表（真实数据，无记录则为空数组） */
     @GetMapping("/records")

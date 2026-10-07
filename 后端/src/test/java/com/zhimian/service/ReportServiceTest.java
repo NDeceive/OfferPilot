@@ -45,7 +45,7 @@ class ReportServiceTest {
         when(dimensions.selectList(any())).thenReturn(List.of());
         when(modules.selectList(any())).thenReturn(List.of());
         UserContext.set(21L, "USER");
-        var service = new ReportService(mock(TeachingService.class),mock(InterviewSnapshotService.class),sessions,
+        var service = new ReportService(mock(TeachingService.class),mock(ExpressionService.class),mock(InterviewSnapshotService.class),sessions,
                 messages,reports,dimensions,mock(SkillQuestionMapper.class),mock(JobPositionMapper.class),modules,mock(ScoreModuleMapper.class));
         var detail = service.getDetail(68L);
         assertTrue(detail.getSummary().contains("未形成可评价回答"));
@@ -89,6 +89,7 @@ class ReportServiceTest {
 
         ReportService service = new ReportService(
                 mock(TeachingService.class),
+                mock(ExpressionService.class),
                 mock(InterviewSnapshotService.class),
                 sessionMapper,
                 mock(InterviewMessageMapper.class),
