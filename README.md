@@ -62,11 +62,37 @@ OfferPilot/
 ## 环境要求
 
 - **Java 17**（后端运行环境）
-- **Node.js**（建议 18+，用于前端构建）
+- **Node.js 20.19+ 或 22.12+**（Vite 8 要求）
 - **MySQL 8**
 - **Python 3.10**（数字人首次启动时自动创建 `.venv`）
 - **Maven Wrapper**：仓库内置 `后端/mvnw.cmd`，无需单独安装 Maven
 - **智谱 API Key**：大模型追问与语音转写共用，通过后端环境变量注入；严禁写入前端或仓库
+
+### Windows 首次启动
+
+安装上述 JDK、Node.js、MySQL 和 Python 3.10，按下方说明初始化数据库后，双击根目录的 `一键启动网页.bat`。
+启动器检查数字人 Python 是否实际可执行，自动创建或修复项目内 `.venv`，缺少依赖时安装默认 Wav2Lip 所需的 `数字人/requirements-offerpilot.txt`。
+已有可用的 CUDA PyTorch 环境会继续使用；新环境可用 CPU 运行，速度取决于硬件。其他数字人引擎仍使用完整的 `requirements.txt`。
+如 Python 未被发现，可将 `OFFERPILOT_PYTHON` 设置为可用 Python 3.10 的 `python.exe` 完整路径。
+
+首次运行需联网访问 PyPI/Maven/npm/GitHub，并留出模型、头像和 Python 依赖所需磁盘空间。
+资源包下载失败会重试，三个包均校验 SHA-256；已校验的 ZIP 保留在系统临时目录供断点后的重新启动复用，文件缺失或空帧会自动修复。
+启动器只有在网页、后端及数字人 HTTP 服务均就绪后才显示成功；发生错误时会保留明确提示，日志在 `后端/logs/`。
+保持启动窗口打开；按回车结束时只关闭本次启动的服务，不会清空数据库，也不会强制结束其他占用端口的程序。
+
+可单独准备和检查数字人环境，不启动服务：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\数字人\start_offerpilot_digital_human.ps1 -CheckOnly
+```
+
+语音识别仍需自己的智谱 API Key；数字人播报使用在线 EdgeTTS，需要能访问微软语音服务。
+
+启动回归检查（先完成资源下载，使用缓存 ZIP 在独立目录检查首次安装和缺失修复）：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-startup.ps1
+```
 
 ### 配置智谱 API Key（每位使用者自行输入）
 

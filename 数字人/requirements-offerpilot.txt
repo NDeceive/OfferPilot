@@ -1,0 +1,17 @@
+# Default Wav2Lip + WebRTC + EdgeTTS runtime; other avatar engines use requirements.txt.
+torch>=2.6,<3
+numpy
+opencv-python-headless
+scipy
+librosa
+resampy
+soundfile
+tqdm
+flask
+flask-sockets
+aiohttp
+aiohttp-cors
+aiortc
+edge-tts
+requests
+openai
