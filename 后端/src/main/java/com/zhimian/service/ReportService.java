@@ -48,6 +48,7 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class ReportService {
     private final TeachingService teachingService;
+    private final ExpressionService expressionService;
     private final InterviewSnapshotService snapshots;
 
     private final InterviewSessionMapper sessionMapper;
@@ -203,6 +204,7 @@ public class ReportService {
         ReportDetailResponse resp = new ReportDetailResponse();
         resp.setReportId(report.getId());
         resp.setSessionId(report.getSessionId());
+        resp.setExpressions(expressionService.report(report.getSessionId()));
         resp.setJobId(session == null ? null : session.getJobId());
         resp.setJobName(jobName);
         // 注入会话时间信息

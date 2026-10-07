@@ -50,14 +50,17 @@
       >
         <button
           v-if="batchMode&&record.trainingSource==='SELF'"
-          class="check-box"
-          :class="{ checked: isSelected(record.id) }"
+          type="button"
+          class="history-select-button"
           :aria-pressed="isSelected(record.id)"
+          :aria-label="'选择' + record.position + '面试记录'"
           @click.stop="toggleSelect(record.id)"
         >
+          <span class="check-box" :class="{ checked: isSelected(record.id) }" aria-hidden="true">
           <svg v-if="isSelected(record.id)" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
             <polyline points="20 6 9 17 4 12"/>
           </svg>
+          </span>
         </button>
         <div class="record-main" @click="batchMode ? toggleSelect(record.id) : viewReport(record)">
           <JobLogo :icon-key="record.iconKey" :tone="record.themeKey" />
@@ -94,12 +97,14 @@
         <!-- Delete button - hidden in batch mode -->
         <button
           v-if="!batchMode&&record.trainingSource==='SELF'"
-          class="delete-btn"
+          type="button"
+          class="history-delete-icon"
           title="删除此记录"
+          :aria-label="'删除' + record.position + '面试记录'"
           @click.stop="confirmDelete(record)"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6M14 10v6"/>
           </svg>
         </button>
       </div>
@@ -566,14 +571,15 @@ onMounted(async () => {
   min-width: 0;
 }
 
-.delete-btn {
+.history-delete-icon {
   flex-shrink: 0;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
   border-radius: var(--radius-sm);
   border: 1px solid transparent;
   background: transparent;
-  color: var(--neutral-400);
+  color: var(--neutral-500);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -581,16 +587,30 @@ onMounted(async () => {
   transition: all var(--duration-fast);
 }
 
-.delete-btn:hover {
-  color: var(--color-error);
-  background: var(--color-error-bg);
-  border-color: rgba(239, 68, 68, 0.2);
+.history-delete-icon:hover {
+  color: var(--neutral-700);
+  background: var(--neutral-100);
 }
+.history-delete-icon svg { flex-shrink: 0; }
+.history-delete-icon:focus-visible { outline: 2px solid var(--accent-600); outline-offset: 2px; }
 
+.history-select-button {
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
 .check-box {
   flex-shrink: 0;
   width: 22px;
   height: 22px;
+  box-sizing: border-box;
   border-radius: 50%;
   border: 1.5px solid var(--neutral-300);
   background: var(--surface-elevated);

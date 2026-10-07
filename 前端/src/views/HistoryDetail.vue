@@ -148,6 +148,9 @@
           </ol>
         </section>
 
+        <ExpressionUploadStatus :session-id="expressionSessionId" @uploaded="refreshExpressions" />
+        <ExpressionReport :data="expressions" :start-time="startTime" :can-review="true" @review-question="reviewExpressionQuestion" />
+
         <section class="review-section">
           <div class="section-heading">
             <div>
@@ -162,6 +165,7 @@
               v-for="(record, index) in followupRecords"
               :key="index"
               class="question-item"
+              :id="'answer-round-' + record.roundNo"
               :class="{ expanded: expandedItems.includes(index) }"
             >
               <button type="button" class="question-trigger" :aria-expanded="expandedItems.includes(index)" @click="toggleExpand(index)">
@@ -213,6 +217,8 @@ import JobLogo from '../components/jobs/JobLogo.vue'
 import AppLayout from '../components/layout/AppLayout.vue'
 import TeachingFeedback from '../components/teacher/TeachingFeedback.vue'
 import RadarChart from '../components/ui/RadarChart.vue'
+import ExpressionReport from '../components/interview/ExpressionReport.vue'
+import ExpressionUploadStatus from '../components/interview/ExpressionUploadStatus.vue'
 import { getJobPresentation } from '../utils/jobPresentation'
 
 const route = useRoute()
@@ -240,6 +246,9 @@ const profileLabel = ref('')
 const radarTargets = ref([])
 const moduleScores = ref([])
 const trainingContext=ref(null)
+const expressions=ref(null)
+const expressionSessionId=ref(null)
+async function refreshExpressions() { try { const data=await getReportDetail(reportId); expressions.value=data.expressions||null } catch {} }
 
 const radarLabels = computed(() => dimensions.value.map(item => item.dimension))
 const radarValues = computed(() => dimensions.value.map(item => item.score))
@@ -297,6 +306,7 @@ function groupMessages(messages) {
     if (message.role === 'INTERVIEWER' && message.msgType === 'MAIN') {
       if (current) records.push(current)
       current = {
+        roundNo: message.roundNo,
         question: message.content,
         abilityTag: message.abilityTag || '',
         answer: '',
@@ -312,6 +322,12 @@ function groupMessages(messages) {
   }
   if (current) records.push(current)
   return records
+}
+function reviewExpressionQuestion(roundNo) {
+  const index=followupRecords.value.findIndex(record=>Number(record.roundNo)===Number(roundNo))
+  if(index<0)return
+  if(!expandedItems.value.includes(index))expandedItems.value.push(index)
+  requestAnimationFrame(()=>{ const element=document.getElementById('answer-round-'+roundNo);element?.scrollIntoView({block:'center',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});element?.querySelector('button')?.focus({preventScroll:true}) })
 }
 
 function toggleExpand(index) {
@@ -359,6 +375,8 @@ async function loadReport() {
     profileLabel.value = data.profileLabel || ''
     moduleScores.value = Array.isArray(data.moduleScores) ? data.moduleScores : []
     trainingContext.value=data.trainingContext||null
+    expressions.value=data.expressions||null
+    expressionSessionId.value=data.sessionId||null
     dimensions.value = isNewReport.value
       ? moduleScores.value.filter(item=>item.rawScore!=null&&Number.isFinite(Number(item.rawScore))).map(item => ({
           dimension: item.moduleName || item.moduleCode,
