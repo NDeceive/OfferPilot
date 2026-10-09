@@ -12,6 +12,7 @@
 # ===== Node / Vite (前端) =====
 node_modules/
 前端/dist/
+前端/dist-app/
 前端/dev.log
 前端/dev.err.log
 
@@ -72,6 +73,11 @@ Thumbs.db
 /前端/assets/
 /前端/capacitor.config.json
 /前端/src/assets/generated/teacher-greeting.png
+
+# HBuilderX 5+App 壳打包链（移动端，暂不上传）：壳工程 / App 构建环境 / 同步脚本
+/hbuilder-app/
+/前端/.env.app
+/scripts/sync-app-shell.mjs
 
 /DESIGN.md
 /PRODUCT.md

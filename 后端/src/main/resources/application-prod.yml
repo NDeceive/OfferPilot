@@ -47,6 +47,12 @@ digital-human:
 cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS:}
 
+# 会议 WebSocket 握手白名单（逗号分隔）：未注入时拒绝所有带 Origin 的握手（fail-closed），
+# 与 HTTP CORS 同源部署时可通过 MEETING_WS_ALLOWED_ORIGINS 注入与 CORS 相同的前端来源。
+meeting:
+  ws:
+    allowed-origins: ${MEETING_WS_ALLOWED_ORIGINS:}
+
 logging:
   level:
     com.zhimian: info

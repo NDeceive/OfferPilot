@@ -33,7 +33,7 @@
 
         <div class="form-header">
           <h1 class="form-title">欢迎回来</h1>
-          <p class="form-sub">登录后继续查看练习记录与复盘</p>
+          <p class="form-sub">{{ formSub }}</p>
         </div>
 
         <!-- Role Tabs -->
@@ -146,7 +146,7 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { computed, ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../store/user'
 import { login as loginApi } from '../api'
@@ -154,6 +154,8 @@ import BrandLogo from '../components/ui/BrandLogo.vue'
 import AuthShowcase from '../components/auth/AuthShowcase.vue'
 import { getApiBase, setApiBase, getRuntimeApiBase } from '../utils/apiBase'
 import { demoState, setDemoActive } from '../utils/offlineDemo'
+// 登录成功后的角色分流与路由守卫共用同一份判断（企业端 / 教师端 / 学生端）
+import { roleHome } from '../router'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -192,8 +194,20 @@ const mouse = reactive({ x: -200, y: -200 })
 const roles = [
   { id: 'student', label: '学生端', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>' },
   { id: 'teacher', label: '教师端', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>' },
+  { id: 'enterprise', label: '企业端', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>' },
   { id: 'admin', label: '管理端', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4"/></svg>' },
 ]
+
+// tab 不决定登录归属（账号角色说了算，见 handleLogin 里的 roleHome），
+// 但点选后副标题跟着切换，让「学生/教师/企业/管理」的切换有可见反馈，
+// 而不是一个点了没反应的装饰。
+const ROLE_SUBS = {
+  student: '登录后继续查看练习记录与复盘',
+  teacher: '登录后进入教师工作台，管理班级、任务与数据分析',
+  enterprise: '登录后进入会议中心，开启视频面试并留存面试建议',
+  admin: '登录后进入管理工作台',
+}
+const formSub = computed(() => ROLE_SUBS[activeRole.value] || ROLE_SUBS.student)
 
 const form = reactive({ account: '', password: '', remember: false })
 
@@ -209,12 +223,7 @@ async function handleLogin() {
   try {
     const data = await loginApi({ username: form.account, password: form.password })
     userStore.setAuth(data)
-    const role = (data.role || '').toUpperCase()
-    if (role === 'TEACHER' || role === 'ADMIN') {
-      router.push('/teacher/dashboard')
-    } else {
-      router.push('/home')
-    }
+    router.push(roleHome((data.role || '').toUpperCase()))
   } catch (e) {
     errorMsg.value = e.response?.data?.message || e.message || '登录失败，请重试'
   } finally {

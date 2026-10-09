@@ -45,6 +45,11 @@
           <span class="stage-caption">AI 面试官</span>
         </div>
 
+        <p v-if="isMobile && latestQuestion" class="mobile-question">
+          <span class="mq-label">当前题目</span>
+          <span class="mq-text">{{ latestQuestion }}</span>
+        </p>
+
         <div class="input-bar" :class="{ collapsed: !showTranscript, 'text-open': textAnswerOpen }">
           <div class="transcript-toolbar">
             <span>回答记录</span>
@@ -192,6 +197,14 @@ const evalItems = ref([
 const progressPercent = computed(() => totalDuration.value > 0
   ? ((totalDuration.value - timeLeft.value) / totalDuration.value) * 100
   : 0)
+
+// 手机端默认收起回答记录，用这条常驻展示当前题目，避免看不到题
+const latestQuestion = computed(() => {
+  for (let i = messages.value.length - 1; i >= 0; i -= 1) {
+    if (messages.value[i].role === 'ai' && messages.value[i].text) return messages.value[i].text
+  }
+  return ''
+})
 
 let timerInterval = null
 let autoFinished = false
@@ -782,6 +795,9 @@ async function waitForReport(sid) {
   .answer-head .text-answer-toggle{flex:1;min-height:48px;border:1.5px solid rgba(4,120,87,.32);border-radius:12px;background:#eef7f2;color:var(--primary-600,#047857);font-weight:700;font-size:13px}
   .text-answer-toggle[aria-expanded="true"]{background:#e2f1e9;border-color:rgba(4,120,87,.5)}
   .mobile-cam-chip{flex:0 0 auto;display:flex;width:84px}
+  .mobile-question{margin:0;padding:10px 12px;border-radius:12px;background:#f8faf9;color:var(--neutral-800);font-size:13px;line-height:1.5}
+  .mobile-question .mq-label{display:block;margin-bottom:3px;color:var(--accent-700,#047857);font-size:11px;font-weight:600}
+  .mobile-question .mq-text{display:-webkit-box;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:4}
 }
 
 /* Pre-pull interview layout: the transcript and voice controls share a fixed lower panel. */
@@ -791,7 +807,7 @@ async function waitForReport(sid) {
   padding: var(--space-3) var(--space-5);
   overflow: hidden;
 }
-.input-bar.collapsed { height: 112px; }
+.input-bar.collapsed { height: auto; min-height: 112px; }
 .transcript-toolbar {
   display: flex;
   align-items: center;
@@ -831,4 +847,8 @@ async function waitForReport(sid) {
 }
 /* 文字作答展开时给面板留出高度，避免把回答记录和麦克风挤没 */
 .input-bar.text-open { height: clamp(300px, 40vh, 400px); }
+/* 手机端面板高度随内容自适应，固定高度会把麦克风/文字作答裁掉 */
+@media (max-width: 767.98px) {
+  .input-bar.text-open { height: auto; min-height: clamp(300px, 40vh, 400px); }
+}
 </style>

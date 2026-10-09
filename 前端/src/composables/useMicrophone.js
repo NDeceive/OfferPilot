@@ -1,5 +1,7 @@
 import { computed, onUnmounted, ref } from 'vue'
 import { createSilenceAutoSubmit } from './silenceAutoSubmit'
+import { assetUrl } from '../utils/assetUrl'
+import { ensureAppPermissions } from '../utils/plusPermissions'
 
 const TARGET_SAMPLE_RATE = 16000
 const SPEECH_THRESHOLD = 0.018
@@ -36,7 +38,13 @@ export function useMicrophone({ onSegment, onAnswerEnd } = {}) {
    * NotAllowedError 有几条来路：用户当场拒了、浏览器记着上次的「阻止」、地址不是安全来源……
    * 只有第一种会弹窗。分得清就给准话——不然用户会对着一个永远不会出现的弹窗干等。
    */
-  async function explainDenied() {
+  async function explainDenied(appPermission) {
+    if (appPermission === 'denied') {
+      return '麦克风权限被拒绝：请到手机「设置 → 应用 → OfferPilot → 权限」中允许「麦克风/录音」，然后回到这里重试。'
+    }
+    if (appPermission === 'granted') {
+      return '系统权限已允许，但麦克风请求仍被 WebView 拒绝（NotAllowedError），请重启 App 后重试；若仍不行，请把这行提示发给开发者。'
+    }
     if (!window.isSecureContext) {
       return '当前地址不是安全来源（需要 https 或 localhost），浏览器不会弹出麦克风授权。'
     }
@@ -53,7 +61,10 @@ export function useMicrophone({ onSegment, onAnswerEnd } = {}) {
     if (stream) return true
     if (!navigator.mediaDevices?.getUserMedia || !window.AudioContext) {
       status.value = 'error'
-      errorMessage.value = '当前浏览器不支持麦克风，请使用最新版 Chrome 或 Edge。'
+      const missing = []
+      if (!navigator.mediaDevices?.getUserMedia) missing.push('mediaDevices 缺失')
+      if (!window.AudioContext) missing.push('AudioContext 缺失')
+      errorMessage.value = `当前环境不支持麦克风（${missing.join('、')}，secureContext=${window.isSecureContext}），请使用最新版 Chrome 或 Edge。`
       return false
     }
 
@@ -61,8 +72,12 @@ export function useMicrophone({ onSegment, onAnswerEnd } = {}) {
     errorMessage.value = ''
     const currentRequestId = ++requestId
     let mediaGranted = false
+    let appPermission = 'skipped'
 
     try {
+      // App（5+ 运行时）里系统「录音」权限没有任何人申请过——先弹系统授权框，
+      // 拿到后再 getUserMedia；桌面浏览器里 plus 不存在，这里是 no-op。
+      appPermission = await ensureAppPermissions(['android.permission.RECORD_AUDIO'])
       const newStream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
@@ -81,7 +96,8 @@ export function useMicrophone({ onSegment, onAnswerEnd } = {}) {
 
       stream = newStream
       audioContext = new AudioContext()
-      await audioContext.audioWorklet.addModule('/audio/pcm-capture-processor.js')
+      // 相对路径：file:// 下 '/audio' 会解析到设备根目录（见 utils/assetUrl.js）
+      await audioContext.audioWorklet.addModule(assetUrl('audio/pcm-capture-processor.js'))
       sourceNode = audioContext.createMediaStreamSource(stream)
       processorNode = new AudioWorkletNode(audioContext, 'pcm-capture-processor')
       silentGainNode = audioContext.createGain()
@@ -98,9 +114,9 @@ export function useMicrophone({ onSegment, onAnswerEnd } = {}) {
       cleanupAudioGraph()
       status.value = 'error'
       if (mediaGranted) {
-        errorMessage.value = '录音组件初始化失败，请刷新页面后重试。'
+        errorMessage.value = `录音组件初始化失败（${error?.name || '未知错误'}），请刷新页面后重试。`
       } else if (error?.name === 'NotAllowedError' || error?.name === 'SecurityError') {
-        errorMessage.value = await explainDenied()
+        errorMessage.value = await explainDenied(appPermission)
       } else if (error?.name === 'NotFoundError') {
         errorMessage.value = '没有找到可用的麦克风设备。'
       } else if (error?.name === 'NotReadableError' || error?.name === 'AbortError') {

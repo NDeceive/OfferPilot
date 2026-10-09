@@ -32,8 +32,14 @@ const mobileViews = {
   report: defineAsyncComponent(() => import('./pages/MobileReport.vue')),
 }
 
+// 企业账号没有移动学生页：/profile 一律走桌面视图（Profile.vue 里已是企业版个人中心），
+// 否则窄窗口/手机上「我的」会变成学生手机版（我的简历/目标岗位/数字人设置 + 学生底部导航）。
+// 其余 surface（home/records/aiPrep…）不动：企业手敲学生路径属已知越权面，本次不补。
+const isEnterprise = (localStorage.getItem('role') || '').toUpperCase() === 'ENTERPRISE'
+
 const activeView = computed(() => {
   const surface = route.meta.mobileSurface
-  return (isMobile.value ? mobileViews : desktopViews)[surface]
+  const useMobile = isMobile.value && !(isEnterprise && surface === 'profile')
+  return (useMobile ? mobileViews : desktopViews)[surface]
 })
 </script>

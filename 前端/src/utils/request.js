@@ -68,6 +68,15 @@ request.interceptors.response.use(
       return Promise.reject(error)
     }
 
+    // 403：后端把原因写在响应体（如「仅企业/教师可发起会议」）。
+    // 提到 error.message 上，各页面直接展示就是人话；此前会掉到 axios 的通用文案。
+    if (error.response?.status === 403) {
+      const data = error.response.data
+      const msg = typeof data === 'object' && data ? data.message : data
+      if (typeof msg === 'string' && msg) error.message = msg
+      return Promise.reject(error)
+    }
+
     // 连不上后端时问一次要不要切到离线演示，用户点了确认才切——静默切换会让
     // 演示的人照着假数据往下讲。
     //

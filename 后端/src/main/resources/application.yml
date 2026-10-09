@@ -69,10 +69,22 @@ digital-human:
     startup-wait-ms: ${DIGITAL_HUMAN_STARTUP_WAIT_MS:120000}
     stop-on-shutdown: ${DIGITAL_HUMAN_STOP_ON_SHUTDOWN:true}
 
-# CORS 允许的前端来源（逗号分隔）。开发默认放行本地 Vite 前端，避免影响本地联调。
-# 生产环境用固定白名单（见 application-prod.yml），不再使用通配符。
+# CORS 允许的前端来源（逗号分隔）。开发默认放行本地 Vite 前端 + 本地预览工具的任意端口
+# （localhost/127.0.0.1:[*] 通配，见 WebConfig 的 allowedOriginPatterns——HBuilderX 内置
+# 浏览器等工具每次用随机端口，写死端口会 403）。
+# "null" 和 "file://" 两条是给 HBuilderX 5+App 用的：APK 里页面以 file:// 加载，跨域请求的
+# Origin 头取决于 WebView 的本地文件访问开关——开了（DCloud 默认）发 "file://"，没开则发
+# "null"，所以两个都放行。
+# 生产白名单在 application-prod.yml，保持 fail-closed。
 cors:
-  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174}
+  allowed-origins: "${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,null,file://,http://localhost:[*],http://127.0.0.1:[*]}"
+
+# 会议 WebSocket（/ws/meeting）握手允许的 Origin（逗号分隔），与 HTTP CORS 白名单相互独立：
+# 局域网演示时前端 IP 可能天天变，复刻 CORS 白名单会频繁 403，开发默认放行所有来源；
+# 生产在 application-prod.yml 用 MEETING_WS_ALLOWED_ORIGINS 注入具体来源（未注入 = 锁死跨域握手）。
+meeting:
+  ws:
+    allowed-origins: "${MEETING_WS_ALLOWED_ORIGINS:*}"
 
 logging:
   level:

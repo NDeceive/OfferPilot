@@ -25,7 +25,11 @@ public class RegisterRequest {
     @Size(max = 100)
     private String email;
 
-    // 安全说明：公开注册接口不再接受 role 字段。
-    // 任何通过公开注册创建的账号一律为 STUDENT，管理员/教师/企业账号
-    // 只能由种子数据、数据库操作或后续的管理后台创建，杜绝越权注册。
+    /** 注册身份：STUDENT / ENTERPRISE（可空，默认 STUDENT） */
+    @Size(max = 20)
+    private String role;
+
+    // 安全说明：公开注册仅允许 STUDENT / ENTERPRISE 两种身份（见 AuthService.register 白名单），
+    // 其余任何值——包括尝试伪造的 TEACHER / ADMIN——一律静默降级为 STUDENT。
+    // 教师/管理员账号仍只能由种子数据、数据库操作或管理后台创建，杜绝越权注册。
 }

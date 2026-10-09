@@ -61,7 +61,7 @@
           <div class="setting-group">
             <label class="setting-label">通知偏好</label>
             <div class="toggle-list">
-              <div class="toggle-item" v-for="t in toggles" :key="t.key">
+              <div class="toggle-item" v-for="t in visibleToggles" :key="t.key">
                 <div>
                   <span class="toggle-name">{{ t.name }}</span>
                   <span class="toggle-desc">{{ t.desc }}</span>
@@ -94,8 +94,8 @@
             <div class="digital-preview">
               <video
                 class="digital-preview__video"
-                src="/assets/interview-avatar/interviewer-v3.mp4"
-                poster="/assets/interview-avatar/closed-door-j0.png"
+                :src="AVATAR_VIDEO"
+                :poster="AVATAR_POSTER"
                 autoplay
                 loop
                 muted
@@ -262,7 +262,8 @@
         <div v-if="activeTab === 'help'" class="card">
           <h2 class="card-title">帮助与反馈</h2>
 
-          <div class="setting-group">
+          <!-- FAQ 全为学生场景（面试记录/简历/刷题/数字人），教师/企业不显示 -->
+          <div v-if="!isStaff" class="setting-group">
             <label class="setting-label">常见问题</label>
             <div class="faq-list">
               <div v-for="(item, index) in faqs" :key="item.q" class="faq-item">
@@ -277,7 +278,7 @@
 
           <div class="setting-group">
             <label class="setting-label">问题反馈</label>
-            <p class="setting-desc">在线反馈通道尚未接入，遇到问题可先在「常见问题」里查找，或联系管理员。</p>
+            <p class="setting-desc">{{ isStaff ? '在线反馈通道尚未接入，遇到问题请联系管理员。' : '在线反馈通道尚未接入，遇到问题可先在「常见问题」里查找，或联系管理员。' }}</p>
             <div class="toggle-item is-disabled">
               <div>
                 <span class="toggle-name">提交问题与建议</span>
@@ -298,17 +299,20 @@ import { useRoute, useRouter } from 'vue-router'
 import AppLayout from '../components/layout/AppLayout.vue'
 import { getInterviewRecords, getMe, updateProfile } from '../api'
 import { useUserStore } from '../store/user'
+import { assetUrl } from '../utils/assetUrl'
 
 const route = useRoute()
 const router = useRouter()
 const store = useUserStore()
 
+// 预览视频/封面：走 assetUrl() 才能在 5+App（file://）构建下找到文件
+const AVATAR_VIDEO = assetUrl('assets/interview-avatar/interviewer-v3.mp4')
+const AVATAR_POSTER = assetUrl('assets/interview-avatar/closed-door-j0.png')
+
 /* ==================== 分栏 ==================== */
 // 六个 tab。手机端「我的」里五个入口各自深链到对应分栏（?tab=…），
 // 不这么做的话点「帮助与反馈」和点「通用设置」落在同一屏，入口名就全是假的。
-const TAB_IDS = ['general', 'digital', 'account', 'appearance', 'data', 'help']
-
-const tabs = [
+const ALL_TABS = [
   { id: 'general', label: '通用设置', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68V3a2 2 0 0 1 4 0v.09A1.65 1.65 0 0 0 14 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>' },
   { id: 'digital', label: '数字人', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="14" rx="2"/><circle cx="12" cy="10" r="2.5"/><path d="M7.5 18a4.5 4.5 0 0 1 9 0"/><path d="M8 21h8"/></svg>' },
   { id: 'account', label: '账号安全', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>' },
@@ -317,15 +321,24 @@ const tabs = [
   { id: 'help', label: '帮助与反馈', icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M9.2 9a2.8 2.8 0 0 1 5.5.8c0 1.9-2.7 2.2-2.7 4"/><circle cx="12" cy="17.5" r=".6" fill="currentColor"/></svg>' },
 ]
 
+// 角色分流：教师/管理员/企业账号不走 AI 模拟面试，也不产生「面试记录」——
+// 「数字人」「数据管理」两栏对他们没有意义，直接按角色收敛。
+// ?tab= 深链按收敛后的可见栏校验，越界值（如员工拿到学生手机页的 ?tab=digital）回落到「通用设置」。
+const ROLE = (localStorage.getItem('role') || '').toUpperCase()
+const isStaff = ROLE === 'TEACHER' || ROLE === 'ADMIN' || ROLE === 'ENTERPRISE'
+const STAFF_HIDDEN_TAB_IDS = ['digital', 'data']
+const tabs = computed(() => (isStaff ? ALL_TABS.filter((t) => !STAFF_HIDDEN_TAB_IDS.includes(t.id)) : ALL_TABS))
+const visibleTabIds = computed(() => tabs.value.map((t) => t.id))
+
 const activeTab = ref(
-  typeof route.query.tab === 'string' && TAB_IDS.includes(route.query.tab) ? route.query.tab : 'general'
+  typeof route.query.tab === 'string' && visibleTabIds.value.includes(route.query.tab) ? route.query.tab : 'general'
 )
 
 // 浏览器的前进/后退也要跟着换栏，否则地址栏是 ?tab=help、内容是通用设置
 watch(
   () => route.query.tab,
   (tab) => {
-    if (typeof tab === 'string' && TAB_IDS.includes(tab) && tab !== activeTab.value) {
+    if (typeof tab === 'string' && visibleTabIds.value.includes(tab) && tab !== activeTab.value) {
       activeTab.value = tab
     }
   }
@@ -346,7 +359,7 @@ async function centerActiveTab() {
   await nextTick()
   const nav = navEl.value
   if (!nav || nav.scrollWidth <= nav.clientWidth) return // 桌面是竖排列表，不需要动
-  const btn = nav.children[TAB_IDS.indexOf(activeTab.value)]
+  const btn = nav.children[visibleTabIds.value.indexOf(activeTab.value)]
   if (!btn) return
   nav.scrollLeft = btn.offsetLeft - (nav.clientWidth - btn.offsetWidth) / 2
 }
@@ -396,6 +409,8 @@ const toggles = reactive([
   { key: 'report', name: '每周报告', desc: '每周发送练习总结和能力趋势', value: true },
   { key: 'features', name: '新功能通知', desc: '产品更新和新功能上线通知', value: false },
 ])
+/** 教师/企业：面试提醒与每周练习报告是学生向的，只留与角色无关的「新功能通知」 */
+const visibleToggles = computed(() => (isStaff ? toggles.filter((t) => t.key === 'features') : toggles))
 
 function loadPrefs() {
   let saved = {}

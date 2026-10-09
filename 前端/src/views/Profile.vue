@@ -11,7 +11,7 @@
           <div class="profile-details">
             <h1 class="profile-name">{{ nickname }}</h1>
             <p class="profile-bio">{{ accountLine }}</p>
-            <div class="profile-stats-row">
+            <div v-if="!isEnterprise" class="profile-stats-row">
               <div class="profile-stat">
                 <span class="stat-num">{{ stats.finishedInterviews }}</span>
                 <span class="stat-text">已完成面试</span>
@@ -40,8 +40,21 @@
 
       <!-- Content Grid -->
       <div class="profile-grid">
+        <!-- 企业账号：个人中心不摆学生模块（技能标签、练习日历都是企业账号没有的数据），
+             只留账号信息 + 回会议中心的入口 -->
+        <div v-if="isEnterprise" class="card enterprise-card">
+          <div class="card-header">
+            <h2 class="card-title">企业账号</h2>
+          </div>
+          <p class="enterprise-desc">
+            企业账号用于发起视频面试会议、查看参会记录、给候选人留下建议，这些都在「会议中心」里。
+            账号资料可以用右上角的「编辑资料」修改。
+          </p>
+          <router-link class="enterprise-cta" to="/enterprise/dashboard">去会议中心</router-link>
+        </div>
+
         <!-- Skills & Tags -->
-        <div class="card">
+        <div v-if="!isEnterprise" class="card">
           <div class="card-header">
             <h2 class="card-title">技能标签</h2>
             <router-link class="card-action" to="/resume?step=1">编辑</router-link>
@@ -61,7 +74,7 @@
         </div>
 
         <!-- Activity Calendar -->
-        <div class="card">
+        <div v-if="!isEnterprise" class="card">
           <div class="card-header">
             <h2 class="card-title">练习日历</h2>
             <!-- 说「35 天」而不是「5 周」：格子按行铺 7 个，
@@ -89,7 +102,7 @@
         </div>
 
         <!-- Per-job performance -->
-        <div class="card">
+        <div v-if="!isEnterprise" class="card">
           <div class="card-header">
             <h2 class="card-title">岗位表现</h2>
             <span class="card-subtitle">仅统计已完成</span>
@@ -108,7 +121,7 @@
         </div>
 
         <!-- Account overview -->
-        <div class="card">
+        <div v-if="!isEnterprise" class="card">
           <div class="card-header">
             <h2 class="card-title">数据概览</h2>
           </div>
@@ -134,7 +147,7 @@
         </div>
 
         <!-- Career target -->
-        <div class="card">
+        <div v-if="!isEnterprise" class="card">
           <div class="card-header">
             <h2 class="card-title">求职目标</h2>
             <span class="card-subtitle">带入面试准备与专项刷题</span>
@@ -196,6 +209,9 @@ import { useUserStore } from '../store/user'
 import AppLayout from '../components/layout/AppLayout.vue'
 
 const userStore = useUserStore()
+
+// 企业账号没有面试/简历数据：个人中心只显示账号信息与企业入口，不渲染学生模块
+const isEnterprise = computed(() => String(userStore.role || '').toUpperCase() === 'ENTERPRISE')
 
 const loading = ref(true)
 const error = ref('')
@@ -327,15 +343,12 @@ async function saveCareer() {
 onMounted(async () => {
   loading.value = true
   error.value = ''
-  // 各请求分开结算：记录只喂日历和岗位表现，它失败不该让整页变成错误态
-  const [meRes, statsRes, resumeRes, recordsRes, careerRes, jobsRes] = await Promise.allSettled([
-    getMe(),
-    getMyStats(),
-    getMyResume(),
-    getInterviewRecords(),
-    getCareerProfile(),
-    getJobList(),
-  ])
+  // 各请求分开结算：记录只喂日历和岗位表现，它失败不该让整页变成错误态。
+  // 企业账号不拉学生数据（统计/简历/记录/求职目标对它是空的），只取账号信息。
+  const tasks = isEnterprise.value
+    ? [getMe()]
+    : [getMe(), getMyStats(), getMyResume(), getInterviewRecords(), getCareerProfile(), getJobList()]
+  const [meRes, statsRes, resumeRes, recordsRes, careerRes, jobsRes] = await Promise.allSettled(tasks)
 
   if (meRes.status === 'fulfilled') {
     me.value = meRes.value
@@ -349,7 +362,8 @@ onMounted(async () => {
     error.value = '个人信息加载失败，显示的是本机缓存的账号信息。'
   }
 
-  if (statsRes.status === 'fulfilled') {
+  // 企业账号分支里后五个任务不存在，用 ?. 跳过（企业视图也不渲染这些卡片）
+  if (statsRes?.status === 'fulfilled') {
     const s = statsRes.value || {}
     stats.value = {
       finishedInterviews: s.finishedInterviews ?? 0,
@@ -362,19 +376,19 @@ onMounted(async () => {
     }
   }
 
-  if (resumeRes.status === 'fulfilled') {
+  if (resumeRes?.status === 'fulfilled') {
     // /resume/mine 的 skills 是一段 JSON 字符串，原样挂在 me 上给 computed 解析
     me.value = { ...(me.value || {}), skillsRaw: resumeRes.value?.skills }
   }
 
-  if (recordsRes.status === 'fulfilled') records.value = recordsRes.value || []
+  if (recordsRes?.status === 'fulfilled') records.value = recordsRes.value || []
 
-  if (careerRes.status === 'fulfilled') {
+  if (careerRes?.status === 'fulfilled') {
     careerLoaded.value = true
     career.value = { ...emptyCareer(), ...careerRes.value }
   }
 
-  if (jobsRes.status === 'fulfilled') {
+  if (jobsRes?.status === 'fulfilled') {
     jobsLoaded.value = true
     jobs.value = Array.isArray(jobsRes.value) ? jobsRes.value : []
   }
@@ -636,6 +650,28 @@ onMounted(async () => {
   gap: var(--space-6);
   align-items: start;
 }
+
+/* 企业账号卡：学生模块不渲染时它就是网格里唯一的内容，整行铺开 */
+.enterprise-card { grid-column: 1 / -1; }
+.enterprise-desc {
+  font-size: var(--text-sm);
+  color: var(--neutral-600);
+  line-height: 1.7;
+}
+.enterprise-cta {
+  display: inline-flex;
+  align-items: center;
+  min-height: 42px;
+  margin-top: var(--space-4);
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--accent-600);
+  color: #fff;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-decoration: none;
+}
+.enterprise-cta:hover { background: var(--accent-500); }
 
 /* Skills */
 .skills-grid {

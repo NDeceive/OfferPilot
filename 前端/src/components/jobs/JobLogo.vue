@@ -108,6 +108,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import { assetUrl } from '../../utils/assetUrl'
 
 const props = defineProps({
   iconKey: { type: String, default: 'qa-sdet' },
@@ -115,15 +116,15 @@ const props = defineProps({
 })
 
 const officialIcons = {
-  openjdk: '/job-logos/openjdk.svg',
-  python: '/job-logos/python.svg',
-  go: '/job-logos/go.svg',
-  nodejs: '/job-logos/nodejs.svg',
-  android: '/job-logos/android.svg',
-  apple: '/job-logos/apple.svg',
-  flutter: '/job-logos/flutter.svg',
-  wechat: '/job-logos/wechat.svg',
-  electron: '/job-logos/electron.svg',
+  openjdk: assetUrl('job-logos/openjdk.svg'),
+  python: assetUrl('job-logos/python.svg'),
+  go: assetUrl('job-logos/go.svg'),
+  nodejs: assetUrl('job-logos/nodejs.svg'),
+  android: assetUrl('job-logos/android.svg'),
+  apple: assetUrl('job-logos/apple.svg'),
+  flutter: assetUrl('job-logos/flutter.svg'),
+  wechat: assetUrl('job-logos/wechat.svg'),
+  electron: assetUrl('job-logos/electron.svg'),
 }
 
 const officialSrc = computed(() => officialIcons[props.iconKey] || '')
