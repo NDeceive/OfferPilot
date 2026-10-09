@@ -57,6 +57,9 @@
 
 <script setup>
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { demoState } from '../../utils/offlineDemo'
+import { getApiBase } from '../../utils/apiBase'
+import { assetUrl } from '../../utils/assetUrl'
 
 const props = defineProps({
   text: {
@@ -69,14 +72,27 @@ const props = defineProps({
   },
 })
 
-const embedBaseUrl = import.meta.env.VITE_DIGITAL_HUMAN_EMBED_URL
-  || '/digital-human/offerpilot-embed.html'
+// 数字人嵌入页地址：优先构建时注入；否则跟随登录页「服务器设置」的服务器地址（换成 8010 端口）。
+// 手机 APK 里没有 Vite 代理，相对地址只会指到 App 自己，必须解析成电脑的绝对地址。
+function resolveEmbedBaseUrl() {
+  const explicit = import.meta.env.VITE_DIGITAL_HUMAN_EMBED_URL
+  if (explicit) return explicit
+  try {
+    const apiHost = new URL(getApiBase()).hostname
+    if (apiHost) return `http://${apiHost}:8010/offerpilot-embed.html`
+  } catch {
+    /* API 根地址是相对路径（Web 端）：继续走 Vite 代理 */
+  }
+  return '/digital-human/offerpilot-embed.html'
+}
+
+const embedBaseUrl = resolveEmbedBaseUrl()
 const embedUrl = withLayoutVersion(embedBaseUrl)
 const INTERVIEW_AVATAR_ASSETS = {
-  waiting: '/assets/interview-avatar/waiting-loop-v3.mp4',
-  opening: '/assets/interview-avatar/door-opening-v3.mp4',
-  interviewerFallback: '/assets/interview-avatar/interviewer-v3.mp4',
-  poster: '/assets/interview-avatar/closed-door-j0.png',
+  waiting: assetUrl('assets/interview-avatar/waiting-loop-v3.mp4'),
+  opening: assetUrl('assets/interview-avatar/door-opening-v3.mp4'),
+  interviewerFallback: assetUrl('assets/interview-avatar/interviewer-v3.mp4'),
+  poster: assetUrl('assets/interview-avatar/closed-door-j0.png'),
 }
 
 const frameRef = ref(null)
@@ -147,9 +163,12 @@ function postToFrame(message) {
 
 function resolveTargetOrigin() {
   try {
-    return new URL(embedUrl, window.location.href).origin
+    const origin = new URL(embedUrl, window.location.href).origin
+    // file:// 页面下 origin 是字符串 "null"，postMessage 不接受它当 targetOrigin（抛 SyntaxError）。
+    // 放宽成 '*'：真正把关的是 handleMessage 里 event.source 是不是我们的 iframe。
+    return origin === 'null' ? '*' : origin
   } catch {
-    return window.location.origin
+    return '*'
   }
 }
 
@@ -269,7 +288,8 @@ function reload() {
 
 function handleMessage(event) {
   if (event.source !== frameRef.value?.contentWindow) return
-  if (event.origin !== resolveTargetOrigin()) return
+  const targetOrigin = resolveTargetOrigin()
+  if (targetOrigin !== '*' && event.origin !== targetOrigin) return
 
   const data = event.data || {}
   if (data.type === 'offerpilot.embed.ready') {
@@ -302,7 +322,13 @@ function handleMessage(event) {
 
 function startConnectionTimeout() {
   clearTimeout(connectionTimer)
+  // 离线演示模式下别开这个超时：数字人 iframe 本来就连不上，两分钟后会翻成一条
+  // 红字「数字人连接异常」，挂在演示画面上很难看。停在「正在连接」比挂着报错体面，
+  // 也不必编一句「已就绪」的假话。面试流程本身不依赖它（题目由 messages 驱动）。
+  if (demoState.active) return
   connectionTimer = setTimeout(() => {
+    // 计时器是挂载时起的，两分钟内可能已经切进演示模式了，触发时再判一次
+    if (demoState.active) return
     if (connectionState.value === 'connecting') connectionState.value = 'error'
   }, 120000)
 }

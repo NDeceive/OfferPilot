@@ -181,8 +181,10 @@ public class DashboardService {
             Long userId, List<InterviewSession> sessions, DashboardOverviewResponse.LatestInsight insight) {
         DashboardOverviewResponse.NextAction action = new DashboardOverviewResponse.NextAction();
         if (sessions.stream().anyMatch(session -> "ONGOING".equals(session.getStatus()))) {
+            // 三条推荐一律指向对话录入（/interview/ai）：它是面试准备的默认入口，
+            // 手动录入（/jobs）两页现在都挂着「对话录入 ⇄」开关，互为出口
             return action(action, "START_INTERVIEW", "开始一场新的模拟面试",
-                    "重新选择目标岗位与训练时长，进入完整面试流程。", "/jobs");
+                    "重新选择目标岗位与训练时长，进入完整面试流程。", "/interview/ai");
         }
         Resume resume = resumeMapper.selectOne(new LambdaQueryWrapper<Resume>()
                 .eq(Resume::getUserId, userId).orderByDesc(Resume::getUpdateTime).last("LIMIT 1"));
@@ -192,12 +194,12 @@ public class DashboardService {
         }
         if (sessions.stream().noneMatch(session -> "FINISHED".equals(session.getStatus()))) {
             return action(action, "FIRST_INTERVIEW", "开始第一次模拟面试",
-                    "选择目标岗位，建立第一份可复盘的训练记录。", "/jobs");
+                    "选择目标岗位，建立第一份可复盘的训练记录。", "/interview/ai");
         }
         String title = insight != null && insight.getWeakestDimension() != null
                 ? "针对“" + insight.getWeakestDimension() + "”再练一次" : "安排下一次岗位训练";
         return action(action, "TARGETED_PRACTICE", title,
-                "结合最近一次报告选择岗位与难度，继续积累可比较的表现数据。", "/jobs");
+                "结合最近一次报告选择岗位与难度，继续积累可比较的表现数据。", "/interview/ai");
     }
 
     private DashboardOverviewResponse.NextAction action(

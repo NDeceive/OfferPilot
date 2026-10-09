@@ -57,12 +57,15 @@ public class WebConfig implements WebMvcConfigurer {
         // 用配置的固定白名单替代通配符 "*"：与 allowCredentials(true) 兼容且更安全。
         // 白名单为空（生产未注入）时 = 不放行任何跨域来源（fail-closed），
         // 同域部署的前端无需跨域，不受影响。
+        // 用 allowedOriginPatterns 而不是 allowedOrigins：字面量的匹配行为完全相同，
+        // 但额外支持 "http://localhost:[*]" 这类端口通配——本地预览工具的端口不固定
+        // （vite 换端口、HBuilderX 内置浏览器每次随机端口），写死端口会把它们拦在跨域层。
         String[] origins = Arrays.stream(allowedOrigins.split(","))
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
                 .toArray(String[]::new);
         registry.addMapping("/**")
-                .allowedOrigins(origins)
+                .allowedOriginPatterns(origins)
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .allowCredentials(true)

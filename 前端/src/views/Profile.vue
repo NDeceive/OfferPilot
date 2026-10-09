@@ -1,132 +1,831 @@
 <template>
-  <component :is="mobile ? MobileShell : AppLayout" title="我的">
-    <div class="profile-page" :class="{ 'is-mobile': mobile }">
-      <header class="page-heading"><div><span class="eyebrow">个人中心</span><h1>我的求职档案</h1><p>整理你的经历与目标，让每一次训练更贴近自己。</p></div><router-link class="text-link" to="/settings">账号设置 →</router-link></header>
-      <div v-if="loading" class="profile-loading" role="status">正在读取你的求职档案…</div>
-      <template v-else>
-        <div v-if="loadErrors.length" class="profile-error" role="alert">{{ loadErrors.join('；') }} <button type="button" @click="load">重新加载</button></div>
-        <p v-if="notice" class="profile-notice" role="status">{{ notice }}</p>
-        <section class="identity-panel" aria-label="个人资料">
-          <AvatarEditor :model-value="userStore.avatar" :name="displayName" @update:model-value="avatarSaved" />
-          <div class="identity-copy"><span class="eyebrow">你的训练档案</span><h2>{{ displayName }}</h2><p>{{ identitySubtitle }}</p><span class="account-name">账号：{{ user?.username || userStore.username || '—' }}</span></div>
-          <button class="secondary" type="button" :disabled="!user" @click="nicknameDraft = displayName; editingName = !editingName">编辑昵称</button>
-          <form v-if="editingName" class="name-form" @submit.prevent="saveName"><label for="profile-nickname">昵称</label><input id="profile-nickname" v-model="nicknameDraft" maxlength="30" required /><button class="primary" :disabled="nameSaving">{{ nameSaving ? '保存中…' : '保存昵称' }}</button><button class="secondary" type="button" :disabled="nameSaving" @click="editingName = false">取消</button><p v-if="nameError" class="field-error" role="alert">{{ nameError }}</p></form>
-        </section>
-        <div class="profile-columns">
-          <div class="profile-main">
-            <section class="profile-panel resume-panel" aria-labelledby="resume-title">
-              <header class="section-heading"><div><span class="eyebrow">训练依据</span><h2 id="resume-title">我的简历</h2></div><span class="status-label">{{ !resumeLoaded ? '暂不可用' : resume?.rawText ? '已建立档案' : '待添加' }}</span></header>
-              <p class="section-description">面试教练会结合你的项目与技能提问。更新资料用于后续训练，不改变历史报告。</p>
-              <div v-if="resume?.rawText" class="resume-document"><span class="document-icon" aria-hidden="true">≡</span><div><strong>{{ fileProfile?.filename || '在线简历' }}</strong><p>{{ resume.updateTime ? '最近更新 ' + dateLabel(resume.updateTime) : '已保存简历内容' }}</p></div><button class="text-link" type="button" @click="showPreview = !showPreview">{{ showPreview ? '收起内容' : '查看内容' }}</button></div>
-              <div v-else-if="resumeLoaded" class="resume-empty"><strong>从一份简历开始</strong><p>上传已有文件，或直接填写经历。你可以先检查内容，再开始面试。</p></div>
-              <pre v-if="showPreview && resume?.rawText" class="resume-preview">{{ resume.rawText }}</pre>
-              <div class="resume-actions"><button :class="resume?.rawText ? 'secondary' : 'primary'" type="button" :disabled="resumeBusy || !resumeLoaded" @click="resumeInput.click()">{{ resumeBusy ? '正在解析并保存…' : resume?.rawText ? '更换简历文件' : '上传简历' }}</button><button class="secondary" type="button" :disabled="resumeBusy || !resumeLoaded" @click="resumeText = resume?.rawText || ''; editingResume = !editingResume">{{ resume?.rawText ? '修正简历内容' : '填写简历内容' }}</button></div>
-              <input ref="resumeInput" type="file" accept=".pdf,.doc,.docx" hidden @change="uploadResume" />
-              <p class="helper">支持 PDF、Word，文件不超过 10 MB。更换时将重新提取技能标签。</p>
-              <p v-if="resumeError" class="field-error" role="alert">{{ resumeError }}</p>
-              <form v-if="editingResume" class="resume-form" @submit.prevent="saveResumeText"><label for="resume-text">简历内容</label><textarea id="resume-text" v-model="resumeText" rows="12" minlength="30" maxlength="30000" required placeholder="填写教育背景、实习或工作经历、项目经历与技能…"></textarea><p class="helper">保存后重新分析技能标签。修正的是训练使用的内容，不修改原上传文件。</p><div class="form-actions"><button class="primary" :disabled="resumeBusy">保存并分析</button><button class="secondary" type="button" :disabled="resumeBusy" @click="editingResume = false">取消</button></div></form>
-              <div v-if="resume?.rawText" class="skills-section"><header class="section-heading"><h3>技能标签</h3><button class="text-link" type="button" :disabled="resumeBusy" @click="tagText = skills.join('，'); editingTags = !editingTags">编辑标签</button></header><p class="helper">来自简历或由你确认，用于匹配题目，不代表能力评分。</p><div v-if="skills.length" class="skill-tags"><span v-for="skill in skills" :key="skill">{{ skill }}</span></div><p v-else class="helper">尚未确认技能，可手动添加。</p><form v-if="editingTags" @submit.prevent="saveTags"><label for="skill-tags">用逗号分隔技能（最多 30 个）</label><textarea id="skill-tags" v-model="tagText" rows="3" maxlength="1500"></textarea><div class="form-actions"><button class="primary" :disabled="resumeBusy">保存标签</button><button class="secondary" type="button" :disabled="resumeBusy" @click="editingTags = false">取消</button></div></form></div>
-            </section>
-            <section class="profile-panel training-panel" aria-labelledby="progress-title"><header class="section-heading"><div><span class="eyebrow">持续积累</span><h2 id="progress-title">我的训练</h2></div><router-link class="text-link" to="/history">查看面试记录 →</router-link></header><div class="training-totals"><div><strong>{{ overview?.summary?.completedCount ?? '—' }}</strong><span>已完成面试</span></div><div><strong>{{ overview?.summary?.recentCount ?? '—' }}</strong><span>近 30 天完成</span></div><div><strong>{{ overview?.summary?.streakDays ?? '—' }}<small> 天</small></strong><span>连续训练</span></div></div><p class="helper">统计来自已完成的模拟面试，详细表现见每次报告。</p><div class="record-links"><router-link to="/history"><strong>面试记录与报告</strong><span>查看反馈，复盘每次面试 →</span></router-link><router-link to="/learning"><strong>专项刷题</strong><span>围绕目标岗位继续练习 →</span></router-link></div></section>
+  <AppLayout>
+    <div class="profile-page">
+      <!-- Profile Header -->
+      <div class="profile-header card">
+        <div class="profile-cover"></div>
+        <div class="profile-info">
+          <div class="profile-avatar">
+            <span>{{ avatarChar }}</span>
           </div>
-          <aside class="profile-side">
-            <section class="profile-panel career-panel" aria-labelledby="career-title"><header class="section-heading"><div><span class="eyebrow">长期准备方向</span><h2 id="career-title">求职目标</h2></div></header><p class="section-description">保存后带入面试准备与专项刷题，每次训练仍可临时调整。</p>
-              <form @submit.prevent="saveCareer"><fieldset :disabled="!careerLoaded || careerSaving"><label for="target-job">默认目标岗位</label><select id="target-job" v-model="career.targetJobId" :disabled="!jobsLoaded"><option :value="null">暂未确定</option><option v-for="job in jobs" :key="job.id" :value="job.id">{{ job.name || job.title }}</option></select>
-                  <label for="career-stage">求职阶段</label><select id="career-stage" v-model="career.stage"><option value="">暂未选择</option><option>实习</option><option>校招</option><option>社招</option></select>
-                  <label for="target-company">目标公司 <span>选填</span></label><input id="target-company" v-model="career.targetCompany" maxlength="100" placeholder="例如：正在准备的目标企业" />
-                  <details class="education-details"><summary>教育背景 <span>选填</span></summary><label for="profile-school">学校</label><input id="profile-school" v-model="career.school" maxlength="100" autocomplete="organization" /><label for="profile-major">专业</label><input id="profile-major" v-model="career.major" maxlength="100" /><label for="graduation-year">毕业年份</label><input id="graduation-year" v-model="career.graduationYear" inputmode="numeric" pattern="(?:19|20|21)[0-9]{2}" maxlength="4" placeholder="例如：2027" /></details>
-                  <button class="primary career-save" :disabled="!jobsLoaded">{{ careerSaving ? '正在保存…' : '保存求职目标' }}</button>
-                </fieldset><p v-if="careerError" class="field-error" role="alert">{{ careerError }}</p></form>
-            </section>
-            <section class="profile-note"><h3>资料准备好，训练更有针对性</h3><p>先核对简历中你真正参与的项目，再确认目标岗位。面试开始前，可以继续调整考察重点和训练时长。</p><router-link class="text-link" to="/interview/ai">进入 AI 面试教练 →</router-link></section>
-          </aside>
+          <div class="profile-details">
+            <h1 class="profile-name">{{ nickname }}</h1>
+            <p class="profile-bio">{{ accountLine }}</p>
+            <div v-if="!isEnterprise" class="profile-stats-row">
+              <div class="profile-stat">
+                <span class="stat-num">{{ stats.finishedInterviews }}</span>
+                <span class="stat-text">已完成面试</span>
+              </div>
+              <div class="profile-stat">
+                <span class="stat-num">{{ stats.averageScore }}</span>
+                <span class="stat-text">平均得分</span>
+              </div>
+              <div class="profile-stat">
+                <span class="stat-num">{{ stats.highestScore }}</span>
+                <span class="stat-text">最高得分</span>
+              </div>
+            </div>
+          </div>
+          <router-link class="edit-btn" :to="{ path: '/settings', query: { tab: 'general' } }">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+            编辑资料
+          </router-link>
         </div>
-      </template>
+      </div>
+
+      <p v-if="error" class="profile-alert" role="alert">{{ error }}</p>
+
+      <!-- Content Grid -->
+      <div class="profile-grid">
+        <!-- 企业账号：个人中心不摆学生模块（技能标签、练习日历都是企业账号没有的数据），
+             只留账号信息 + 回会议中心的入口 -->
+        <div v-if="isEnterprise" class="card enterprise-card">
+          <div class="card-header">
+            <h2 class="card-title">企业账号</h2>
+          </div>
+          <p class="enterprise-desc">
+            企业账号用于发起视频面试会议、查看参会记录、给候选人留下建议，这些都在「会议中心」里。
+            账号资料可以用右上角的「编辑资料」修改。
+          </p>
+          <router-link class="enterprise-cta" to="/enterprise/dashboard">去会议中心</router-link>
+        </div>
+
+        <!-- Skills & Tags -->
+        <div v-if="!isEnterprise" class="card">
+          <div class="card-header">
+            <h2 class="card-title">技能标签</h2>
+            <router-link class="card-action" to="/resume?step=1">编辑</router-link>
+          </div>
+          <template v-if="loading">
+            <div class="profile-loading">正在加载简历…</div>
+          </template>
+          <template v-else-if="skills.length">
+            <div class="skills-grid">
+              <span v-for="skill in skills" :key="skill" class="skill-item">{{ skill }}</span>
+            </div>
+            <p class="card-foot">共 {{ skills.length }} 项，由简历解析得到</p>
+          </template>
+          <div v-else class="profile-empty">
+            还没有解析出技能标签，<router-link to="/resume?step=1">上传简历</router-link>后自动生成。
+          </div>
+        </div>
+
+        <!-- Activity Calendar -->
+        <div v-if="!isEnterprise" class="card">
+          <div class="card-header">
+            <h2 class="card-title">练习日历</h2>
+            <!-- 说「35 天」而不是「5 周」：格子按行铺 7 个，
+                 每行是连续 7 天，并没有按周一到周日对齐 -->
+            <span class="card-subtitle">最近 35 天</span>
+          </div>
+          <div class="calendar-grid">
+            <div
+              v-for="day in calendarDays"
+              :key="day.key"
+              class="calendar-cell"
+              :class="'level-' + day.level"
+              :title="day.key + '：' + day.count + ' 场'"
+            ></div>
+          </div>
+          <div class="calendar-legend">
+            <span class="legend-label">少</span>
+            <div class="legend-cell level-0"></div>
+            <div class="legend-cell level-1"></div>
+            <div class="legend-cell level-2"></div>
+            <div class="legend-cell level-3"></div>
+            <div class="legend-cell level-4"></div>
+            <span class="legend-label">多</span>
+          </div>
+        </div>
+
+        <!-- Per-job performance -->
+        <div v-if="!isEnterprise" class="card">
+          <div class="card-header">
+            <h2 class="card-title">岗位表现</h2>
+            <span class="card-subtitle">仅统计已完成</span>
+          </div>
+          <div v-if="jobStats.length" class="jobperf-list">
+            <div v-for="item in jobStats" :key="item.name" class="jobperf-row">
+              <span class="jobperf-name" :title="item.name">{{ item.name }}</span>
+              <div class="jobperf-track">
+                <div class="jobperf-bar" :style="{ width: item.avg + '%' }"></div>
+              </div>
+              <span class="jobperf-count">{{ item.count }}场</span>
+              <span class="jobperf-score">{{ item.avg }}</span>
+            </div>
+          </div>
+          <div v-else class="profile-empty">还没有完成的面试，成绩出来后会按岗位汇总。</div>
+        </div>
+
+        <!-- Account overview -->
+        <div v-if="!isEnterprise" class="card">
+          <div class="card-header">
+            <h2 class="card-title">数据概览</h2>
+          </div>
+          <div class="stat-grid">
+            <div class="stat-cell">
+              <strong>{{ stats.ongoingInterviews }}</strong>
+              <span>进行中面试</span>
+            </div>
+            <div class="stat-cell">
+              <strong>{{ stats.reportCount }}</strong>
+              <span>已生成报告</span>
+            </div>
+            <div class="stat-cell">
+              <strong>{{ stats.skillCount }}</strong>
+              <span>简历技能</span>
+            </div>
+            <div class="stat-cell">
+              <strong>{{ finishedRate }}</strong>
+              <span>完成率</span>
+            </div>
+          </div>
+          <p class="card-foot">每次点「开始面试」都会建一条记录，中途退出不会自动结束，因此「进行中」会比实际练习次数多。</p>
+        </div>
+
+        <!-- Career target -->
+        <div v-if="!isEnterprise" class="card">
+          <div class="card-header">
+            <h2 class="card-title">求职目标</h2>
+            <span class="card-subtitle">带入面试准备与专项刷题</span>
+          </div>
+          <form class="career-form" @submit.prevent="saveCareer">
+            <label>
+              <span>默认目标岗位</span>
+              <select v-model="career.targetJobId" :disabled="!jobsLoaded">
+                <option :value="null">暂未确定</option>
+                <option v-for="job in jobs" :key="job.id" :value="job.id">{{ job.name || job.title }}</option>
+              </select>
+            </label>
+            <label>
+              <span>求职阶段</span>
+              <select v-model="career.stage">
+                <option value="">暂未选择</option>
+                <option>实习</option>
+                <option>校招</option>
+                <option>社招</option>
+              </select>
+            </label>
+            <label>
+              <span>目标公司（选填）</span>
+              <input v-model.trim="career.targetCompany" maxlength="100" placeholder="例如：正在准备的目标企业" />
+            </label>
+            <details class="career-education">
+              <summary>教育背景（选填）</summary>
+              <label>
+                <span>学校</span>
+                <input v-model.trim="career.school" maxlength="100" autocomplete="organization" />
+              </label>
+              <label>
+                <span>专业</span>
+                <input v-model.trim="career.major" maxlength="100" />
+              </label>
+              <label>
+                <span>毕业年份</span>
+                <input v-model.trim="career.graduationYear" inputmode="numeric" pattern="(?:19|20|21)[0-9]{2}" maxlength="4" placeholder="例如：2027" />
+              </label>
+            </details>
+            <div class="career-actions">
+              <button type="submit" class="career-save" :disabled="careerSaving || !careerLoaded">
+                {{ careerSaving ? '正在保存…' : '保存求职目标' }}
+              </button>
+              <span v-if="careerNotice" class="career-notice" role="status">{{ careerNotice }}</span>
+            </div>
+          </form>
+          <p class="card-foot">保存后，面试准备与专项刷题会默认带入这个方向，每次训练仍可临时调整。</p>
+        </div>
+      </div>
     </div>
-  </component>
+  </AppLayout>
 </template>
+
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import AppLayout from '../components/layout/AppLayout.vue'
-import MobileShell from '../mobile/components/MobileShell.vue'
-import AvatarEditor from '../components/profile/AvatarEditor.vue'
-import { getMe, updateProfile, getMyResume, getResumeFileProfile, uploadResumeFile, saveResume, updateResumeTags, getCareerProfile, saveCareerProfile, getJobList, getDashboardOverview } from '../api'
+import { getCareerProfile, getInterviewRecords, getJobList, getMe, getMyResume, getMyStats, saveCareerProfile } from '../api'
 import { useUserStore } from '../store/user'
-defineProps({ mobile: Boolean })
+import AppLayout from '../components/layout/AppLayout.vue'
+
 const userStore = useUserStore()
-const user = ref(null), resume = ref(null), fileProfile = ref(null), overview = ref(null), jobs = ref([])
+
+// 企业账号没有面试/简历数据：个人中心只显示账号信息与企业入口，不渲染学生模块
+const isEnterprise = computed(() => String(userStore.role || '').toUpperCase() === 'ENTERPRISE')
+
+const loading = ref(true)
+const error = ref('')
+const me = ref(null)
+const records = ref([])
+
+// 字段名对齐后端 UserStats（finishedInterviews / ongoingInterviews / averageScore /
+// highestScore / reportCount / skillCount）。此前读的是 totalInterviews 和 streakDays，
+// 这两个后端根本没有，于是「面试次数」和「连续练习」恒为 0。
+const stats = ref({
+  finishedInterviews: 0,
+  ongoingInterviews: 0,
+  averageScore: 0,
+  highestScore: 0,
+  reportCount: 0,
+  skillCount: 0,
+})
+
+const nickname = computed(
+  () => me.value?.nickname || userStore.nickname || me.value?.username || userStore.username || '用户'
+)
+const avatarChar = computed(() => (nickname.value.trim().charAt(0) || '用').toUpperCase())
+const accountLine = computed(() => {
+  const username = me.value?.username || userStore.username
+  return username ? `@${username}` : '求职训练用户'
+})
+const finishedRate = computed(() => {
+  const total = stats.value.finishedInterviews + stats.value.ongoingInterviews
+  return total ? `${Math.round((stats.value.finishedInterviews / total) * 100)}%` : '—'
+})
+
+/* ---------- 技能标签：来自简历解析结果，不再写死 ---------- */
+function parseSkillList(raw) {
+  if (!raw) return []
+  if (Array.isArray(raw)) return raw.map(String).filter(Boolean)
+  try {
+    const parsed = JSON.parse(raw)
+    if (Array.isArray(parsed)) return parsed.map(String).filter(Boolean)
+  } catch {
+    // 后端也可能把 skills 存成逗号分隔的纯文本，退回按分隔符切
+  }
+  return String(raw).split(/[,，、\n]/).map((s) => s.trim()).filter(Boolean)
+}
+
+const skills = computed(() => parseSkillList(me.value?.skillsRaw))
+
+/* ---------- 练习日历：最近 35 天，按真实面试记录计数 ---------- */
+const CALENDAR_DAYS = 35
+
+function toDayKey(value) {
+  const d = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(d.getTime())) return ''
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+// 2 场封顶到 level 4，是因为单日跑十几场的极端值会把整张图压成一片浅色
+function levelOf(count) {
+  if (count <= 0) return 0
+  if (count === 1) return 1
+  if (count === 2) return 2
+  if (count <= 4) return 3
+  return 4
+}
+
+const calendarDays = computed(() => {
+  const counts = new Map()
+  records.value.forEach((r) => {
+    const key = toDayKey(r.startTime)
+    if (key) counts.set(key, (counts.get(key) || 0) + 1)
+  })
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const days = []
+  for (let i = CALENDAR_DAYS - 1; i >= 0; i--) {
+    const d = new Date(today)
+    d.setDate(d.getDate() - i)
+    const key = toDayKey(d)
+    const count = counts.get(key) || 0
+    days.push({ key, count, level: levelOf(count) })
+  }
+  return days
+})
+
+/* ---------- 岗位表现：按岗位汇总已完成场次与平均分 ---------- */
+const jobStats = computed(() => {
+  const map = new Map()
+  records.value.forEach((r) => {
+    if (r.status !== 'FINISHED') return
+    if (r.totalScore === null || r.totalScore === undefined) return
+    const score = Number(r.totalScore)
+    if (!Number.isFinite(score)) return
+    const name = r.jobName || '未命名岗位'
+    const cur = map.get(name) || { name, count: 0, total: 0 }
+    cur.count += 1
+    cur.total += score
+    map.set(name, cur)
+  })
+  return [...map.values()]
+    .map((j) => ({ name: j.name, count: j.count, avg: Math.round(j.total / j.count) }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 6) // 岗位族有 32 个，列太长得翻页，取场次最多的前 6 个
+})
+
+/* ---------- 求职目标：保存后喂给 preferredRole / preferredCompany / 预选岗位 ---------- */
+const jobs = ref([])
+const jobsLoaded = ref(false)
+const careerLoaded = ref(false)
+const careerSaving = ref(false)
+const careerNotice = ref('')
 const emptyCareer = () => ({ stage: '', school: '', major: '', graduationYear: '', targetJobId: null, targetCompany: '' })
-const career = ref(emptyCareer()), savedCareer = ref(emptyCareer())
-const loading = ref(true), loadErrors = ref([]), notice = ref(''), careerLoaded = ref(false), jobsLoaded = ref(false), resumeLoaded = ref(false)
-const editingName = ref(false), nicknameDraft = ref(''), nameSaving = ref(false), nameError = ref('')
-const resumeInput = ref(null), resumeBusy = ref(false), resumeError = ref(''), showPreview = ref(false), editingResume = ref(false), resumeText = ref(''), editingTags = ref(false), tagText = ref('')
-const careerSaving = ref(false), careerError = ref('')
-const displayName = computed(() => userStore.nickname || user.value?.username || '我的档案')
-const identitySubtitle = computed(() => [savedCareer.value.stage && `${savedCareer.value.stage}准备中`, savedCareer.value.school, savedCareer.value.major].filter(Boolean).join(' · ') || '完善你的资料，从真实经历开始训练')
-function parseList(value) { if (Array.isArray(value)) return value; try { const data = JSON.parse(value || '[]'); return Array.isArray(data) ? data : [] } catch { return [] } }
-const skills = computed(() => parseList(resume.value?.skills).filter(item => typeof item === 'string'))
-const dateLabel = value => { const date = new Date(value); return Number.isNaN(date.getTime()) ? '—' : new Intl.DateTimeFormat('zh-CN').format(date) }
-async function load() {
-  loading.value = true; loadErrors.value = []
-  const [me, cv, file, prefs, roles, stats] = await Promise.allSettled([getMe(), getMyResume(), getResumeFileProfile(), getCareerProfile(), getJobList(), getDashboardOverview()])
-  if (me.status === 'fulfilled' && me.value) { user.value = me.value; userStore.syncProfile(me.value) } else loadErrors.value.push('个人资料读取失败')
-  resumeLoaded.value = cv.status === 'fulfilled'
-  if (resumeLoaded.value) resume.value = cv.value; else loadErrors.value.push('简历读取失败')
-  if (file.status === 'fulfilled') fileProfile.value = file.value
-  careerLoaded.value = prefs.status === 'fulfilled'
-  if (careerLoaded.value) { career.value = { ...emptyCareer(), ...prefs.value }; savedCareer.value = { ...career.value } } else loadErrors.value.push('求职目标读取失败')
-  jobsLoaded.value = roles.status === 'fulfilled'
-  if (jobsLoaded.value) jobs.value = Array.isArray(roles.value) ? roles.value : []; else loadErrors.value.push('岗位列表读取失败')
-  if (stats.status === 'fulfilled') overview.value = stats.value; else loadErrors.value.push('训练统计暂不可用')
-  loading.value = false
-}
-async function saveName() {
-  nameError.value = ''; nameSaving.value = true
-  try {
-    if (!nicknameDraft.value.trim()) throw new Error('请输入昵称。')
-    const updated = await updateProfile({ nickname: nicknameDraft.value.trim() })
-    user.value = { ...user.value, nickname: updated.nickname }
-    userStore.syncProfile({ ...user.value, avatar: userStore.avatar })
-    editingName.value = false; notice.value = '昵称已保存。'
-  } catch (e) { nameError.value = e.message || '保存失败，请重试。' } finally { nameSaving.value = false }
-}
-function avatarSaved(value) { userStore.avatar = value; notice.value = '头像已保存。' }
-async function uploadResume(event) {
-  const file = event.target.files[0]; event.target.value = ''; if (!file) return
-  resumeError.value = ''
-  if (!/\.(pdf|docx?)$/i.test(file.name) || file.size > 10 * 1024 * 1024) { resumeError.value = '请选择 10 MB 以内的 PDF 或 Word 文件。'; return }
-  resumeBusy.value = true
-  try {
-    fileProfile.value = await uploadResumeFile(file); resume.value = await getMyResume()
-    editingResume.value = false; editingTags.value = false; notice.value = '简历已更新，请核对内容与技能标签。'
-  } catch (e) { resumeError.value = e.message || '上传或读取失败，请重新加载后确认。' } finally { resumeBusy.value = false }
-}
-async function saveResumeText() {
-  resumeBusy.value = true; resumeError.value = ''
-  try {
-    if (resumeText.value.trim().length < 30) throw new Error('请填写至少 30 个字的简历内容。')
-    resume.value = await saveResume({ rawText: resumeText.value.trim() })
-    editingResume.value = false; editingTags.value = false; notice.value = '简历内容已保存，技能标签已重新分析。'
-  } catch (e) { resumeError.value = e.message || '保存失败，请重试。' } finally { resumeBusy.value = false }
-}
-async function saveTags() {
-  resumeBusy.value = true; resumeError.value = ''
-  try {
-    const tags = [...new Set(tagText.value.split(/[,，\n]/).map(s => s.trim()).filter(Boolean))]
-    if (tags.length > 30 || tags.some(s => s.length > 40)) throw new Error('最多保存 30 个技能，每个不超过 40 个字符。')
-    await updateResumeTags(tags); resume.value = { ...resume.value, skills: tags }; editingTags.value = false; notice.value = '技能标签已保存。'
-  } catch (e) { resumeError.value = e.message || '保存失败，请重试。' } finally { resumeBusy.value = false }
-}
+const career = ref(emptyCareer())
+
 async function saveCareer() {
-  careerSaving.value = true; careerError.value = ''
-  try { const result = await saveCareerProfile(career.value); career.value = { ...emptyCareer(), ...result }; savedCareer.value = { ...career.value }; notice.value = '求职目标已保存，下次准备时自动带入。' }
-  catch (e) { careerError.value = e.message || '保存失败，请重试。' } finally { careerSaving.value = false }
+  careerSaving.value = true
+  careerNotice.value = ''
+  try {
+    const saved = await saveCareerProfile(career.value)
+    career.value = { ...emptyCareer(), ...saved }
+    careerNotice.value = '已保存，下次准备时自动带入。'
+  } catch (e) {
+    careerNotice.value = e.message || '保存失败，请重试。'
+  } finally {
+    careerSaving.value = false
+  }
 }
-onMounted(load)
+
+onMounted(async () => {
+  loading.value = true
+  error.value = ''
+  // 各请求分开结算：记录只喂日历和岗位表现，它失败不该让整页变成错误态。
+  // 企业账号不拉学生数据（统计/简历/记录/求职目标对它是空的），只取账号信息。
+  const tasks = isEnterprise.value
+    ? [getMe()]
+    : [getMe(), getMyStats(), getMyResume(), getInterviewRecords(), getCareerProfile(), getJobList()]
+  const [meRes, statsRes, resumeRes, recordsRes, careerRes, jobsRes] = await Promise.allSettled(tasks)
+
+  if (meRes.status === 'fulfilled') {
+    me.value = meRes.value
+    userStore.$patch({
+      userId: meRes.value?.id,
+      username: meRes.value?.username,
+      nickname: meRes.value?.nickname || '',
+      role: meRes.value?.role,
+    })
+  } else {
+    error.value = '个人信息加载失败，显示的是本机缓存的账号信息。'
+  }
+
+  // 企业账号分支里后五个任务不存在，用 ?. 跳过（企业视图也不渲染这些卡片）
+  if (statsRes?.status === 'fulfilled') {
+    const s = statsRes.value || {}
+    stats.value = {
+      finishedInterviews: s.finishedInterviews ?? 0,
+      ongoingInterviews: s.ongoingInterviews ?? 0,
+      // 平均分/最高分接口给的是小数，页面上按整数看更清楚
+      averageScore: Math.round(s.averageScore ?? 0),
+      highestScore: Math.round(s.highestScore ?? 0),
+      reportCount: s.reportCount ?? 0,
+      skillCount: s.skillCount ?? 0,
+    }
+  }
+
+  if (resumeRes?.status === 'fulfilled') {
+    // /resume/mine 的 skills 是一段 JSON 字符串，原样挂在 me 上给 computed 解析
+    me.value = { ...(me.value || {}), skillsRaw: resumeRes.value?.skills }
+  }
+
+  if (recordsRes?.status === 'fulfilled') records.value = recordsRes.value || []
+
+  if (careerRes?.status === 'fulfilled') {
+    careerLoaded.value = true
+    career.value = { ...emptyCareer(), ...careerRes.value }
+  }
+
+  if (jobsRes?.status === 'fulfilled') {
+    jobsLoaded.value = true
+    jobs.value = Array.isArray(jobsRes.value) ? jobsRes.value : []
+  }
+
+  loading.value = false
+})
 </script>
+
 <style scoped>
-.profile-page input[hidden]{display:none}
-.profile-page{max-width:1180px;margin:0 auto;padding:30px 24px 48px;color:var(--neutral-900)}.page-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:24px}.eyebrow{display:block;color:var(--accent-700);font-size:12px;font-weight:650}.page-heading h1{margin:5px 0 8px;font-size:30px;letter-spacing:-.02em}.page-heading p,.section-description{font-size:14px;color:var(--neutral-600);line-height:1.75}.identity-panel{display:flex;align-items:center;gap:22px;flex-wrap:wrap;padding:25px 28px;margin-bottom:20px;border:1px solid var(--neutral-200);border-radius:16px;background:var(--surface-elevated)}.identity-copy{flex:1;min-width:160px}.identity-copy h2{margin:3px 0 6px;font-size:25px;overflow-wrap:anywhere}.identity-copy p{font-size:14px;color:var(--neutral-600)}.account-name{display:block;margin-top:6px;color:var(--neutral-500);font-size:12px;overflow-wrap:anywhere}.profile-columns{display:grid;grid-template-columns:minmax(0,1.75fr) minmax(300px,1fr);gap:20px;align-items:start}.profile-main,.profile-side{display:grid;gap:20px;min-width:0}.profile-panel{padding:26px;border:1px solid var(--neutral-200);border-radius:16px;background:var(--surface-elevated)}.section-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}.section-heading h2{font-size:21px;margin-top:4px}.section-heading h3{font-size:16px}.section-description{margin-top:12px}.status-label{flex:none;background:var(--accent-50);color:var(--accent-700);padding:5px 10px;border-radius:20px;font-size:12px}.resume-document{display:flex;align-items:center;gap:14px;margin:23px 0 18px;padding:17px 0;border-top:1px solid var(--neutral-200);border-bottom:1px solid var(--neutral-200)}.resume-document>div{flex:1;min-width:0}.resume-document strong{font-size:15px;overflow-wrap:anywhere}.resume-document p{margin-top:5px;color:var(--neutral-600);font-size:12px}.document-icon{display:grid;place-items:center;width:42px;height:50px;border:1px solid var(--accent-200);border-radius:7px;background:var(--surface-mint);color:var(--accent-700);font-size:29px}.resume-empty{padding:28px 0 23px}.resume-empty strong{font-size:18px}.resume-empty p{margin-top:8px;color:var(--neutral-600);font-size:14px;line-height:1.7}.resume-actions,.form-actions{display:flex;flex-wrap:wrap;gap:10px}.helper{font-size:12px;color:var(--neutral-600);line-height:1.75;margin-top:10px}.skills-section{margin-top:24px;padding-top:20px;border-top:1px solid var(--neutral-200)}.skill-tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:13px}.skill-tags span{padding:6px 11px;border-radius:7px;background:var(--neutral-100);font-size:13px;overflow-wrap:anywhere;max-width:100%}.profile-note{padding:4px 10px}.profile-note h3{font-size:14px}.profile-note p{margin:10px 0;color:var(--neutral-600);font-size:13px;line-height:1.8}.primary,.secondary{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:10px 17px;border-radius:9px;font-size:14px;font-weight:650;cursor:pointer}.primary{border:1px solid transparent;background:var(--accent-500);color:white}.primary:hover{background:var(--accent-600)}.secondary{border:1px solid var(--neutral-200);background:white;color:var(--neutral-700)}.secondary:hover{background:var(--neutral-50)}.text-link{display:inline-flex;align-items:center;min-height:44px;border:0;background:transparent;color:var(--accent-700);font-size:13px;text-decoration:none;cursor:pointer;flex-shrink:0}.profile-page button:disabled{opacity:.5;cursor:not-allowed}.profile-page :is(button,a,input,select,textarea,summary):focus-visible{outline:2px solid var(--accent-700);outline-offset:3px}.profile-page label{display:block;margin:17px 0 7px;font-size:13px;font-weight:600}.profile-page label span,.education-details summary span{font-size:12px;color:var(--neutral-500);font-weight:400;margin-left:5px}.profile-page input,.profile-page select,.profile-page textarea{display:block;width:100%;min-width:0;min-height:44px;padding:10px 12px;border:1px solid var(--neutral-300);border-radius:8px;background:white;font:inherit;font-size:14px;color:var(--neutral-900)}.profile-page textarea{resize:vertical;line-height:1.7}.profile-page fieldset{padding:0;border:0;min-width:0}.education-details{margin-top:18px;border-top:1px solid var(--neutral-200);padding-top:8px}.education-details summary{min-height:44px;line-height:44px;cursor:pointer;font-size:13px}.career-save{width:100%;margin-top:20px}.resume-preview{max-height:360px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:13px;line-height:1.8;padding:16px;background:var(--neutral-50);margin-bottom:16px;border-radius:8px}.resume-form .form-actions,.skills-section .form-actions{margin-top:12px}.name-form{display:flex;flex-wrap:wrap;align-items:center;gap:10px;width:100%;border-top:1px solid var(--neutral-200);padding-top:18px}.name-form label{margin:0}.name-form input{flex:1;min-width:140px;max-width:360px}.field-error{margin-top:10px;color:#b42318;font-size:13px;line-height:1.7}.profile-error,.profile-notice{padding:12px 16px;margin-bottom:16px;border-radius:8px;font-size:13px;line-height:1.7}.profile-error{background:#fff4ed;color:#9c4218}.profile-error button{border:0;background:transparent;text-decoration:underline;color:inherit;cursor:pointer;min-height:44px}.profile-notice{background:var(--accent-50);color:var(--accent-800)}.profile-loading{padding:80px 0;text-align:center;color:var(--neutral-600)}.training-totals{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:23px 0 8px}.training-totals strong{display:block;font-size:27px;font-weight:650}.training-totals small{font-size:13px}.training-totals span{display:block;margin-top:6px;font-size:12px;color:var(--neutral-600)}.record-links{margin-top:18px;border-top:1px solid var(--neutral-200)}.record-links a{display:flex;justify-content:space-between;gap:10px;padding:16px 0;text-decoration:none;font-size:13px;color:var(--neutral-800)}.record-links a+a{border-top:1px solid var(--neutral-200)}.record-links span{color:var(--neutral-600)}
-@media(max-width:900px){.profile-columns{grid-template-columns:minmax(0,1fr)}.profile-main,.profile-side{display:contents}.resume-panel{order:1}.career-panel{order:2}.training-panel{order:3}.profile-note{display:none}.profile-page{padding:20px}.page-heading h1{font-size:25px}}
-.is-mobile{padding:0 0 20px}.is-mobile .page-heading{align-items:flex-start}.is-mobile .page-heading h1{font-size:24px}.is-mobile .page-heading .eyebrow{display:none}.is-mobile .identity-panel,.is-mobile .profile-panel{padding:20px}.is-mobile .identity-panel{gap:14px}.is-mobile .identity-panel>.secondary{width:100%}.is-mobile .record-links a{flex-direction:column}.is-mobile .section-heading{flex-wrap:wrap}.is-mobile .resume-document{flex-wrap:wrap}.is-mobile .identity-copy h2{font-size:22px}
+.profile-page {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: var(--space-8) 0 var(--space-16);
+}
+
+.card {
+  background: var(--surface-elevated);
+  border: 1px solid var(--neutral-200);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  animation: fade-in-up 0.4s var(--ease-out-expo);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-4);
+}
+
+.card-title {
+  font-family: var(--font-display);
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--neutral-900);
+}
+
+.card-subtitle {
+  font-size: var(--text-xs);
+  color: var(--neutral-400);
+}
+
+.card-action {
+  font-size: var(--text-sm);
+  color: var(--accent-600);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color var(--duration-fast);
+}
+
+.card-action:hover {
+  color: var(--accent-500);
+}
+
+.card-foot {
+  margin-top: var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--neutral-500);
+  line-height: 1.6;
+}
+
+/* Career target */
+.career-form {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.career-form label {
+  display: grid;
+  gap: 6px;
+  font-size: var(--text-sm);
+  color: var(--neutral-600);
+}
+
+.career-form select,
+.career-form input {
+  min-height: 42px;
+  padding: 0 var(--space-3);
+  color: var(--neutral-900);
+  background: var(--surface-elevated);
+  border: 1px solid var(--neutral-200);
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-size: var(--text-sm);
+}
+
+.career-form select:focus-visible,
+.career-form input:focus-visible {
+  outline: 2px solid var(--accent-500);
+  outline-offset: 2px;
+}
+
+.career-education {
+  padding-top: var(--space-3);
+  border-top: 1px dashed var(--neutral-200);
+}
+
+.career-education summary {
+  min-height: 32px;
+  color: var(--neutral-600);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.career-education summary + label {
+  margin-top: var(--space-3);
+}
+
+.career-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.career-save {
+  min-height: 42px;
+  padding: 0 var(--space-4);
+  color: #fff;
+  background: var(--accent-600);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.career-save:hover { background: var(--accent-500); }
+.career-save:disabled { opacity: .5; cursor: not-allowed; }
+.career-notice { font-size: var(--text-sm); color: var(--accent-600); }
+
+.profile-alert {
+  margin-bottom: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  color: #92400e;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+}
+
+.profile-loading,
+.profile-empty {
+  padding: var(--space-6) 0;
+  color: var(--neutral-500);
+  font-size: var(--text-sm);
+  text-align: center;
+}
+
+.profile-empty a {
+  color: var(--accent-600);
+  font-weight: 500;
+}
+
+/* Profile Header */
+.profile-header {
+  margin-bottom: var(--space-6);
+  padding: 0;
+  overflow: hidden;
+}
+
+.profile-cover {
+  height: 120px;
+  background: linear-gradient(135deg, var(--accent-500), var(--accent-600));
+}
+
+.profile-info {
+  padding: var(--space-6);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-5);
+}
+
+.profile-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, var(--accent-500), var(--accent-600));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  color: white;
+  margin-top: -40px;
+  border: 4px solid var(--surface-elevated);
+  box-shadow: var(--shadow-sm);
+}
+
+.profile-details {
+  flex: 1;
+}
+
+.profile-name {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  color: var(--neutral-900);
+}
+
+.profile-bio {
+  font-size: var(--text-sm);
+  color: var(--neutral-500);
+  margin-top: var(--space-1);
+}
+
+.profile-stats-row {
+  display: flex;
+  gap: var(--space-8);
+  margin-top: var(--space-4);
+}
+
+.profile-stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-num {
+  font-family: var(--font-mono);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  color: var(--neutral-900);
+}
+
+.stat-text {
+  font-size: var(--text-xs);
+  color: var(--neutral-500);
+}
+
+.edit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border: 1.5px solid var(--neutral-200);
+  border-radius: var(--radius-md);
+  background: var(--surface-elevated);
+  color: var(--neutral-700);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all var(--duration-normal);
+}
+
+.edit-btn:hover {
+  border-color: var(--accent-300);
+  background: var(--accent-50);
+  color: var(--accent-700);
+}
+
+/* Profile Grid */
+.profile-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+/* 企业账号卡：学生模块不渲染时它就是网格里唯一的内容，整行铺开 */
+.enterprise-card { grid-column: 1 / -1; }
+.enterprise-desc {
+  font-size: var(--text-sm);
+  color: var(--neutral-600);
+  line-height: 1.7;
+}
+.enterprise-cta {
+  display: inline-flex;
+  align-items: center;
+  min-height: 42px;
+  margin-top: var(--space-4);
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--accent-600);
+  color: #fff;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-decoration: none;
+}
+.enterprise-cta:hover { background: var(--accent-500); }
+
+/* Skills */
+.skills-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* 技能不再按 high/mid/low 上色：后端没有难度分级字段，
+   之前那三档是写死在模板里的假数据，统一一种样式反而诚实。 */
+.skill-item {
+  padding: var(--space-2) var(--space-3);
+  color: var(--accent-700);
+  background: var(--accent-50);
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  transition: transform var(--duration-fast);
+}
+
+.skill-item:hover {
+  transform: scale(1.05);
+}
+
+/* Calendar */
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+}
+
+.calendar-cell {
+  aspect-ratio: 1;
+  border-radius: var(--radius-xs);
+  transition: transform var(--duration-fast);
+}
+
+.calendar-cell:hover {
+  transform: scale(1.2);
+}
+
+.level-0 { background: var(--neutral-100); }
+.level-1 { background: rgba(16, 185, 129, 0.15); }
+.level-2 { background: rgba(16, 185, 129, 0.35); }
+.level-3 { background: rgba(16, 185, 129, 0.6); }
+.level-4 { background: var(--accent-500); }
+
+.calendar-legend {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  justify-content: flex-end;
+  margin-top: var(--space-3);
+}
+
+.legend-label {
+  font-size: 10px;
+  color: var(--neutral-400);
+}
+
+.legend-cell {
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius-xs);
+}
+
+/* Job performance */
+.jobperf-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.jobperf-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.jobperf-name {
+  width: 104px;
+  flex-shrink: 0;
+  overflow: hidden;
+  color: var(--neutral-700);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.jobperf-track {
+  flex: 1;
+  height: 8px;
+  background: var(--neutral-100);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.jobperf-bar {
+  height: 100%;
+  background: var(--accent-500);
+  border-radius: var(--radius-full);
+  transition: width 1s var(--ease-out-expo);
+}
+
+.jobperf-count {
+  width: 40px;
+  flex-shrink: 0;
+  text-align: right;
+  color: var(--neutral-500);
+  font-size: var(--text-xs);
+}
+
+.jobperf-score {
+  width: 30px;
+  flex-shrink: 0;
+  text-align: right;
+  color: var(--accent-600);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+/* Account overview */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-3);
+}
+
+.stat-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-primary);
+  border-radius: var(--radius-md);
+}
+
+.stat-cell strong {
+  color: var(--neutral-900);
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
+.stat-cell span {
+  color: var(--neutral-500);
+  font-size: var(--text-xs);
+}
+
+@media (max-width: 768px) {
+  .profile-grid { grid-template-columns: 1fr; }
+  .profile-info { flex-direction: column; }
+  .profile-stats-row { gap: var(--space-4); }
+  .edit-btn { align-self: flex-start; }
+}
 </style>

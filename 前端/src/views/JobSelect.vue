@@ -5,6 +5,7 @@
       <header class="page-header reveal">
         <h1 class="page-title">面试准备</h1>
         <p class="page-desc">{{ stepDescriptions[currentStep] }}</p>
+        <button type="button" class="mode-switch" @click="goAiPrep">对话录入 ⇄</button>
       </header>
 
       <!-- Step Indicator -->
@@ -623,7 +624,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import AppLayout from '../components/layout/AppLayout.vue'
 import JobLogo from '../components/jobs/JobLogo.vue'
 import { getJobList, getCareerProfile, getModules, getResumeFileProfile, getSkillTags, startInterview, updateResumeTags, uploadResumeFile } from '../api'
@@ -633,6 +634,11 @@ import { getJobList, getCareerProfile, getModules, getResumeFileProfile, getSkil
 /* ------------------------------------------------------------------ */
 const router = useRouter()
 const route = useRoute()
+
+/** 与 AI 对话页的「手动录入 ⇄」互为出口：这边是手动录入，那边是对话录入 */
+function goAiPrep() {
+  router.push('/interview/ai')
+}
 const currentStep = ref(0)
 const searchQuery = ref('')
 const activeFamily = ref('BE')
@@ -1225,6 +1231,13 @@ function scheduleObserve() {
 
 watch(currentStep, scheduleObserve)
 onMounted(() => {
+  // 消费 AI 对话页带来的 ?step=<n>（AiPrep.vue:611 一直在发，此前全被丢弃，
+  // 于是「对话完成 → 接力到训练目标」实际是回到第一步重来）。job=<code> 在 fetchJobs 里落实。
+  const step = Number(route.query.step)
+  if (Number.isInteger(step) && step >= 0 && step < stepsInfo.length) {
+    currentStep.value = step
+  }
+
   scheduleObserve()
   fetchJobs()
   fetchModules()
@@ -1265,6 +1278,30 @@ onUnmounted(() => { if (observer) observer.disconnect() })
   font-size: var(--text-base);
   color: var(--neutral-500);
   font-family: var(--font-body);
+}
+
+/* 手动 ⇄ 对话：这页是手动录入那条路，入口给回对话页。
+   与 AI 页右上角的「手动录入 ⇄」同款样式，只是放平在页头下 */
+.mode-switch {
+  display: inline-flex;
+  align-items: center;
+  margin-top: var(--space-3);
+  padding: 7px 16px;
+  border: 1px solid var(--neutral-200);
+  border-radius: 999px;
+  background: var(--neutral-50);
+  color: var(--neutral-700);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--duration-fast) var(--ease-out-quart);
+}
+
+.mode-switch:hover {
+  border-color: var(--accent-500);
+  background: var(--accent-50);
+  color: var(--accent-600);
 }
 
 /* ===================================================================
@@ -3238,7 +3275,10 @@ onUnmounted(() => { if (observer) observer.disconnect() })
 .page-container{max-width:1500px;padding:18px 24px 24px}.page-header{margin-bottom:8px}.page-title{font-size:30px}.page-desc{margin-top:5px;font-size:14px}.stepper{gap:64px;margin-bottom:18px;padding:4px 0 8px}.stepper__dot{width:32px;height:32px}.stepper__track{top:20px;left:29%;right:29%}.stepper__item{min-width:92px;gap:6px}.stepper__label{font-size:12px}.stepper__track-fill{transition-duration:260ms}.step-panel{animation-duration:280ms}.card,.job-catalog{border-radius:16px}.step-actions{margin-top:14px;padding-top:14px}.btn{min-height:40px}
 
 /* Step 1 */
-.job-catalog__top{padding:18px 22px 12px}.job-catalog>.search-box{margin:0 22px 16px}.job-catalog__layout{grid-template-columns:180px minmax(420px,1.25fr) minmax(330px,.9fr);min-height:0;height:clamp(500px,calc(100dvh - 305px),590px)}.job-list,.catalog-state{height:100%}.family-nav{padding:12px 10px}.family-nav button{position:relative;min-height:45px;border-radius:9px}.family-nav button.is-active::before{content:"";position:absolute;left:-10px;top:7px;bottom:7px;width:3px;border-radius:0 3px 3px 0;background:var(--accent-500)}.job-list{padding:10px}.job-list__item{padding:11px 12px;border-radius:12px}.job-list__item+.job-list__item{margin-top:2px}.job-list__summary{margin-top:3px}.job-list__tags{margin-top:5px}.job-detail{align-self:stretch;display:flex;flex-direction:column;padding:18px 20px;background:#f8fbf9}.job-detail__summary{margin-top:14px;line-height:1.6}.job-detail__section{margin-top:17px}.job-detail__footer{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:auto -20px -18px;padding:13px 16px;border-top:1px solid var(--neutral-200);background:rgba(255,255,255,.8)}.job-detail__selected{min-width:0;margin:0;padding:0;border:0}.job-detail__selected>span{display:flex;min-width:0;flex-direction:column}.job-detail__selected strong{font-size:12px}.job-detail__selected small{margin-top:2px;color:var(--neutral-500);font-size:9px;font-weight:400}.job-detail__footer .btn{flex:0 0 auto;padding:10px 16px}
+/* 行高必须钉死：外层给了固定 height，但隐式行默认仍按内容 auto 撑开（32 个岗位 → 2686px），
+   于是 .job-list 的 height:100% 解析成内容自身高度、overflow-y:auto 永不触发——
+   岗位被 .job-catalog 的 overflow:hidden 裁在卡片下沿，又滚不到。minmax(0,1fr) 让行跟随容器高度。 */
+.job-catalog__top{padding:18px 22px 12px}.job-catalog>.search-box{margin:0 22px 16px}.job-catalog__layout{grid-template-columns:180px minmax(420px,1.25fr) minmax(330px,.9fr);min-height:0;height:clamp(500px,calc(100dvh - 305px),590px);grid-template-rows:minmax(0,1fr)}.job-list,.catalog-state{height:100%}.family-nav{padding:12px 10px}.family-nav button{position:relative;min-height:45px;border-radius:9px}.family-nav button.is-active::before{content:"";position:absolute;left:-10px;top:7px;bottom:7px;width:3px;border-radius:0 3px 3px 0;background:var(--accent-500)}.job-list{padding:10px}.job-list__item{padding:11px 12px;border-radius:12px}.job-list__item+.job-list__item{margin-top:2px}.job-list__summary{margin-top:3px}.job-list__tags{margin-top:5px}.job-detail{align-self:stretch;display:flex;flex-direction:column;padding:18px 20px;background:#f8fbf9}.job-detail__summary{margin-top:14px;line-height:1.6}.job-detail__section{margin-top:17px}.job-detail__footer{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:auto -20px -18px;padding:13px 16px;border-top:1px solid var(--neutral-200);background:rgba(255,255,255,.8)}.job-detail__selected{min-width:0;margin:0;padding:0;border:0}.job-detail__selected>span{display:flex;min-width:0;flex-direction:column}.job-detail__selected strong{font-size:12px}.job-detail__selected small{margin-top:2px;color:var(--neutral-500);font-size:9px;font-weight:400}.job-detail__footer .btn{flex:0 0 auto;padding:10px 16px}
 
 /* Step 2 */
 .upload-layout{grid-template-columns:minmax(0,1.9fr) minmax(310px,.9fr);gap:16px}.upload-card,.job-summary{min-height:clamp(490px,calc(100dvh - 330px),590px);padding:22px}.upload-zone{min-height:230px;padding:42px 24px;display:flex;flex-direction:column;justify-content:center}.upload-zone--filled{min-height:128px;padding:20px}.resume-state{display:flex;align-items:center;gap:8px;margin-top:14px;color:var(--neutral-500);font-size:12px}.resume-state__dot{width:7px;height:7px;border-radius:50%;background:#d49a37}.resume-state.is-ready{color:var(--accent-700)}.resume-state.is-ready .resume-state__dot{background:var(--accent-500)}.resume-state.is-error{color:#b4473e}.resume-state.is-error .resume-state__dot{background:#d9534f}.resume-progress{height:3px;margin-top:10px;overflow:hidden;border-radius:3px;background:var(--neutral-100)}.resume-progress span{display:block;width:42%;height:100%;border-radius:inherit;background:var(--accent-500);animation:resumeProgress 1.2s ease-in-out infinite}.saved-resume{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-top:16px;padding:14px 16px;border:1px solid var(--neutral-200);border-radius:12px}.saved-resume>div{display:grid;gap:3px}.saved-resume__label,.saved-resume small{color:var(--neutral-500);font-size:11px}.saved-resume strong{font-size:13px}.saved-resume .btn{padding:8px 14px}.extracted-skills{margin-top:16px;padding-top:16px}.job-summary{position:static}.summary-section-head{display:flex;align-items:center;justify-content:space-between;margin-top:18px}.summary-section-head strong{font-size:13px}.summary-section-head button,.config-section__head button{border:0;background:transparent;color:var(--accent-700);font:inherit;font-size:11px;font-weight:650;cursor:pointer}.resume-uses{margin-top:20px;padding-top:18px;border-top:1px solid var(--neutral-200)}.resume-uses h4{margin:0 0 12px;font-size:13px}.resume-uses ol{display:grid;gap:13px;margin:0;padding:0;list-style:none}.resume-uses li{display:flex;gap:11px;align-items:center}.resume-uses li>b{display:grid;width:34px;height:34px;place-items:center;border-radius:50%;background:var(--accent-50);color:var(--accent-700);font-size:11px}.resume-uses li span{display:grid;gap:2px}.resume-uses li strong{font-size:12px}.resume-uses li small{color:var(--neutral-500);font-size:10px}.resume-privacy{margin-top:auto;padding-top:18px;color:var(--neutral-500);font-size:10px;line-height:1.5}

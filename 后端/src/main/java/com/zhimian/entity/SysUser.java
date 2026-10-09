@@ -20,7 +20,7 @@ public class SysUser {
     private String username;
     private String password;
     private String nickname;
-    /** STUDENT / TEACHER / ADMIN */
+    /** STUDENT / TEACHER / ENTERPRISE / ADMIN */
     private String role;
     private String email;
     private String phone;

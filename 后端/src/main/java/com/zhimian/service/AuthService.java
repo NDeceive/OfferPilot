@@ -35,9 +35,11 @@ public class AuthService {
         user.setEmail(req.getEmail() == null || req.getEmail().isBlank() ? null : req.getEmail().trim().toLowerCase(java.util.Locale.ROOT));
         user.setPassword(passwordEncoder.encode(req.getPassword()));
         user.setNickname(req.getNickname() != null ? req.getNickname() : req.getUsername());
-        // 安全：公开注册一律创建普通学生账号，忽略任何来自请求体的 role，
-        // 防止越权注册成 ADMIN/TEACHER。特权账号仅通过种子数据/DB/管理后台创建。
-        user.setRole("STUDENT");
+        // 安全：公开注册只允许 STUDENT / ENTERPRISE 两种身份（企业端会议需要企业账号），
+        // 其余任何值——包括尝试伪造的 TEACHER / ADMIN——一律静默降级为学生账号；
+        // 教师/管理员仍只能通过种子数据/DB/管理后台创建，杜绝越权注册。
+        String requested = req.getRole() == null ? "" : req.getRole().trim().toUpperCase(java.util.Locale.ROOT);
+        user.setRole(java.util.Set.of("STUDENT", "ENTERPRISE").contains(requested) ? requested : "STUDENT");
         user.setStatus(1);
         userMapper.insert(user);
     }
