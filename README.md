@@ -13,6 +13,7 @@
 - **动态追问**：基于智谱 GLM 大模型对考生回答实时生成追问；不可用时自动回退到内置规则（RULE）追问，保证流程不中断。
 - **语音回答**：支持微信通话式开麦/静音、自动分句，并通过 GLM-ASR 转换为可编辑文字。
 - **多维评分报告**：面试结束自动生成五维能力评分（专业知识掌握 / 项目实践表达 / 逻辑表达能力 / 岗位匹配程度 / 动态追问应对），含雷达图与优势 / 不足 / 建议。
+- **专项刷题**：知识题作答、代码提交、收藏与训练历史均按用户持久化保存；编程题可接入自部署 Judge0 CE 进行真实判题。
 - **训练闭环**：历史记录可回看报告，支持针对性复训。
 - **追问记录分析**：持久化每次追问，并提供 AI / RULE 来源占比等统计，便于评估追问质量。
 
@@ -61,11 +62,37 @@ OfferPilot/
 ## 环境要求
 
 - **Java 17**（后端运行环境）
-- **Node.js**（建议 18+，用于前端构建）
+- **Node.js 20.19+ 或 22.12+**（Vite 8 要求）
 - **MySQL 8**
 - **Python 3.10**（数字人首次启动时自动创建 `.venv`）
 - **Maven Wrapper**：仓库内置 `后端/mvnw.cmd`，无需单独安装 Maven
 - **智谱 API Key**：大模型追问与语音转写共用，通过后端环境变量注入；严禁写入前端或仓库
+
+### Windows 首次启动
+
+安装上述 JDK、Node.js、MySQL 和 Python 3.10，按下方说明初始化数据库后，双击根目录的 `一键启动网页.bat`。
+启动器检查数字人 Python 是否实际可执行，自动创建或修复项目内 `.venv`，缺少依赖时安装默认 Wav2Lip 所需的 `数字人/requirements-offerpilot.txt`。
+已有可用的 CUDA PyTorch 环境会继续使用；新环境可用 CPU 运行，速度取决于硬件。其他数字人引擎仍使用完整的 `requirements.txt`。
+如 Python 未被发现，可将 `OFFERPILOT_PYTHON` 设置为可用 Python 3.10 的 `python.exe` 完整路径。
+
+首次运行需联网访问 PyPI/Maven/npm/GitHub，并留出模型、头像和 Python 依赖所需磁盘空间。
+资源包下载失败会重试，三个包均校验 SHA-256；已校验的 ZIP 保留在系统临时目录供断点后的重新启动复用，文件缺失或空帧会自动修复。
+启动器只有在网页、后端及数字人 HTTP 服务均就绪后才显示成功；发生错误时会保留明确提示，日志在 `后端/logs/`。
+保持启动窗口打开；按回车结束时只关闭本次启动的服务，不会清空数据库，也不会强制结束其他占用端口的程序。
+
+可单独准备和检查数字人环境，不启动服务：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\数字人\start_offerpilot_digital_human.ps1 -CheckOnly
+```
+
+语音识别仍需自己的智谱 API Key；数字人播报使用在线 EdgeTTS，需要能访问微软语音服务。
+
+启动回归检查（先完成资源下载，使用缓存 ZIP 在独立目录检查首次安装和缺失修复）：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-startup.ps1
+```
 
 ### 配置智谱 API Key（每位使用者自行输入）
 
@@ -115,6 +142,14 @@ OfferPilot/
    该脚本会创建技能标签、技能题目和题目标签关系表，并导入 57 个标签与 71 道题。
    重复执行会重建这三张技能题库表，但不会删除用户、简历或面试数据。
 
+5. 执行专项刷题的增量迁移（不会删除既有数据）：
+
+   ```powershell
+   mysql -u root -p zhimian < 后端/src/main/resources/db/migration_v5_practice.sql
+   ```
+
+   专项训练会从第 4 步的技能题库抽取知识题，并将每次训练、回答、代码提交和收藏单独保存。
+
 ## 环境变量
 
 后端通过环境变量注入配置，开发环境多数项有安全默认值，**生产环境必须显式注入敏感项**。
@@ -128,6 +163,10 @@ OfferPilot/
 | `ZHIPU_API_KEY` | 智谱 API Key（LLM 与 ASR 共用） | 空（AI 走 RULE，语音转写不可用） | **必须注入，无默认值** |
 | `ZHIPU_LLM_MODEL` | 智谱大模型名称 | `glm-4.7-flash` | 可覆盖 |
 | `ZHIPU_ASR_MODEL` | 智谱语音识别模型 | `glm-asr-2512` | 可覆盖 |
+| `JUDGE_ENABLED` | 是否启用自部署 Judge0 CE | `false` | 按需设为 `true` |
+| `JUDGE_BASE_URL` | 自部署 Judge0 CE 的服务地址 | 空 | 启用判题时必须注入 |
+| `JUDGE_AUTH_TOKEN` | Judge0 网关 `X-Auth-Token`（如有） | 空 | 按需注入 |
+| `JUDGE_LANGUAGE_JAVA` | 当前 Judge0 部署中 Java 17 的 `language_id` | `62` | 部署后用 `/languages` 校验 |
 | `CORS_ALLOWED_ORIGINS` | 允许的前端跨域来源（逗号分隔） | 本地 Vite 地址 | 固定白名单（默认空 = 不放行） |
 | `SPRING_PROFILES_ACTIVE` | 激活的配置 profile | 默认（dev） | 设为 `prod` |
 | `LOG_PATH` | 生产日志输出目录 | 不适用（开发仅控制台） | 默认 `logs`，可覆盖 |
@@ -147,6 +186,7 @@ cd 后端
 - 后端会检查 `8010` 端口；数字人未运行时自动启动 `数字人/start_offerpilot_digital_human.bat`。
 - 数字人首次启动会从项目 GitHub Release 下载 Wav2Lip 模型、基础头像和当前使用的 `offerpilot_interviewer_v2` 头像资源（这些大文件不进入 Git 历史），随后创建 Python 3.10 虚拟环境并安装依赖，耗时较长；进度见 `后端/logs/digital-human.log`。
 - 后端关闭时，只关闭由本次后端启动的数字人实例。
+- Judge0 默认关闭，因此不会改变已部署服务的网络行为。启用前请在独立 Linux/容器环境部署 Judge0 CE，并通过它的 `/languages` 接口确认 Java 的 `language_id`；不要使用公共判题实例处理用户代码。
 - 后端服务地址：`http://localhost:8080`
 
 ## 后端启动 — 生产环境（prod profile）

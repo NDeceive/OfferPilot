@@ -44,7 +44,7 @@
 </template>
 
 <script setup>
-import { computed, nextTick, ref } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { transcribeSpeech } from '../../api'
 import { useMicrophone } from '../../composables/useMicrophone'
 
@@ -53,6 +53,7 @@ const props = defineProps({
   sessionId: { type: Number, default: null },
   transcript: { type: String, default: '' },
   disabled: { type: Boolean, default: false },
+  paused: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['transcript', 'processing', 'submit', 'skip'])
@@ -76,6 +77,7 @@ const {
 
 const errorMessage = computed(() => recognitionError.value || deviceError.value)
 const statusText = computed(() => {
+  if (props.paused) return '面试已暂停，继续后可重新开启麦克风'
   if (isRequesting.value) return '正在申请麦克风权限...'
   if (submitRequested.value && pendingCount.value > 0) return '正在等待识别完成后提交...'
   if (pendingCount.value > 0) return '正在识别语音...'
@@ -86,7 +88,7 @@ const statusText = computed(() => {
 })
 
 function queueTranscription(blob, duration) {
-  if (!props.sessionId) return
+  if (!props.sessionId || props.paused) return
   const currentGeneration = generation
   pendingCount.value++
   emit('processing', true)
@@ -144,6 +146,7 @@ function handleToggleMicrophone() {
 }
 
 async function requestSkip() {
+  if (props.disabled || props.paused) return
   generation++
   submitRequested.value = false
   pendingCount.value = 0
@@ -161,6 +164,7 @@ async function stopMicrophone() {
 }
 
 defineExpose({ stopMicrophone, muteMicrophone })
+watch(() => props.paused, paused => { if (paused) stopMicrophone() })
 </script>
 
 <style scoped>
