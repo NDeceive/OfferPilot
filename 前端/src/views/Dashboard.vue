@@ -58,12 +58,12 @@
             class="review-card panel card-light reveal"
             style="--delay:60ms"
           >
-            <header class="panel-head">
+            <header v-if="hasRecentReport" class="panel-head">
               <div><h2>最近一次复盘</h2><strong>{{ currentJob }}</strong></div>
               <router-link :to="latestReportRoute">查看完整报告 <span>→</span></router-link>
             </header>
 
-            <div v-if="overview.latestInsight" class="review-list">
+            <div v-if="hasRecentReport" class="review-list">
               <article class="review-item needs">
                 <span>需要加强</span>
                 <strong>{{ weaknessLabel }}</strong>
@@ -79,6 +79,11 @@
                 <strong>针对高频考点进行专项练习</strong>
                 <p>继续围绕最近报告中的真实反馈安排训练。</p>
               </article>
+            </div>
+            <div v-else-if="hasCompletedInterview" class="review-empty">
+              <strong>复盘报告正在生成</strong>
+              <p>完成评分后，这里会展示优势、薄弱维度和下一步练习建议。</p>
+              <router-link to="/history">查看训练记录</router-link>
             </div>
             <div v-else class="review-empty">
               <strong>完成一次训练后生成复盘</strong>
@@ -121,29 +126,44 @@
             </div>
           </section>
 
-          <section
-            class="profile-card panel card-light reveal"
-            style="--delay:140ms"
-          >
+          <section class="profile-card resume-library-card panel card-light reveal" style="--delay:140ms">
             <span class="profile-paper profile-paper-one" aria-hidden="true"></span>
             <span class="profile-paper profile-paper-two" aria-hidden="true"></span>
             <header class="panel-head">
-              <h2>当前训练档案</h2>
-              <router-link to="/jobs">管理档案 <span>→</span></router-link>
+              <h2>我的简历</h2>
+              <router-link to="/resume/builder">管理简历 <span>→</span></router-link>
             </header>
-            <div class="profile-title">
-              <strong>{{ currentJob }}</strong>
-              <span>{{ resume ? '已准备' : '待完善' }}</span>
+            <div v-if="resumeLibraryLoading" class="resume-library-empty" role="status">正在读取已保存的简历…</div>
+            <div v-else-if="resumeLibraryError" class="resume-library-empty" role="status">
+              <strong>暂时无法读取已保存的简历</strong>
+              <p>{{ resumeLibraryError }}</p>
+              <button type="button" @click="loadResumeLibrary">重试读取</button>
             </div>
-            <div v-if="profileTags.length" class="tag-list"><span v-for="tag in profileTags" :key="tag">{{ tag }}</span></div>
-            <div v-else class="tag-list"><span>完成简历后生成技能标签</span></div>
-            <div class="resume-row">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h8l4 4v16H6zM14 2v5h5M9 12h6M9 16h6"/></svg>
-              <div><strong>{{ resumeLabel }}</strong><small>{{ resumeUpdatedLabel }}</small></div>
+            <template v-else-if="latestResumeVersion">
+              <div class="resume-library-main">
+                <span>最近保存 · 共 {{ resumeVersions.length }} 个版本</span>
+                <strong>{{ latestResumeVersion.title }}</strong>
+                <small>{{ resumeVersionType(latestResumeVersion) }} · {{ formatResumeDate(latestResumeVersion.createdAt) }}</small>
+              </div>
+              <div class="resume-library-list">
+                <router-link v-for="version in resumeVersions.slice(0, 2)" :key="version.id" :to="editResumeRoute(version)">
+                  <span>{{ version.title }}</span><b>查看 / 修改 →</b>
+                </router-link>
+              </div>
+            </template>
+            <div v-else-if="uploadedResumeFile?.filename" class="resume-library-main">
+              <span>已上传的简历</span>
+              <strong>{{ uploadedResumeFile.filename }}</strong>
+              <small>可在面试准备时复用，也可在简历工作台核实事实后制作新版本。</small>
             </div>
-            <div class="profile-actions">
-              <router-link to="/jobs" class="primary-btn">继续准备</router-link>
-              <router-link to="/jobs" class="secondary-btn">更换岗位</router-link>
+            <div v-else class="resume-library-empty">
+              <strong>还没有保存简历</strong>
+              <p>创建或上传一份简历，下次面试可以直接选择，不必重新填写。</p>
+            </div>
+            <div class="profile-actions resume-library-actions">
+              <router-link to="/resume/builder" class="primary-btn">创建简历</router-link>
+              <router-link :to="uploadResumeRoute" class="secondary-btn">上传并保存</router-link>
+              <router-link v-if="latestResumeVersion" :to="useResumeRoute(latestResumeVersion)" class="secondary-btn">用于面试</router-link>
             </div>
           </section>
         </div>
@@ -183,13 +203,17 @@
 import { computed, nextTick, onMounted, ref } from 'vue'
 import coachPortrait from '../assets/generated/interview-coach.png'
 import AppLayout from '../components/layout/AppLayout.vue'
-import { getDashboardOverview, getMyResume } from '../api'
+import { getDashboardOverview, getMyResume, getResumeFileProfile, getResumeVersions } from '../api'
 
 const loading = ref(true)
 const errorMessage = ref('')
 const updatedAt = ref('')
 const pageReady = ref(false)
 const resume = ref(null)
+const resumeVersions = ref([])
+const uploadedResumeFile = ref(null)
+const resumeLibraryError = ref('')
+const resumeLibraryLoading = ref(true)
 const overview = ref({
   summary: { completedCount: 0, recentCount: 0, averageScore: 0, bestScore: 0, bestJobName: '', streakDays: 0 },
   nextAction: { type: '', title: '', description: '', route: '/jobs' },
@@ -202,6 +226,10 @@ const todayLabel = computed(() => new Intl.DateTimeFormat('zh-CN', { month: 'num
 const currentJob = computed(() => overview.value.latestInsight?.jobName || overview.value.recentInterviews?.[0]?.jobName || '尚未选择目标岗位')
 const shortJob = computed(() => currentJob.value.replace('开发工程师', '').trim())
 const latestReportRoute = computed(() => overview.value.latestInsight?.reportId ? `/history/${overview.value.latestInsight.reportId}` : '/history')
+const hasRecentReport = computed(() => Boolean(overview.value.latestInsight?.reportId))
+const hasCompletedInterview = computed(() => Number(overview.value.summary?.completedCount || 0) > 0)
+const latestResumeVersion = computed(() => resumeVersions.value[0] || null)
+const uploadResumeRoute = { path: '/jobs', query: { from: 'resume-library', step: '1' } }
 const weaknessLabel = computed(() => shortDimension(overview.value.latestInsight?.weakestDimension) || '专项能力')
 const strengthLabel = computed(() => shortDimension(overview.value.latestInsight?.strongestDimension) || '等待训练反馈')
 const nextActionLabel = computed(() => ({
@@ -215,7 +243,6 @@ const paperItems = computed(() => {
 const recentRows = computed(() => overview.value.recentInterviews.slice(0, 3))
 const bestScoreLabel = computed(() => overview.value.summary.bestScore ? formatScore(overview.value.summary.bestScore) : '—')
 const resumeLabel = computed(() => resume.value ? '个人简历' : '尚未上传')
-const resumeUpdatedLabel = computed(() => resume.value?.updateTime ? `上次更新距今${daysAgo(resume.value.updateTime)}` : '完善简历后匹配真实经历')
 const profileTags = computed(() => parseList(resume.value?.skills || resume.value?.keywords).slice(0, 4))
 const practiceQuestions = computed(() => {
   const source = [...paperItems.value, ...profileTags.value]
@@ -232,6 +259,7 @@ async function loadOverview() {
     ])
     overview.value = overviewData
     resume.value = resumeData
+    loadResumeLibrary()
     updatedAt.value = new Intl.DateTimeFormat('zh-CN', { hour: '2-digit', minute: '2-digit' }).format(new Date())
     await nextTick()
     requestAnimationFrame(() => { pageReady.value = true })
@@ -240,6 +268,39 @@ async function loadOverview() {
   } finally {
     loading.value = false
   }
+}
+
+async function loadResumeLibrary() {
+  resumeLibraryLoading.value = true
+  resumeLibraryError.value = ''
+  try {
+    const [versions, uploaded] = await Promise.all([
+      getResumeVersions(), getResumeFileProfile().catch(() => null),
+    ])
+    resumeVersions.value = Array.isArray(versions) ? versions : []
+    uploadedResumeFile.value = uploaded
+  } catch (error) {
+    resumeLibraryError.value = error.message || '请稍后重试。'
+  } finally { resumeLibraryLoading.value = false }
+}
+
+function editResumeRoute(version) {
+  return { path: '/resume/builder', query: { versionId: String(version.id), tab: 'editor' } }
+}
+
+function useResumeRoute(version) {
+  return { path: '/jobs', query: { from: 'resume-library', step: '1',
+    resumeVersionId: String(version.id), jobId: version.jobId ? String(version.jobId) : undefined } }
+}
+
+function resumeVersionType(version) {
+  return version.sourceKind === 'AI_GENERATED' ? 'AI 初稿' : version.sourceKind === 'GENERATED' ? '事实整理' : '手动保存'
+}
+
+function formatResumeDate(value) {
+  if (!value) return '已保存'
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? '已保存' : new Intl.DateTimeFormat('zh-CN', { month: 'numeric', day: 'numeric' }).format(date)
 }
 
 function parseList(value) {
@@ -273,11 +334,6 @@ function formatDate(value) {
   if (diff < 86400000) return '今天'
   if (diff < 172800000) return '昨天'
   return new Intl.DateTimeFormat('zh-CN', { month: 'numeric', day: 'numeric' }).format(date)
-}
-
-function daysAgo(value) {
-  const days = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 86400000))
-  return days ? `${days} 天` : '不到 1 天'
 }
 
 function statusClass(status) {
@@ -330,5 +386,18 @@ onMounted(loadOverview)
 .advice-copy .action-row{flex-wrap:wrap;margin-top:20px}
 .primary-btn:focus-visible,.secondary-btn:focus-visible{outline:2px solid var(--accent-700);outline-offset:3px}
 .profile-actions .primary-btn,.profile-actions .secondary-btn{min-height:44px}
+.resume-library-card{display:flex;flex-direction:column;gap:12px}
+.resume-library-main,.resume-library-empty{position:relative;z-index:2;display:grid;gap:7px;margin-top:8px;min-height:88px}
+.resume-library-main>span{font-size:11px;color:#168d61;font-weight:700}
+.resume-library-main>strong,.resume-library-empty>strong{font-size:17px;line-height:1.4;overflow-wrap:anywhere}
+.resume-library-main>small,.resume-library-empty>p{margin:0;color:#71807a;font-size:12px;line-height:1.6}
+.resume-library-empty>button{justify-self:start;padding:0;border:0;background:none;color:#168d61;font-weight:700;cursor:pointer}
+.resume-library-list{position:relative;z-index:2;display:grid;gap:6px}
+.resume-library-list>a{display:flex;justify-content:space-between;gap:10px;align-items:center;min-width:0;padding:9px 11px;border:1px solid #e4ebe7;border-radius:8px;background:rgba(255,255,255,.85);color:#263c32;text-decoration:none;font-size:12px}
+.resume-library-list>a:hover{border-color:#acd8c1;background:#f7fcf9}
+.resume-library-list span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.resume-library-list b{flex:none;color:#168d61;font-size:11px}
+.resume-library-actions{flex-wrap:wrap;margin-top:auto;padding-top:4px}
+.resume-library-actions .primary-btn,.resume-library-actions .secondary-btn{min-height:36px;padding-inline:12px;font-size:11px}
 @media(max-width:760px){.advice-card{grid-template-columns:1fr;padding:0;gap:0}.coach-portrait{height:230px}.coach-portrait img{height:250px;width:auto}.advice-copy{padding:22px}.advice-copy h1{font-size:23px}}
 </style>

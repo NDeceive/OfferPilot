@@ -3,6 +3,7 @@ package com.zhimian.service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zhimian.common.BizException;
+import com.zhimian.common.ForbiddenException;
 import com.zhimian.config.UserContext;
 import jakarta.validation.constraints.*;
 import lombok.RequiredArgsConstructor;
@@ -96,12 +97,13 @@ public class TeachingService {
     public List<Map<String,Object>> rows(String sql,Object... args){return db.queryForList(sql,args).stream().map(this::camel).toList();}
     private Map<String,Object> camel(Map<String,Object> raw){var out=new LinkedHashMap<String,Object>();raw.forEach((k,v)->{StringBuilder key=new StringBuilder();boolean upper=false;for(char c:k.toCharArray()){if(c=='_')upper=true;else{key.append(upper?Character.toUpperCase(c):c);upper=false;}}out.put(key.toString(),v instanceof Timestamp ts?ts.toLocalDateTime():v);});return out;}
     private Map<String,Object> one(String sql,Object... args){var list=rows(sql,args);if(list.isEmpty())throw new BizException("记录不存在或无访问权限");return list.get(0);}
+    private Map<String,Object> owned(String sql,Object... args){var list=rows(sql,args);if(list.isEmpty())throw new ForbiddenException("记录不存在或无访问权限");return list.get(0);}
     public static long id(Map<String,Object> row,String key){return ((Number)row.get(key)).longValue();}
     public static boolean flag(Map<String,Object> row,String key){Object value=row.get(key);return Boolean.TRUE.equals(value)||value instanceof Number n&&n.intValue()!=0;}
     public static LocalDateTime date(Map<String,Object> row,String key){return (LocalDateTime)row.get(key);}
     private long insert(String sql,Object... args){var keys=new GeneratedKeyHolder();db.update(connection->{var stmt=connection.prepareStatement(sql,Statement.RETURN_GENERATED_KEYS);for(int i=0;i<args.length;i++)stmt.setObject(i+1,args[i]);return stmt;},keys);return Objects.requireNonNull(keys.getKey()).longValue();}
-    private Map<String,Object> ownClass(long classId){teacher();return one("SELECT * FROM teaching_class WHERE id=? AND teacher_id=?",classId,user());}
-    private Map<String,Object> ownTask(long taskId){teacher();return one(TASK_SELECT+"WHERE t.id=? AND c.teacher_id=?",taskId,user());}
+    private Map<String,Object> ownClass(long classId){teacher();return owned("SELECT * FROM teaching_class WHERE id=? AND teacher_id=?",classId,user());}
+    private Map<String,Object> ownTask(long taskId){teacher();return owned(TASK_SELECT+"WHERE t.id=? AND c.teacher_id=?",taskId,user());}
     private void activeClass(Map<String,Object> c){if(flag(c,"archived"))throw new BizException("班级已归档，不能修改成员或任务");}
     public List<Map<String,Object>> classes(){
         if("STUDENT".equals(UserContext.getRole()))return rows("SELECT c.id,c.name,c.semester,c.archived,m.state,COALESCE(NULLIF(u.nickname,''),u.username) teacher_name FROM teaching_class c JOIN teaching_member m ON m.class_id=c.id JOIN sys_user u ON u.id=c.teacher_id WHERE m.student_id=? ORDER BY c.id DESC",user());
@@ -131,20 +133,57 @@ public class TeachingService {
         if(db.queryForObject("SELECT COUNT(*) FROM teaching_assignment WHERE task_id=?",Integer.class,taskId)==0)throw new BizException("请先加入至少一名正常学生");
     }
     @Transactional public void editTask(long taskId,TaskInput input){
-        teacher();var t=one(TASK_SELECT+"WHERE t.id=? AND c.teacher_id=? FOR UPDATE",taskId,user());
+        teacher();var t=owned(TASK_SELECT+"WHERE t.id=? AND c.teacher_id=? FOR UPDATE",taskId,user());
         if(t.get("publishedAt")!=null)throw new BizException("已发布任务的内容与次数要求已冻结，只能延期或结束");
         if(id(t,"classId")!=input.classId())throw new BizException("草稿不能更换所属班级");
         validate(input);String snapshot;try{snapshot=json.writeValueAsString(input.questions().stream().map(String::trim).toList());}catch(Exception e){throw new BizException("题目格式无效");}
         db.update("UPDATE teaching_task SET title=?,description=?,job_id=?,questions_json=?,duration_seconds=?,difficulty=?,min_attempts=?,max_attempts=?,allow_late=?,start_time=?,deadline=?,version=version+1 WHERE id=?",input.title().trim(),input.description(),input.jobId(),snapshot,input.durationSeconds(),input.difficulty(),input.minAttempts(),input.maxAttempts(),input.allowLate(),input.startTime(),input.deadline(),taskId);
         db.update("DELETE FROM teaching_assignment WHERE task_id=?",taskId);allocate(taskId,input);saveScorePlan(taskId,input.scoreModules());
     }
-    @Transactional public void discard(long taskId){teacher();var t=one(TASK_SELECT+"WHERE t.id=? AND c.teacher_id=? FOR UPDATE",taskId,user());if(t.get("publishedAt")!=null)throw new BizException("只能删除未发布草稿，已发布任务与历史记录需保留");db.update("DELETE FROM teaching_assignment WHERE task_id=?",taskId);db.update("DELETE FROM teaching_score_plan WHERE task_id=?",taskId);db.update("DELETE FROM teaching_task WHERE id=?",taskId);}
+    @Transactional public void discard(long taskId){teacher();var t=owned(TASK_SELECT+"WHERE t.id=? AND c.teacher_id=? FOR UPDATE",taskId,user());if(t.get("publishedAt")!=null)throw new BizException("只能删除未发布草稿，已发布任务与历史记录需保留");db.update("DELETE FROM teaching_assignment WHERE task_id=?",taskId);db.update("DELETE FROM teaching_score_plan WHERE task_id=?",taskId);db.update("DELETE FROM teaching_task WHERE id=?",taskId);}
     public List<String> questions(Map<String,Object> task){try{return json.readValue(String.valueOf(task.get("questionsJson")),new TypeReference<List<String>>(){});}catch(Exception e){throw new BizException("任务题目快照损坏");}}
     private Map<String,Object> enrichTask(Map<String,Object> task){task.put("scorePlan",scorePlan(id(task,"id")));task.put("questions",questions(task));task.remove("questionsJson");LocalDateTime now=LocalDateTime.now();task.put("lifecycle",task.get("publishedAt")==null?"DRAFT":task.get("endedAt")!=null?"ENDED":!date(task,"deadline").isAfter(now)?"CLOSED":date(task,"startTime").isAfter(now)?"SCHEDULED":"ACTIVE");return task;}
     public List<Map<String,Object>> tasks(){teacher();return rows(TASK_SELECT+"WHERE c.teacher_id=? ORDER BY t.id DESC",user()).stream().map(this::enrichTask).toList();}
-    public List<Map<String,Object>> tasks(boolean includeAssignments){var all=tasks();if(includeAssignments)for(var t:all)if(t.get("publishedAt")!=null)t.put("assignments",assignmentsForTask(id(t,"id")));return all;}
+    public List<Map<String,Object>> tasks(boolean includeAssignments){var all=tasks();if(includeAssignments){var published=all.stream().filter(t->t.get("publishedAt")!=null).toList();var grouped=batchAssignments(published);for(var t:published)t.put("assignments",grouped.getOrDefault(id(t,"id"),List.of()));}return all;}
     public Map<String,Object> task(long taskId){var t=enrichTask(ownTask(taskId));t.put("assignments",assignmentsForTask(taskId));return t;}
-    public List<Map<String,Object>> assignmentsForTask(long taskId){ownTask(taskId);return rows("SELECT a.*,COALESCE(NULLIF(u.nickname,''),u.username) name,u.username FROM teaching_assignment a JOIN sys_user u ON u.id=a.student_id WHERE a.task_id=? ORDER BY a.id",taskId).stream().map(this::progress).toList();}
+    public List<Map<String,Object>> assignmentsForTask(long taskId){return batchAssignments(List.of(ownTask(taskId))).getOrDefault(taskId,List.of());}
+
+    /** Batch the list view; individual student operations still use locking and their own resource checks. */
+    private Map<Long,List<Map<String,Object>>> batchAssignments(List<Map<String,Object>> taskRows){
+        var result=new HashMap<Long,List<Map<String,Object>>>();
+        var rules=new HashMap<Long,Map<String,Object>>();
+        for(var task:taskRows){long taskId=id(task,"id");rules.put(taskId,task);result.put(taskId,new ArrayList<>());}
+        var ids=new ArrayList<>(rules.keySet());
+        for(int offset=0;offset<ids.size();offset+=100){
+            var chunk=ids.subList(offset,Math.min(offset+100,ids.size()));
+            String placeholders=String.join(",",Collections.nCopies(chunk.size(),"?"));
+            Object[] ownerArgs=new Object[chunk.size()+1];ownerArgs[0]=user();for(int i=0;i<chunk.size();i++)ownerArgs[i+1]=chunk.get(i);
+            var assignments=rows("SELECT a.*,COALESCE(NULLIF(u.nickname,''),u.username) name,u.username FROM teaching_assignment a JOIN teaching_task t ON t.id=a.task_id JOIN teaching_class c ON c.id=t.class_id JOIN sys_user u ON u.id=a.student_id WHERE c.teacher_id=? AND a.task_id IN ("+placeholders+") ORDER BY a.id",ownerArgs);
+            if(assignments.isEmpty())continue;
+            var assignmentIds=assignments.stream().map(a->id(a,"id")).toList();
+            var attemptByAssignment=new HashMap<Long,List<Map<String,Object>>>();
+            for(int start=0;start<assignmentIds.size();start+=200){
+                var part=assignmentIds.subList(start,Math.min(start+200,assignmentIds.size()));
+                String marks=String.join(",",Collections.nCopies(part.size(),"?"));
+                for(var attempt:rows("SELECT * FROM teaching_attempt WHERE assignment_id IN ("+marks+") ORDER BY id DESC",part.toArray()))
+                    attemptByAssignment.computeIfAbsent(id(attempt,"assignmentId"),ignored->new ArrayList<>()).add(attempt);
+            }
+            var overrideByAssignment=new HashMap<Long,Map<String,Object>>();
+            for(int start=0;start<assignmentIds.size();start+=200){
+                var part=assignmentIds.subList(start,Math.min(start+200,assignmentIds.size()));
+                String marks=String.join(",",Collections.nCopies(part.size(),"?"));
+                for(var override:rows("SELECT * FROM teaching_assignment_override WHERE assignment_id IN ("+marks+")",part.toArray()))
+                    overrideByAssignment.put(id(override,"assignmentId"),override);
+            }
+            var memberStates=new HashMap<Long,String>();
+            for(var member:rows("SELECT a.id assignment_id,m.state FROM teaching_assignment a JOIN teaching_task t ON t.id=a.task_id JOIN teaching_class c ON c.id=t.class_id LEFT JOIN teaching_member m ON m.class_id=c.id AND m.student_id=a.student_id WHERE c.teacher_id=? AND a.task_id IN ("+placeholders+")",ownerArgs))
+                memberStates.put(id(member,"assignmentId"),(String)member.get("state"));
+            for(var assignment:assignments){long assignmentId=id(assignment,"id"),taskId=id(assignment,"taskId");
+                result.get(taskId).add(progressFrom(assignment,rules.get(taskId),attemptByAssignment.getOrDefault(assignmentId,List.of()),memberStates.get(assignmentId),overrideByAssignment.getOrDefault(assignmentId,Map.of())));
+            }
+        }
+        return result;
+    }
 
     private Map<String,Object> progress(Map<String,Object> a){
         var attempts=rows("SELECT * FROM teaching_attempt WHERE assignment_id=? ORDER BY id DESC",id(a,"id"));
@@ -152,10 +191,13 @@ public class TeachingService {
         var member=rows("SELECT state FROM teaching_member WHERE class_id=? AND student_id=?",id(rule,"classId"),id(a,"studentId"));
         var overrides=rows("SELECT * FROM teaching_assignment_override WHERE assignment_id=?",id(a,"id"));
         var override=overrides.isEmpty()?Map.<String,Object>of():overrides.get(0);
+        return progressFrom(a,rule,attempts,member.isEmpty()?null:(String)member.get(0).get("state"),override);
+    }
+    private Map<String,Object> progressFrom(Map<String,Object> a,Map<String,Object> rule,List<Map<String,Object>> attempts,String memberState,Map<String,Object> override){
         long valid=attempts.stream().filter(r->flag(r,"valid")&&"READY".equals(r.get("state"))).count();
         boolean exempt=flag(override,"exempt");long extra=override.get("extraAttempts")==null?0:id(override,"extraAttempts");
         LocalDateTime deadline=override.get("deadline")==null?date(rule,"deadline"):date(override,"deadline");
-        a.put("memberState",member.isEmpty()?"REMOVED":member.get(0).get("state"));a.put("attempts",attempts);a.put("validCount",valid);
+        a.put("memberState",memberState==null?"REMOVED":memberState);a.put("attempts",attempts);a.put("validCount",valid);
         a.put("exempt",exempt);a.put("extraAttempts",extra);a.put("overrideReason",override.getOrDefault("reason",""));a.put("effectiveMaxAttempts",id(rule,"maxAttempts")+extra);a.put("effectiveDeadline",deadline);
         a.put("completionStatus",exempt?"EXEMPT":valid>=id(rule,"minAttempts")?"COMPLETED":attempts.stream().anyMatch(r->"GENERATING".equals(r.get("state")))?"PENDING_VALIDATION":attempts.isEmpty()?"NOT_STARTED":"IN_PROGRESS");
         String reason=null;
@@ -171,7 +213,7 @@ public class TeachingService {
     }
     public List<Map<String,Object>> mine(){student();return rows("SELECT a.id,a.task_id,a.student_id FROM teaching_assignment a JOIN teaching_task t ON t.id=a.task_id WHERE a.student_id=? AND t.published_at IS NOT NULL ORDER BY a.id DESC",user()).stream().map(a->{progress(a);a.put("task",enrichTask(one(TASK_SELECT+"WHERE t.id=?",id(a,"taskId"))));return a;}).toList();}
     public Map<String,Object> assignment(long assignmentId){student();var a=one("SELECT * FROM teaching_assignment WHERE id=? AND student_id=?",assignmentId,user());progress(a);a.put("task",enrichTask(one(TASK_SELECT+"WHERE t.id=? AND t.published_at IS NOT NULL",id(a,"taskId"))));return a;}
-    @Transactional public void publish(long taskId){var t=one(TASK_SELECT+"WHERE t.id=? AND c.teacher_id=? FOR UPDATE",taskId,user());teacher();activeClass(t);if(t.get("publishedAt")!=null)return;if(!date(t,"deadline").isAfter(LocalDateTime.now()))throw new BizException("任务已过截止时间，请重新创建");var assigned=rows("SELECT a.student_id FROM teaching_assignment a JOIN teaching_member m ON m.student_id=a.student_id AND m.class_id=? JOIN sys_user u ON u.id=a.student_id WHERE a.task_id=? AND m.state='JOINED' AND u.status=1",id(t,"classId"),taskId);int total=db.queryForObject("SELECT COUNT(*) FROM teaching_assignment WHERE task_id=?",Integer.class,taskId);if(total==0||assigned.size()!=total)throw new BizException("成员名单发生变化，请重新创建任务");db.update("UPDATE teaching_task SET published_at=NOW(),version=version+1 WHERE id=?",taskId);for(var a:assigned){long studentId=id(a,"studentId"),assignmentId=id(one("SELECT id FROM teaching_assignment WHERE task_id=? AND student_id=?",taskId,studentId),"id");message(studentId,"新的教学任务",String.valueOf(t.get("title")),"/my/tasks/"+assignmentId);}}
+    @Transactional public void publish(long taskId){teacher();var t=owned(TASK_SELECT+"WHERE t.id=? AND c.teacher_id=? FOR UPDATE",taskId,user());activeClass(t);if(t.get("publishedAt")!=null)return;if(!date(t,"deadline").isAfter(LocalDateTime.now()))throw new BizException("任务已过截止时间，请重新创建");var assigned=rows("SELECT a.student_id FROM teaching_assignment a JOIN teaching_member m ON m.student_id=a.student_id AND m.class_id=? JOIN sys_user u ON u.id=a.student_id WHERE a.task_id=? AND m.state='JOINED' AND u.status=1",id(t,"classId"),taskId);int total=db.queryForObject("SELECT COUNT(*) FROM teaching_assignment WHERE task_id=?",Integer.class,taskId);if(total==0||assigned.size()!=total)throw new BizException("成员名单发生变化，请重新创建任务");db.update("UPDATE teaching_task SET published_at=NOW(),version=version+1 WHERE id=?",taskId);for(var a:assigned){long studentId=id(a,"studentId"),assignmentId=id(one("SELECT id FROM teaching_assignment WHERE task_id=? AND student_id=?",taskId,studentId),"id");message(studentId,"新的教学任务",String.valueOf(t.get("title")),"/my/tasks/"+assignmentId);}}
     @Transactional public void extend(long taskId,DeadlineInput input){var t=ownTask(taskId);activeClass(t);if(t.get("publishedAt")==null||t.get("endedAt")!=null||!input.deadline().isAfter(date(t,"deadline"))||!input.deadline().isAfter(LocalDateTime.now()))throw new BizException("只能延长已发布且未手动结束任务的截止时间");db.update("UPDATE teaching_task SET deadline=?,version=version+1 WHERE id=?",input.deadline(),taskId);notifyTask(taskId,"任务截止时间延长",input.deadline().toString());}
     @Transactional public void end(long taskId){var t=ownTask(taskId);if(t.get("publishedAt")==null)throw new BizException("草稿不能结束");db.update("UPDATE teaching_task SET ended_at=COALESCE(ended_at,NOW()),version=version+1 WHERE id=?",taskId);notifyTask(taskId,"任务已结束","不再允许开始新的训练，历史结果保留。");}
     @Transactional public void remind(long taskId){var t=ownTask(taskId);activeClass(t);if(t.get("publishedAt")==null||t.get("endedAt")!=null)throw new BizException("只能提醒已发布且未手动结束的任务");for(var a:assignmentsForTask(taskId))if(!flag(a,"exempt")&&!"COMPLETED".equals(a.get("completionStatus")))message(id(a,"studentId"),"教学任务提醒","请查看任务要求并完成训练。","/my/tasks/"+id(a,"id"));}
@@ -200,9 +242,37 @@ public class TeachingService {
     public void failed(long sessionId){db.update("UPDATE teaching_attempt SET state='FAILED',failure_reason='报告生成失败，请重试' WHERE session_id=? AND state='GENERATING'",sessionId);}
     public void retry(long sessionId){student();one("SELECT p.id FROM teaching_attempt p JOIN teaching_assignment a ON a.id=p.assignment_id WHERE p.session_id=? AND a.student_id=? AND p.state='FAILED'",sessionId,user());if(db.update("UPDATE teaching_attempt SET state='GENERATING',failure_reason=NULL WHERE session_id=? AND state='FAILED'",sessionId)!=1)throw new BizException("报告状态已更新，请刷新");}
     public boolean canReadReport(long reportId){if(!Set.of("TEACHER","ADMIN").contains(String.valueOf(UserContext.getRole())))return false;return db.queryForObject("SELECT COUNT(*) FROM teaching_attempt p JOIN teaching_assignment a ON a.id=p.assignment_id JOIN teaching_task t ON t.id=a.task_id JOIN teaching_class c ON c.id=t.class_id WHERE p.report_id=? AND c.teacher_id=?",Integer.class,reportId,user())>0;}
-    public void reportAccess(long reportId){if(!canReadReport(reportId)&&db.queryForObject("SELECT COUNT(*) FROM interview_report WHERE id=? AND user_id=?",Integer.class,reportId,user())==0)throw new BizException("无权查看该报告");}
+    public void reportAccess(long reportId){if(!canReadReport(reportId)&&db.queryForObject("SELECT COUNT(*) FROM interview_report WHERE id=? AND user_id=?",Integer.class,reportId,user())==0)throw new ForbiddenException("无权查看该报告");}
     public List<Map<String,Object>> reviews(long reportId){reportAccess(reportId);return rows("SELECT r.*,COALESCE(NULLIF(u.nickname,''),u.username) teacher_name FROM teaching_review r JOIN sys_user u ON u.id=r.teacher_id WHERE r.report_id=? ORDER BY r.id",reportId);}
-    @Transactional public void review(long reportId,ReviewInput input){teacher();if(!canReadReport(reportId))throw new BizException("无权点评该报告");insert("INSERT INTO teaching_review(report_id,teacher_id,text) VALUES(?,?,?)",reportId,user(),input.text().trim());var a=one("SELECT a.student_id,a.id FROM teaching_attempt p JOIN teaching_assignment a ON a.id=p.assignment_id WHERE p.report_id=?",reportId);message(id(a,"studentId"),"收到教师点评","请在任务报告中查看教师反馈。","/my/tasks/"+id(a,"id"));}
+    @Transactional public void review(long reportId,ReviewInput input){teacher();if(!canReadReport(reportId))throw new ForbiddenException("无权点评该报告");insert("INSERT INTO teaching_review(report_id,teacher_id,text) VALUES(?,?,?)",reportId,user(),input.text().trim());var a=one("SELECT a.student_id,a.id FROM teaching_attempt p JOIN teaching_assignment a ON a.id=p.assignment_id WHERE p.report_id=?",reportId);message(id(a,"studentId"),"收到教师点评","请在任务报告中查看教师反馈。","/my/tasks/"+id(a,"id"));}
     public List<Map<String,Object>> reportMessages(long reportId){reportAccess(reportId);return rows("SELECT m.id,m.role,m.msg_type,m.round_no,m.content,m.ability_tag FROM interview_message m JOIN interview_report r ON r.session_id=m.session_id WHERE r.id=? ORDER BY m.id",reportId);}
-    public Map<String,Object> summary(){teacher();var people=people();var all=tasks();long assigned=0,completed=0,valid=0,pending=0;for(var t:all)if(t.get("publishedAt")!=null)for(var a:assignmentsForTask(id(t,"id"))){if(!flag(a,"exempt"))assigned++;if("COMPLETED".equals(a.get("completionStatus")))completed++;for(var p:(List<Map<String,Object>>)a.get("attempts")){if(flag(p,"valid")&&"READY".equals(p.get("state")))valid++;if(p.get("reportId")!=null&&db.queryForObject("SELECT COUNT(*) FROM teaching_review WHERE report_id=?",Integer.class,p.get("reportId"))==0)pending++;}}return Map.of("studentTotal",people.stream().map(s->id(s,"id")).distinct().count(),"taskTotal",all.size(),"assignmentTotal",assigned,"completedTotal",completed,"validAttemptTotal",valid,"pendingReviewTotal",pending);}
+    public Map<String,Object> summary(){
+        teacher();
+        long studentTotal=((Number)rows("SELECT COUNT(DISTINCT m.student_id) student_total FROM teaching_member m " +
+                "JOIN teaching_class c ON c.id=m.class_id WHERE c.teacher_id=? AND m.state='JOINED'",user()).get(0).get("studentTotal")).longValue();
+        long taskTotal=((Number)rows("SELECT COUNT(*) task_total FROM teaching_task t " +
+                "JOIN teaching_class c ON c.id=t.class_id WHERE c.teacher_id=?",user()).get(0).get("taskTotal")).longValue();
+        var counts=rows("SELECT COALESCE(SUM(CASE WHEN exempt=FALSE THEN 1 ELSE 0 END),0) assignment_total," +
+                "COALESCE(SUM(CASE WHEN exempt=FALSE AND valid_count>=min_attempts THEN 1 ELSE 0 END),0) completed_total," +
+                "COALESCE(SUM(valid_count),0) valid_attempt_total FROM (" +
+                "SELECT a.id,t.min_attempts,COALESCE(o.exempt,FALSE) exempt," +
+                "SUM(CASE WHEN p.state='READY' AND p.valid=TRUE THEN 1 ELSE 0 END) valid_count " +
+                "FROM teaching_assignment a JOIN teaching_task t ON t.id=a.task_id " +
+                "JOIN teaching_class c ON c.id=t.class_id " +
+                "LEFT JOIN teaching_assignment_override o ON o.assignment_id=a.id " +
+                "LEFT JOIN teaching_attempt p ON p.assignment_id=a.id " +
+                "WHERE c.teacher_id=? AND t.published_at IS NOT NULL " +
+                "GROUP BY a.id,t.min_attempts,o.exempt) scoped",user()).get(0);
+        var pendingRows=rows("SELECT COUNT(DISTINCT p.report_id) pending_total FROM teaching_attempt p " +
+                "JOIN teaching_assignment a ON a.id=p.assignment_id JOIN teaching_task t ON t.id=a.task_id " +
+                "JOIN teaching_class c ON c.id=t.class_id WHERE c.teacher_id=? AND t.published_at IS NOT NULL " +
+                "AND p.report_id IS NOT NULL AND NOT EXISTS " +
+                "(SELECT 1 FROM teaching_review r WHERE r.report_id=p.report_id)",user());
+        long pending=pendingRows.isEmpty()?0:((Number)pendingRows.get(0).get("pendingTotal")).longValue();
+        return Map.of("studentTotal",studentTotal,"taskTotal",taskTotal,
+                "assignmentTotal",((Number)counts.get("assignmentTotal")).longValue(),
+                "completedTotal",((Number)counts.get("completedTotal")).longValue(),
+                "validAttemptTotal",((Number)counts.get("validAttemptTotal")).longValue(),
+                "pendingReviewTotal",pending);
+    }
 }

@@ -100,7 +100,7 @@
                     type="button"
                     class="job-list__item"
                     :class="{ 'is-selected': selectedJob?.id === job.id }"
-                    @click="selectedJob = job"
+                    @click="selectJob(job)"
                   >
                     <JobLogo :icon-key="job.iconKey" :tone="job.themeKey" />
                     <span class="job-list__content">
@@ -227,13 +227,23 @@
                     <span class="resume-state__dot" />
                     <span v-if="resumeUploading">正在读取简历并识别技术栈与项目经历…</span>
                     <span v-else-if="resumeError">{{ resumeError }}</span>
-                    <span v-else>解析完成，识别到 {{ extractedSkills.length }} 项技能<span v-if="resumeProjectCount">、{{ resumeProjectCount }} 段项目经历</span></span>
+                  <span v-else-if="resumeVersionId">已选择简历版本，可用于本轮面试</span>
+                  <span v-else>解析完成，识别到 {{ extractedSkills.length }} 项技能<span v-if="resumeProjectCount">、{{ resumeProjectCount }} 段项目经历</span></span>
                   </div>
                   <div v-if="resumeUploading" class="resume-progress" aria-label="正在解析简历"><span /></div>
                 </template>
               </div>
 
               <p v-if="resumeError && !uploadedFile" class="resume-validation" role="alert">{{ resumeError }}</p>
+              <button type="button" class="resume-builder-link" @click="openResumeBuilder">还没有简历，在线生成简历报告。</button>
+
+              <section v-if="resumeVersions.length" class="saved-resume">
+                <div><span class="saved-resume__label">或选择已制作的简历版本</span><small>选中后，本轮面试会使用该版本的快照。</small></div>
+                <select :value="resumeVersionId || ''" aria-label="选择简历版本" @change="selectResumeVersion($event.target.value)">
+                  <option value="">请选择版本</option>
+                  <option v-for="version in compatibleResumeVersions" :key="version.id" :value="version.id">{{ version.title }}</option>
+                </select>
+              </section>
 
               <section v-if="savedResume?.filename && !uploadedFile" class="saved-resume">
                 <div>
@@ -337,7 +347,7 @@
                   <li><b>03</b><span><strong>针对性追问</strong><small>生成更贴近个人经历的问题</small></span></li>
                 </ol>
               </div>
-              <p class="resume-privacy">简历仅用于本轮训练的问题生成与追问。</p>
+              <p class="resume-privacy">本轮所选简历会保存为面试快照；在线制作的事实与版本保留在你的账号下。</p>
             </aside>
           </div>
 
@@ -350,9 +360,9 @@
               上一步
             </button>
             <div class="step-actions__right">
-              <button class="btn btn--ghost" @click="currentStep = 2">暂不上传</button>
-              <button class="btn btn--primary" @click="currentStep = 2">
-                下一步：训练目标
+              <button class="btn btn--ghost" @click="skipResume">暂不上传</button>
+              <button class="btn btn--primary" :disabled="resumeUploading || Boolean(resumeError)" @click="currentStep = 2">
+                下一步：简历评价
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M5 12h14M12 5l7 7-7 7" />
                 </svg>
@@ -361,8 +371,34 @@
           </div>
         </section>
 
-        <!-- ========== Step 3: Training goals ========== -->
+        <!-- ========== Step 3: Resume review ========== -->
         <section v-show="currentStep === 2" key="step2" class="step-panel">
+          <div class="resume-review card reveal">
+            <span class="resume-review__eyebrow">简历评价 · 训练建议</span>
+            <h2>先看简历证据，再确定训练重点</h2>
+            <p>这是基于简历文本和目标岗位的初步提示，不是招聘结论，也不会替你决定训练目标。</p>
+            <div v-if="reviewLoading" role="status">正在分析简历与岗位的关联…</div>
+            <div v-else-if="reviewError" class="resume-review__error" role="alert">{{ reviewError }} <button type="button" @click="fetchResumeReview">重试</button></div>
+            <div v-else-if="resumeReview?.status === 'NO_RESUME' || !uploadedFile" class="resume-review__empty">本轮未使用简历，仍可继续选择训练目标；也可以返回上传或在线制作。</div>
+            <template v-else-if="resumeReview">
+              <p>{{ resumeReview.summary }}</p>
+              <ul class="resume-review__findings">
+                <li v-for="(finding, index) in resumeReview.findings" :key="index">
+                  <strong>{{ finding.title }}</strong><span>{{ finding.detail }}</span>
+                </li>
+              </ul>
+              <div class="resume-review__suggestion">
+                <strong>建议优先训练</strong>
+                <span>{{ suggestedModuleNames.join('、') || '请在下一步自行选择' }}</span>
+                <button v-if="suggestedModuleNames.length" type="button" class="btn btn--ghost" @click="applyRecommendedModules">采用这组建议</button>
+              </div>
+            </template>
+          </div>
+          <div class="step-actions"><button class="btn btn--ghost" @click="currentStep = 1">上一步</button><button class="btn btn--primary" @click="currentStep = 3">下一步：训练目标</button></div>
+        </section>
+
+        <!-- ========== Step 4: Training goals ========== -->
+        <section v-show="currentStep === 3" key="step3" class="step-panel">
           <div class="module-layout reveal">
             <div class="module-select card">
               <div class="module-heading">
@@ -441,13 +477,13 @@
             </aside>
           </div>
           <div class="step-actions">
-            <button class="btn btn--ghost" @click="currentStep = 1">上一步</button>
-            <button class="btn btn--primary" :disabled="selectedModuleCodes.size !== 5" @click="currentStep = 3">确认训练目标</button>
+            <button class="btn btn--ghost" @click="currentStep = 2">上一步</button>
+            <button class="btn btn--primary" :disabled="selectedModuleCodes.size !== 5" @click="currentStep = 4">确认训练目标</button>
           </div>
         </section>
 
-        <!-- ========== Step 4: Confirm & Start ========== -->
-        <section v-show="currentStep === 3" key="step3" class="step-panel">
+        <!-- ========== Step 5: Confirm & Start ========== -->
+        <section v-show="currentStep === 4" key="step4" class="step-panel">
           <div class="confirmation-layout reveal">
             <section class="configuration-card card">
               <header><h2>本次面试配置</h2><p>请确认以下信息，支持随时修改。</p></header>
@@ -462,7 +498,7 @@
               </div>
 
               <div class="config-section">
-                <div class="config-section__head"><strong>本轮训练重点</strong><button type="button" @click="currentStep = 2">修改目标 →</button></div>
+                <div class="config-section__head"><strong>本轮训练重点</strong><button type="button" @click="currentStep = 3">修改目标 →</button></div>
                 <ol class="config-priorities">
                   <li v-for="(module, index) in sortedSelectedModules" :key="module.code">
                     <b>{{ String(index + 1).padStart(2, '0') }}</b>
@@ -519,7 +555,7 @@
           </div>
 
           <div class="step-actions step-actions--confirm">
-            <button class="btn btn--ghost" @click="currentStep = 2">
+            <button class="btn btn--ghost" @click="currentStep = 3">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5m7 7-7-7 7-7" /></svg>
               返回修改
             </button>
@@ -626,7 +662,7 @@ import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import AppLayout from '../components/layout/AppLayout.vue'
 import JobLogo from '../components/jobs/JobLogo.vue'
-import { getJobList, getCareerProfile, getModules, getResumeFileProfile, getSkillTags, startInterview, updateResumeTags, uploadResumeFile } from '../api'
+import { getJobList, getCareerProfile, getModules, getResumeFileProfile, getResumeReview, getResumeVersion, getResumeVersions, getSkillTags, startInterview, updateResumeTags, uploadResumeFile } from '../api'
 
 /* ------------------------------------------------------------------ */
 /*  State                                                              */
@@ -639,6 +675,13 @@ const activeFamily = ref('BE')
 const selectedJob = ref(null)
 const isDragging = ref(false)
 const uploadedFile = ref(null)
+const resumeVersionId = ref(null)
+const resumeVersions = ref([])
+const resumeReview = ref(null)
+const reviewLoading = ref(false)
+const reviewError = ref('')
+let reviewRequest = 0
+let uploadRequest = 0
 const savedResume = ref(null)
 const resumeProjectCount = ref(0)
 const fileInput = ref(null)
@@ -682,10 +725,11 @@ const jobsError = ref('')
 const resumeUploading = ref(false)
 const resumeError = ref('')
 
-const stepsInfo = ['选择岗位', '上传简历', '训练目标', '确认信息']
+const stepsInfo = ['选择岗位', '上传简历', '简历评价', '训练目标', '确认信息']
 const stepDescriptions = [
   '选择目标岗位，为后续简历解析与训练方案生成做准备',
   '上传简历，让后续题目更贴近你的真实经历',
+  '核对简历与岗位的关联，了解本轮训练建议',
   '选择本轮重点能力，系统将据此组织面试题目与复盘重点',
   '确认本次训练配置，开始 AI 虚拟面试',
 ]
@@ -699,12 +743,13 @@ const moduleLevelOptions = [
 function isStepDone(index) {
   if (index === 0) return currentStep.value > 0 && Boolean(selectedJob.value)
   if (index === 1) return currentStep.value > 1 && Boolean(uploadedFile.value)
-  if (index === 2) return currentStep.value > 2 && selectedModuleCodes.value.size === 5
+  if (index === 2) return currentStep.value > 2 && Boolean(uploadedFile.value) && resumeReview.value?.status === 'READY'
+  if (index === 3) return currentStep.value > 3 && selectedModuleCodes.value.size === 5
   return false
 }
 
 function isStepSkipped(index) {
-  return index === 1 && currentStep.value > 1 && !uploadedFile.value
+  return (index === 1 || index === 2) && currentStep.value > index && !uploadedFile.value
 }
 
 /* ------------------------------------------------------------------ */
@@ -780,10 +825,11 @@ async function fetchJobs() {
     const [data, profile] = await Promise.all([getJobList(), getCareerProfile().catch(() => null)])
     jobs.value = (Array.isArray(data) ? data : []).map(mapJobFromBackend)
     if (!selectedJob.value && jobs.value.length) {
-      const requestedJob = jobs.value.find(job => job.directionCode === route.query.job)
+      const requestedJob = jobs.value.find(job => job.id === Number(route.query.jobId) || job.directionCode === route.query.job)
       selectedJob.value = requestedJob || jobs.value.find(job => job.id === profile?.targetJobId) || jobs.value.find(job => job.familyCode === activeFamily.value) || jobs.value[0]
       activeFamily.value = selectedJob.value.familyCode
-      if (requestedJob && route.query.from === 'ai' && route.query.step === '2') currentStep.value = 2
+      if (requestedJob && route.query.step === '2' && ['ai', 'builder'].includes(route.query.from)) currentStep.value = 2
+      if (route.query.step === '1' && ['builder', 'resume-library'].includes(route.query.from)) currentStep.value = 1
     }
   } catch (e) {
     console.error('Failed to load jobs:', e)
@@ -838,6 +884,74 @@ function selectFamily(code) {
   activeFamily.value = code
   searchQuery.value = ''
   selectedJob.value = jobs.value.find(job => code === 'ALL' || job.familyCode === code) || null
+}
+
+function selectJob(job) { selectedJob.value = job }
+
+const compatibleResumeVersions = computed(() => resumeVersions.value.filter(version =>
+  version.jobId == null || version.jobId === selectedJob.value?.id))
+const suggestedModuleCodes = computed(() => (resumeReview.value?.suggestedModules || [])
+  .filter(code => allModules.value.some(module => module.code === code)).slice(0, 5))
+const suggestedModuleNames = computed(() => suggestedModuleCodes.value
+  .map(code => allModules.value.find(module => module.code === code)?.name).filter(Boolean))
+
+function openResumeBuilder() {
+  router.push({ path: '/resume/builder', query: {
+    jobId: selectedJob.value?.id || undefined, job: selectedJob.value?.directionCode || undefined,
+  } })
+}
+
+async function fetchResumeVersions() {
+  try { resumeVersions.value = await getResumeVersions() || [] }
+  catch (error) { console.error('Failed to load resume versions:', error) }
+}
+
+async function selectResumeVersion(id) {
+  if (!id) { resumeVersionId.value = null; removeFile(); return }
+  try {
+    const version = await getResumeVersion(Number(id))
+    if (version.jobId != null && version.jobId !== selectedJob.value?.id) throw new Error('简历版本与目标岗位不匹配')
+    ++uploadRequest
+    resumeUploading.value = false
+    resumeVersionId.value = version.id
+    uploadedFile.value = { name: version.title, size: 0, existing: true, workbench: true }
+    extractedSkills.value = String(version.content?.skills || '').split(/[、,，\n]/).map(value => value.trim()).filter(Boolean)
+    resumeProjectCount.value = version.content?.projects?.trim() ? 1 : 0
+    resumeError.value = ''
+    resumeReview.value = null
+    if (currentStep.value === 2) fetchResumeReview()
+  } catch (error) { resumeError.value = error.message || '简历版本加载失败' }
+}
+
+async function fetchResumeReview() {
+  const request = ++reviewRequest
+  resumeReview.value = null
+  reviewError.value = ''
+  if (!selectedJob.value || !uploadedFile.value) {
+    resumeReview.value = { status: 'NO_RESUME', summary: '本轮未使用简历' }
+    reviewLoading.value = false
+    return
+  }
+  reviewLoading.value = true
+  const jobId = selectedJob.value.id
+  const versionId = resumeVersionId.value
+  try {
+    const result = await getResumeReview({ jobId, versionId: versionId || undefined })
+    if (request === reviewRequest && jobId === selectedJob.value?.id && versionId === resumeVersionId.value)
+      resumeReview.value = result
+  } catch (error) {
+    if (request === reviewRequest) reviewError.value = error.message || '评价失败，请重试'
+  } finally { if (request === reviewRequest) reviewLoading.value = false }
+}
+
+function applyRecommendedModules() {
+  const suggested = suggestedModuleCodes.value
+  const codes = [...suggested, ...allModules.value.map(module => module.code)].filter((code, index, items) => items.indexOf(code) === index).slice(0, 5)
+  selectedModuleCodes.value = new Set(codes)
+  moduleOrder.value = codes
+  moduleLevels.value = Object.fromEntries(codes.map(code => [code, moduleLevels.value[code] || 2]))
+  activeModuleCode.value = codes[0] || ''
+  currentStep.value = 3
 }
 
 function formatDuration(totalSeconds) {
@@ -944,31 +1058,40 @@ function handleDrop(e) {
 function selectResumeFile(file) {
   const extension = file.name.split('.').pop()?.toLowerCase()
   if (!['pdf', 'doc', 'docx'].includes(extension)) {
-    uploadedFile.value = null
+    removeFile()
     resumeError.value = '请上传 PDF、DOC 或 DOCX 格式的简历'
     return
   }
   if (file.size > 10 * 1024 * 1024) {
-    uploadedFile.value = null
+    removeFile()
     resumeError.value = '简历文件不能超过 10MB'
     return
   }
   uploadedFile.value = file
+  resumeVersionId.value = null
   simulateExtract()
 }
 
 function removeFile() {
+  ++uploadRequest
+  resumeUploading.value = false
   uploadedFile.value = null
+  resumeVersionId.value = null
+  resumeReview.value = null
   extractedSkills.value = []
   resumeProjectCount.value = 0
   resumeError.value = ''
 }
 
+function skipResume() { removeFile(); currentStep.value = 2 }
+
 function simulateExtract() {
+  const request = ++uploadRequest
   resumeUploading.value = true
   resumeError.value = ''
   uploadResumeFile(uploadedFile.value)
     .then((data) => {
+      if (request !== uploadRequest) return
       const skills = []
       if (data.skills) skills.push(...data.skills)
       if (data.keywords) {
@@ -977,13 +1100,15 @@ function simulateExtract() {
       extractedSkills.value = skills
       resumeProjectCount.value = Array.isArray(data.projects) ? data.projects.length : 0
       savedResume.value = data
+      if (currentStep.value === 2) fetchResumeReview()
     })
     .catch((e) => {
+      if (request !== uploadRequest) return
       console.error('Resume upload failed:', e)
       resumeError.value = '简历解析失败，请重试'
     })
     .finally(() => {
-      resumeUploading.value = false
+      if (request === uploadRequest) resumeUploading.value = false
     })
 }
 
@@ -1001,10 +1126,12 @@ async function fetchSavedResume() {
 
 function useSavedResume() {
   if (!savedResume.value?.filename) return
+  resumeVersionId.value = null
   uploadedFile.value = { name: savedResume.value.filename, size: 0, existing: true }
   extractedSkills.value = [...(savedResume.value.skills || [])]
   resumeProjectCount.value = savedResume.value.projects?.length || 0
   resumeError.value = ''
+  if (currentStep.value === 2) fetchResumeReview()
 }
 
 function formatSize(bytes) {
@@ -1163,7 +1290,7 @@ async function fetchModules() {
 }
 
 async function handleStartInterview() {
-  if (!selectedJob.value || startingInterview.value) return
+  if (!selectedJob.value || startingInterview.value || resumeUploading.value || resumeError.value) return
   startingInterview.value = true
   startError.value = ''
   try {
@@ -1171,6 +1298,8 @@ async function handleStartInterview() {
       jobId: selectedJob.value.id,
       durationSeconds: durationSeconds.value,
       modulePreferences: buildModulePreferences(),
+      resumeVersionId: resumeVersionId.value || undefined,
+      skipResume: !uploadedFile.value,
     })
     router.push({
       path: '/interview',
@@ -1223,14 +1352,26 @@ function scheduleObserve() {
   })
 }
 
-watch(currentStep, scheduleObserve)
+watch(currentStep, step => {
+  scheduleObserve()
+  if (step === 2) fetchResumeReview()
+})
+watch(selectedJob, job => {
+  ++reviewRequest
+  if (resumeVersionId.value && !compatibleResumeVersions.value.some(version => version.id === resumeVersionId.value)) removeFile()
+  if (job && currentStep.value === 2) fetchResumeReview()
+})
 onMounted(() => {
   scheduleObserve()
-  fetchJobs()
+  fetchJobs().then(async () => {
+    if (route.query.resumeVersionId) await selectResumeVersion(route.query.resumeVersionId)
+    if (currentStep.value === 2) fetchResumeReview()
+  })
   fetchModules()
   fetchSavedResume()
+  fetchResumeVersions()
 })
-onUnmounted(() => { if (observer) observer.disconnect() })
+onUnmounted(() => { ++reviewRequest; ++uploadRequest; if (observer) observer.disconnect() })
 </script>
 
 <style scoped>
@@ -3259,5 +3400,10 @@ onUnmounted(() => { if (observer) observer.disconnect() })
 @media(min-width:901px) and (max-height:950px){.page-container{padding-top:10px;padding-bottom:12px}.page-header{margin-bottom:4px}.page-title{font-size:26px}.page-desc{margin-top:3px;font-size:12px}.stepper{margin-bottom:10px;padding:2px 0 4px}.stepper__dot{width:30px;height:30px}.stepper__track{top:17px}.job-catalog__top{padding:13px 18px 8px}.job-catalog>.search-box{margin:0 18px 10px;padding-block:9px}.job-catalog__layout{height:clamp(430px,calc(100dvh - 390px),520px);min-height:0}.job-list__item{padding:8px 10px}.job-list__item+.job-list__item{margin-top:0}.job-list__summary{font-size:11px}.job-list__tags{margin-top:3px}.family-nav button{min-height:42px}.job-detail{padding:14px 16px}.job-detail__summary{margin-top:9px}.job-detail__section{margin-top:12px}.job-detail__footer{margin:auto -16px -14px}.upload-card,.job-summary,.module-select,.module-priority,.configuration-card,.launch-card{min-height:calc(100dvh - 365px);padding:16px}.upload-zone{min-height:190px;padding:28px 20px}.module-heading{margin-bottom:9px}.module-grid{gap:7px 10px}.module-option{min-height:60px;padding:9px 12px}.module-option small{margin-top:3px}.priority-list{margin-top:10px}.priority-list li{min-height:40px;padding:4px 8px}.strategy-detail{margin-top:8px;padding-top:8px}.strategy-level{margin-top:8px}.strategy-focus{margin-top:7px!important}.config-section{padding:10px 0}.configuration-card>header+.config-section{margin-top:8px}.launch-card h2{margin-top:7px}.launch-format{margin-top:9px;padding:9px}.duration-section,.before-start{margin-top:8px;padding-top:8px}.step-actions{margin-top:8px;padding-top:8px}}
 @media(max-width:900px){.page-container{padding-top:16px}.job-catalog__layout{height:auto;grid-template-columns:170px 1fr}.job-detail{grid-column:1/-1;min-height:380px}.upload-layout,.module-layout,.confirmation-layout{grid-template-columns:1fr}.upload-card,.job-summary,.module-select,.module-priority,.configuration-card,.launch-card{min-height:auto}.stepper{gap:20px}.stepper__track{left:18%;right:18%}}
 @media(max-width:640px){.page-container{padding:14px 12px 28px}.page-title{font-size:25px}.page-desc{font-size:12px}.stepper{gap:4px}.stepper__item{min-width:72px}.stepper__track{left:14%;right:14%}.job-catalog__layout{display:block}.job-detail__footer{align-items:stretch;flex-direction:column}.module-grid{grid-template-columns:1fr}.module-option{min-height:70px}.configuration-card,.launch-card{padding:16px}.config-priorities li{grid-template-columns:30px minmax(0,1fr) 38px 40px}.duration-dialog{max-height:calc(100dvh - 24px);overflow:auto}.duration-wheel{height:230px}.duration-wheel__column{height:230px;padding:89px 0}.duration-wheel__highlight{top:89px}}
+.stepper{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0}.stepper__item{min-width:0}.stepper__track{left:10%;right:10%}
+.resume-builder-link{display:block;margin:12px 0 4px;padding:0;border:0;background:none;color:var(--accent-700);font:inherit;font-weight:700;text-align:left;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.saved-resume select{min-width:190px;max-width:100%;padding:8px;border:1px solid var(--neutral-200);border-radius:8px;background:white;color:inherit}
+.resume-review{max-width:980px;margin:0 auto;padding:30px;min-height:320px}.resume-review h2{font-size:25px;margin:8px 0}.resume-review>p{color:var(--neutral-600);line-height:1.65}.resume-review__eyebrow{color:var(--accent-700);font-weight:700;font-size:13px;letter-spacing:.08em}.resume-review__findings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;list-style:none;padding:0;margin:24px 0}.resume-review__findings li{display:grid;gap:7px;border:1px solid var(--neutral-200);border-radius:12px;padding:15px;background:#fafdfb}.resume-review__findings span{color:var(--neutral-600);line-height:1.6;font-size:13px}.resume-review__suggestion{display:flex;align-items:center;flex-wrap:wrap;gap:12px;border-top:1px solid var(--neutral-200);padding-top:18px}.resume-review__suggestion span{flex:1;color:var(--accent-700)}.resume-review__error{color:#a23327}.resume-review__error button{border:0;background:none;color:inherit;text-decoration:underline;cursor:pointer}.resume-review__empty{margin-top:30px;padding:24px;border-radius:12px;background:var(--neutral-100);color:var(--neutral-600)}
+@media(max-width:640px){.stepper__label{font-size:10px;text-align:center;white-space:normal}.stepper__item{gap:4px}.stepper__dot{width:28px;height:28px}.stepper__track{top:17px}.resume-review{padding:18px;min-height:0}.resume-review__findings{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){.resume-progress span{animation:none}.step-panel{animation:none}}
 </style>

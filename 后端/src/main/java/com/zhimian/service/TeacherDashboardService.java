@@ -38,13 +38,11 @@ import java.util.Set;
 /**
  * 教师仪表盘数据服务（Phase 5.3）。
  * <p>
- * 只读聚合查询，全部为教师视角的全局统计，<b>不</b>按当前登录用户隔离
- * （与学生端 {@link StatsService} / {@link InterviewFollowupRecordService} 的「按本人过滤」相反）。
- * 访问权限由 Controller 上的 {@code @RequireRole({"TEACHER","ADMIN"})} 保证，仅教师/管理员可达。
+ * 只读聚合查询，仅统计当前教师名下班级的教学任务，不包含其他教师的数据。
+ * Controller 与服务层均校验教师身份，资源范围以 teaching_class.teacher_id 为准。
  * <p>
- * 不新增数据表、不写裸 SQL，复用既有 MyBatis-Plus Mapper。涉及难以从现有数据精确还原的部分
- * （薄弱项分布、常见问题），优先基于 interview_followup_record 做关键词归类，无数据时回退到
- * 明确标注的 Phase 5.3 临时静态兜底值。
+ * 不新增数据表，复用现有教学关系查询与 MyBatis-Plus Mapper。涉及难以从现有数据精确还原的部分
+ * （薄弱项分布、常见问题），仅在存在可归类的真实追问记录时返回近似归类结果。
  */
 @Slf4j
 @Service
@@ -74,23 +72,29 @@ public class TeacherDashboardService {
     private static final List<String> WEAKNESS_NAMES = List.of(W_PROJECT, W_FOLLOWUP, W_TECH, W_LOGIC);
 
     /**
-     * 组装教师仪表盘总览。任一子项无数据时返回安全默认值（0 / 空列表 / 标注的临时兜底），不抛异常。
+     * 组装教师仪表盘总览。无数据时返回 0 / 空列表，不伪造统计值。
      */
     public TeacherDashboardOverviewResponse getOverview() {
+        teachingService.teacher();
         // 一次性拉取基础数据，后续在内存中聚合，避免 N+1 查询。当前数据规模可控。
         List<Long> studentIds=teachingService.people().stream().map(s->TeachingService.id(s,"id")).distinct().toList();
-        List<Long> sessionIds=teachingService.rows("SELECT p.session_id FROM teaching_attempt p JOIN teaching_assignment a ON a.id=p.assignment_id JOIN teaching_task t ON t.id=a.task_id JOIN teaching_class c ON c.id=t.class_id WHERE c.teacher_id=?",teachingService.user()).stream().map(p->TeachingService.id(p,"sessionId")).toList();
+        List<Long> sessionIds=teachingService.rows("SELECT DISTINCT p.session_id FROM teaching_attempt p JOIN teaching_assignment a ON a.id=p.assignment_id JOIN teaching_task t ON t.id=a.task_id JOIN teaching_class c ON c.id=t.class_id WHERE c.teacher_id=?",teachingService.user()).stream().map(p->TeachingService.id(p,"sessionId")).toList();
         List<SysUser> students=studentIds.isEmpty()?List.of():userMapper.selectBatchIds(studentIds);
         List<InterviewSession> sessions=sessionIds.isEmpty()?List.of():sessionMapper.selectBatchIds(sessionIds);
         List<InterviewReport> reports=sessionIds.isEmpty()?List.of():reportMapper.selectList(new LambdaQueryWrapper<InterviewReport>().in(InterviewReport::getSessionId,sessionIds));
-        List<JobPosition> jobs = jobPositionMapper.selectList(new LambdaQueryWrapper<>());
+        Set<Long> validReportIds=sessionIds.isEmpty()?Set.of():validReportIds();
+        List<InterviewFollowupRecord> followups=sessionIds.isEmpty()?List.of():followupRecordMapper.selectList(
+                new LambdaQueryWrapper<InterviewFollowupRecord>().in(InterviewFollowupRecord::getSessionId,sessionIds));
+        List<Long> jobIds=sessions.stream().map(InterviewSession::getJobId).filter(java.util.Objects::nonNull).distinct().toList();
+        List<JobPosition> jobs=jobIds.isEmpty()?List.of():jobPositionMapper.selectBatchIds(jobIds);
+        List<TeacherWeaknessItem> weaknesses=buildWeaknessDistribution(followups);
 
         TeacherDashboardOverviewResponse resp = new TeacherDashboardOverviewResponse();
-        resp.setSummary(buildSummary(students, sessions, reports));
+        resp.setSummary(buildSummary(students, reports, validReportIds, followups));
         resp.setTrainingTrend(buildTrend(sessions));
-        resp.setWeaknessDistribution(List.of());
-        resp.setStudentTrainingList(buildStudentList(students, sessions, reports, jobs));
-        resp.setCommonProblems(List.of());
+        resp.setWeaknessDistribution(weaknesses);
+        resp.setStudentTrainingList(buildStudentList(students, sessions, reports, jobs, validReportIds));
+        resp.setCommonProblems(buildCommonProblems(weaknesses));
 
         log.info("[教师仪表盘] 学生数={}, 会话数={}, 报告数={}", students.size(), sessions.size(), reports.size());
         return resp;
@@ -101,8 +105,9 @@ public class TeacherDashboardService {
     // ---------------------------------------------------------------------
 
     private TeacherDashboardSummary buildSummary(List<SysUser> students,
-                                                 List<InterviewSession> sessions,
-                                                 List<InterviewReport> reports) {
+                                                 List<InterviewReport> reports,
+                                                 Set<Long> validReportIds,
+                                                 List<InterviewFollowupRecord> followups) {
         Set<Long> studentIds = new HashSet<>();
         for (SysUser s : students) {
             studentIds.add(s.getId());
@@ -119,19 +124,17 @@ public class TeacherDashboardService {
         int trainedCount = trainedStudentIds.size();
 
         // 平均分仅采用本教师任务的有效报告。
-        var validReports=teachingService.rows("SELECT p.report_id FROM teaching_attempt p JOIN teaching_assignment a ON a.id=p.assignment_id JOIN teaching_task t ON t.id=a.task_id JOIN teaching_class c ON c.id=t.class_id WHERE c.teacher_id=? AND p.state='READY' AND p.valid=TRUE",teachingService.user()).stream().map(p->TeachingService.id(p,"reportId")).collect(java.util.stream.Collectors.toSet());
         double scoreSum = 0;
         int scored = 0;
         for (InterviewReport r : reports) {
-            if (validReports.contains(r.getId())&&r.getTotalScore() != null) {
+            if (validReportIds.contains(r.getId())&&r.getTotalScore() != null) {
                 scoreSum += r.getTotalScore().doubleValue();
                 scored++;
             }
         }
 
-        var sessionIds=sessions.stream().map(InterviewSession::getId).toList();
-        long aiCount = countFollowupBySource("AI",sessionIds);
-        long ruleCount = countFollowupBySource("RULE",sessionIds);
+        long aiCount = followups.stream().filter(r -> "AI".equals(r.getSource())).count();
+        long ruleCount = followups.stream().filter(r -> "RULE".equals(r.getSource())).count();
 
         TeacherDashboardSummary summary = new TeacherDashboardSummary();
         summary.setStudentTotal(studentTotal);
@@ -143,14 +146,10 @@ public class TeacherDashboardService {
         return summary;
     }
 
-    /** 只统计本教师任务会话的追问来源。 */
-    private long countFollowupBySource(String source,List<Long> sessionIds) {
-        if(sessionIds.isEmpty())return 0;
-        Long c = followupRecordMapper.selectCount(
-                new LambdaQueryWrapper<InterviewFollowupRecord>()
-                        .eq(InterviewFollowupRecord::getSource, source)
-                        .in(InterviewFollowupRecord::getSessionId,sessionIds));
-        return c == null ? 0L : c;
+    /** 仅认可已生成且有效的教学任务报告；无教师数据时不发起全表查询。 */
+    private Set<Long> validReportIds() {
+        return teachingService.rows("SELECT DISTINCT p.report_id FROM teaching_attempt p JOIN teaching_assignment a ON a.id=p.assignment_id JOIN teaching_task t ON t.id=a.task_id JOIN teaching_class c ON c.id=t.class_id WHERE c.teacher_id=? AND p.state='READY' AND p.valid=TRUE AND p.report_id IS NOT NULL",teachingService.user())
+                .stream().map(p -> TeachingService.id(p,"reportId")).collect(java.util.stream.Collectors.toSet());
     }
 
     // ---------------------------------------------------------------------
@@ -195,10 +194,9 @@ public class TeacherDashboardService {
     /**
      * 薄弱项分布：基于 interview_followup_record 的 triggerReason / abilityTag 做关键词归类。
      * 现有数据没有与这四类一一对应的字段，因此采用关键词映射做近似还原；
-     * 当没有任何可归类的记录时，回退到 Phase 5.3 临时静态兜底分布（已明确标注）。
+     * 当没有任何可归类的记录时返回空列表。
      */
-    private List<TeacherWeaknessItem> buildWeaknessDistribution() {
-        List<InterviewFollowupRecord> records = followupRecordMapper.selectList(new LambdaQueryWrapper<>());
+    private List<TeacherWeaknessItem> buildWeaknessDistribution(List<InterviewFollowupRecord> records) {
 
         Map<String, Integer> counts = new LinkedHashMap<>();
         for (String name : WEAKNESS_NAMES) {
@@ -217,8 +215,7 @@ public class TeacherDashboardService {
         }
 
         if (total == 0) {
-            // Phase 5.3 临时兜底：暂无可归类的追问记录时返回静态占比（仅占位，待真实数据接入后自动替换）
-            return staticWeaknessFallback();
+            return List.of();
         }
 
         List<TeacherWeaknessItem> list = new ArrayList<>(WEAKNESS_NAMES.size());
@@ -253,24 +250,6 @@ public class TeacherDashboardService {
         return null;
     }
 
-    /** Phase 5.3 临时静态兜底：薄弱项分布占位数据（无真实数据时使用）。 */
-    private List<TeacherWeaknessItem> staticWeaknessFallback() {
-        List<TeacherWeaknessItem> list = new ArrayList<>();
-        list.add(weakness(W_PROJECT, 0.35, 0));
-        list.add(weakness(W_FOLLOWUP, 0.28, 0));
-        list.add(weakness(W_TECH, 0.22, 0));
-        list.add(weakness(W_LOGIC, 0.15, 0));
-        return list;
-    }
-
-    private TeacherWeaknessItem weakness(String name, double percent, int count) {
-        TeacherWeaknessItem item = new TeacherWeaknessItem();
-        item.setName(name);
-        item.setPercent(percent);
-        item.setCount(count);
-        return item;
-    }
-
     // ---------------------------------------------------------------------
     // studentTrainingList
     // ---------------------------------------------------------------------
@@ -278,7 +257,8 @@ public class TeacherDashboardService {
     private List<TeacherStudentTrainingItem> buildStudentList(List<SysUser> students,
                                                               List<InterviewSession> sessions,
                                                               List<InterviewReport> reports,
-                                                              List<JobPosition> jobs) {
+                                                              List<JobPosition> jobs,
+                                                              Set<Long> validReportIds) {
         Map<Long, String> jobNameById = new HashMap<>();
         for (JobPosition j : jobs) {
             jobNameById.put(j.getId(), j.getName());
@@ -294,7 +274,7 @@ public class TeacherDashboardService {
         // 按学生聚合报告分数
         Map<Long, double[]> scoreAggByUser = new HashMap<>(); // [sum, count]
         for (InterviewReport r : reports) {
-            if (r.getUserId() != null && r.getTotalScore() != null) {
+            if (validReportIds.contains(r.getId()) && r.getUserId() != null && r.getTotalScore() != null) {
                 double[] agg = scoreAggByUser.computeIfAbsent(r.getUserId(), k -> new double[2]);
                 agg[0] += r.getTotalScore().doubleValue();
                 agg[1] += 1;
@@ -367,28 +347,27 @@ public class TeacherDashboardService {
     // ---------------------------------------------------------------------
 
     /**
-     * 常见问题：以薄弱项分布为基础生成（占比直接取自 weaknessDistribution），
-     * 问题描述文案为 Phase 5.3 约定文案。等级按占比阈值划分：>=0.30 高 / >=0.20 中 / 其余 低。
+     * 常见问题：仅展示有对应追问记录的关键词类别。描述不推断记录中没有的学生行为。
+     * 等级按已归类记录的占比划分：>=0.30 高 / >=0.20 中 / 其余 低。
      */
-    private List<TeacherCommonProblemItem> buildCommonProblems() {
-        List<TeacherWeaknessItem> weaknesses = buildWeaknessDistribution();
+    private List<TeacherCommonProblemItem> buildCommonProblems(List<TeacherWeaknessItem> weaknesses) {
         Map<String, Double> percentByName = new HashMap<>();
         for (TeacherWeaknessItem w : weaknesses) {
             percentByName.put(w.getName(), w.getPercent() == null ? 0d : w.getPercent());
         }
 
         List<TeacherCommonProblemItem> list = new ArrayList<>();
-        list.add(problem("项目经历表达笼统",
-                "学生描述项目时缺乏量化指标与个人贡献，难以体现真实能力。",
+        if (percentByName.getOrDefault(W_PROJECT, 0d) > 0) list.add(problem("项目经历表达笼统",
+                "项目表达相关追问较集中，请结合具体报告核实问题并安排针对性练习。",
                 percentByName.getOrDefault(W_PROJECT, 0d)));
-        list.add(problem("面对追问应对不足",
-                "在连续追问下容易答非所问或思路中断，需加强临场应变训练。",
+        if (percentByName.getOrDefault(W_FOLLOWUP, 0d) > 0) list.add(problem("面对追问应对不足",
+                "追问应对相关记录较集中，请结合具体报告核实并安排追问训练。",
                 percentByName.getOrDefault(W_FOLLOWUP, 0d)));
-        list.add(problem("技术细节阐述不清",
-                "对所用技术的原理与实现细节掌握不深，回答停留在表层。",
+        if (percentByName.getOrDefault(W_TECH, 0d) > 0) list.add(problem("技术细节阐述不清",
+                "技术细节相关追问较集中，请结合具体报告核实并安排技术表达训练。",
                 percentByName.getOrDefault(W_TECH, 0d)));
-        list.add(problem("回答逻辑结构不完整",
-                "回答缺少清晰的结构与条理，建议采用 STAR 等结构化表达。",
+        if (percentByName.getOrDefault(W_LOGIC, 0d) > 0) list.add(problem("回答逻辑结构不完整",
+                "逻辑结构相关追问较集中，请结合具体报告核实并安排结构化表达训练。",
                 percentByName.getOrDefault(W_LOGIC, 0d)));
 
         // 按占比从高到低排序，便于教师优先关注

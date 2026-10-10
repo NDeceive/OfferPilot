@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => {
     server: {
       proxy: {
         '/api': {
-          target: 'http://localhost:8080',
+          target: env.VITE_BACKEND_PROXY_TARGET || 'http://localhost:8080',
           changeOrigin: true,
         },
         '/digital-human': {

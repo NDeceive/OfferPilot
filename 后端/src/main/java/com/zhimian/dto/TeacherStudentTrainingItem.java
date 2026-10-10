@@ -13,9 +13,9 @@ public class TeacherStudentTrainingItem {
     private String studentName;
     /** 最近一次训练的目标岗位名称；无则为 "-" */
     private String position;
-    /** 训练次数（该学生的面试会话总数） */
+    /** 训练次数（当前教师任务关联的面试会话数） */
     private Integer trainingCount;
-    /** 平均分（该学生报告 totalScore 平均值，保留 1 位小数；无报告为 0） */
+    /** 当前教师任务中 READY 且有效的该学生报告平均分；无报告为 0 */
     private Double averageScore;
     /** 最近一次训练时间，格式 yyyy-MM-dd HH:mm；从未训练为 null */
     private String lastTrainingTime;

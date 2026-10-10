@@ -9,11 +9,15 @@ import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
+import org.springframework.web.client.ResourceAccessException;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
@@ -27,6 +31,8 @@ import java.util.function.Consumer;
 @Slf4j
 @Component
 public class DeepSeekClient {
+    public enum JsonFailure { NONE, NOT_CONFIGURED, RATE_LIMITED, AUTH_FAILED, PROVIDER_ERROR, NETWORK_ERROR, INVALID_RESPONSE }
+    public record JsonCallResult(JsonNode value, JsonFailure failure) {}
     public String modelName(){return props.getModel();}
 
     private final AiProperties props;
@@ -193,6 +199,79 @@ public class DeepSeekClient {
             return null;
         }
     }
+
+    /** Detailed result for interactive AI tools that must explain provider failures to the user. */
+    public JsonCallResult chatJsonDetailed(String systemPrompt, String userPrompt) {
+        if (!props.isUsable()) return new JsonCallResult(null, JsonFailure.NOT_CONFIGURED);
+        try {
+            Map<String, Object> body = Map.of(
+                    "model", props.getModel(),
+                    "messages", List.of(Map.of("role", "system", "content", systemPrompt),
+                            Map.of("role", "user", "content", userPrompt)),
+                    "temperature", 0.4,
+                    "stream", false);
+            String raw = restClient().post().uri("/chat/completions")
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + props.getApiKey())
+                    .contentType(MediaType.APPLICATION_JSON).body(body).retrieve().body(String.class);
+            String content = extractContent(raw);
+            if (content == null) return new JsonCallResult(null, JsonFailure.INVALID_RESPONSE);
+            String value = content.trim();
+            if (value.startsWith("```")) {
+                int start = value.indexOf('\n');
+                int end = value.lastIndexOf("```");
+                if (start >= 0 && end > start) value = value.substring(start, end).trim();
+            }
+            JsonNode parsed = objectMapper.readTree(value);
+            return parsed.isObject() ? new JsonCallResult(parsed, JsonFailure.NONE)
+                    : new JsonCallResult(null, JsonFailure.INVALID_RESPONSE);
+        } catch (RestClientResponseException e) {
+            int status = e.getStatusCode().value();
+            ProviderDiagnostic diagnostic = providerDiagnostic(e.getResponseBodyAsString());
+            String retryAfter = e.getResponseHeaders() == null ? null
+                    : e.getResponseHeaders().getFirst(HttpHeaders.RETRY_AFTER);
+            if (retryAfter == null || !retryAfter.matches("[0-9]{1,6}")) retryAfter = "未提供";
+            log.warn("AI JSON 调用返回 HTTP {}, providerCode={}, reasonClass={}, retryAfterSeconds={}",
+                    status, diagnostic.code(), diagnostic.reasonClass(), retryAfter);
+            JsonFailure failure = status == 429 ? JsonFailure.RATE_LIMITED
+                    : status == 401 || status == 403 ? JsonFailure.AUTH_FAILED : JsonFailure.PROVIDER_ERROR;
+            return new JsonCallResult(null, failure);
+        } catch (ResourceAccessException e) {
+            log.warn("AI JSON 调用网络不可达或超时：{}", e.getClass().getSimpleName());
+            return new JsonCallResult(null, JsonFailure.NETWORK_ERROR);
+        } catch (RestClientException e) {
+            Throwable cause = e.getCause();
+            log.warn("AI JSON 调用客户端错误：type={}, causeType={}",
+                    e.getClass().getSimpleName(), cause == null ? "未提供" : cause.getClass().getSimpleName());
+            return new JsonCallResult(null, JsonFailure.INVALID_RESPONSE);
+        } catch (Exception e) {
+            log.warn("AI JSON 调用未得到有效结果：{}", e.getClass().getSimpleName());
+            return new JsonCallResult(null, JsonFailure.INVALID_RESPONSE);
+        }
+    }
+
+    /** Log only bounded error metadata; never log the provider body, prompts or API key. */
+    ProviderDiagnostic providerDiagnostic(String body) {
+        try {
+            JsonNode root = objectMapper.readTree(body);
+            JsonNode error = root.path("error");
+            JsonNode codeNode = error.path("code");
+            if (codeNode.isMissingNode() || codeNode.isNull()) codeNode = root.path("code");
+            String code = codeNode.asText("");
+            if (!code.matches("[A-Za-z0-9._-]{1,48}")) code = "未提供";
+            String message = error.path("message").asText("");
+            if (message.isBlank()) message = root.path("message").asText("");
+            String lower = message.toLowerCase(Locale.ROOT);
+            String reason = lower.contains("并发") || lower.contains("concurr") ? "CONCURRENCY"
+                    : lower.contains("限流") || lower.contains("频率") || lower.contains("rate limit") ? "RATE_LIMIT"
+                    : lower.contains("余额") || lower.contains("额度") || lower.contains("quota") || lower.contains("balance") ? "QUOTA"
+                    : "UNKNOWN";
+            return new ProviderDiagnostic(code, reason);
+        } catch (Exception ignored) {
+            return new ProviderDiagnostic("未提供", "UNKNOWN");
+        }
+    }
+
+    record ProviderDiagnostic(String code, String reasonClass) {}
 
     /** 解析 choices[0].message.content，缺失或空白返回 null */
     private String extractContent(String raw) {

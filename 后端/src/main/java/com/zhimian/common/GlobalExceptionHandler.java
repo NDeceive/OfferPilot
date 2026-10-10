@@ -7,6 +7,7 @@ import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.http.ResponseEntity;
 
 import java.util.UUID;
 
@@ -16,6 +17,11 @@ import java.util.UUID;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<Result<Void>> handleForbidden(ForbiddenException e) {
+        return ResponseEntity.status(403).body(Result.error(403, e.getMessage()));
+    }
 
     @ExceptionHandler(BizException.class)
     public Result<Void> handleBiz(BizException e) {

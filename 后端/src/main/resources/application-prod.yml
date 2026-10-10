@@ -37,6 +37,10 @@ ai:
 asr:
   api-key: ${ZHIPU_API_KEY}
 
+resume-ai:
+  deepseek:
+    api-key: ${DEEPSEEK_RESUME_API_KEY:}
+
 # 仅部署自有 Judge0 CE 后再显式打开；留空/false 不影响既有线上服务。
 judge:
   enabled: ${JUDGE_ENABLED:false}

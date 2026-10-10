@@ -135,7 +135,6 @@
         </form>
       </section>
 
-      <OnlineResumeDialog v-model="onlineOpen" @saved="onOnlineResumeSaved" />
     </div>
   </AppLayout>
 </template>
@@ -144,7 +143,6 @@
 import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import AppLayout from '../components/layout/AppLayout.vue'
-import OnlineResumeDialog from '../components/resume/OnlineResumeDialog.vue'
 import { getJobList, getCareerProfile, getAiStatus, uploadResumeFile } from '../api'
 import { postSse } from '../utils/sse'
 import { JOB_FAMILIES, mapJobFromBackend, isReadyJob } from '../utils/jobs'
@@ -190,7 +188,6 @@ const busy = ref(true)
 const controlsVisible = ref(false)
 
 const draft = ref('')
-const onlineOpen = ref(false)
 /** 低置信意图的确认条；null 表示不显示 */
 const confirmAct = ref(null)
 
@@ -259,7 +256,6 @@ function tick() {
   const n = queue.length > 80 ? 4 : queue.length > 30 ? 2 : 1
   currentMsg.text += queue.slice(0, n)
   queue = queue.slice(n)
-  scrollToEnd()
 }
 
 function pushText(text) {
@@ -401,6 +397,7 @@ function settle(mine) {
 function revealControls() {
   typingId.value = 0
   controlsVisible.value = true
+  scrollToEnd()
   applyAct()
 }
 
@@ -546,16 +543,10 @@ function send() {
 /*  在线简历                                                           */
 /* ------------------------------------------------------------------ */
 function openOnlineResume() {
-  onlineOpen.value = true
-}
-
-function onOnlineResumeSaved(payload) {
-  extractedSkills.value = payload?.skills || []
-  uploadedName.value = '在线简历'
-  uploadError.value = ''
-  // 没有文件也照常推进：出题读的是 resume 表的 skills，在线简历走的是同一个
-  // POST /api/resume，解析结果与上传文件同构，后面整条链路不必区分这两条路
-  advance('DONE', '用在线简历')
+  router.push({ path: '/resume/builder', query: {
+    job: selectedJob.value?.code || undefined,
+    jobId: selectedJob.value?.id || undefined,
+  } })
 }
 
 function onFileChange(e) {
@@ -609,7 +600,7 @@ async function handleFile(file) {
 
 function goTargets() {
   if (!selectedJob.value) return
-  // step=2 是「训练目标」（currentStep 从 0 起算）；from=ai 让 JobSelect 回读简历画像
+  // step=2 是简历评价；训练目标现为第 4 步。
   router.push({
     path: '/jobs',
     query: { job: selectedJob.value.code, step: '2', from: 'ai' },

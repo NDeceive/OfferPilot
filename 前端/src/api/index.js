@@ -36,6 +36,21 @@ export const uploadResumeFile = (file) => {
 export const getResumeFileProfile = () => request.get('/resume/file-profile')
 export const updateResumeTags = (tags) => request.put('/resume/tags', { tags })
 export const getSkillTags = () => request.get('/tags')
+export const getResumeClaims = () => request.get('/resume-workbench/claims')
+export const getResumeClaimSuggestions = () => request.get('/resume-workbench/claim-suggestions')
+export const getResumeAiStatus = () => request.get('/resume-workbench/ai-status')
+export const generateResumeClaimExample = (data) => request.post('/resume-workbench/claim-example/ai', data, { timeout: 95000 })
+export const getAiResumeClaimWording = (data) => request.post('/resume-workbench/claim-wording/ai', data, { timeout: 95000 })
+export const addResumeClaim = (data) => request.post('/resume-workbench/claims', data)
+export const updateResumeClaim = (id, data) => request.put(`/resume-workbench/claims/${id}`, data)
+export const deleteResumeClaim = (id) => request.delete(`/resume-workbench/claims/${id}`)
+export const getResumeVersions = () => request.get('/resume-workbench/versions')
+export const getResumeVersion = (id) => request.get(`/resume-workbench/versions/${id}`)
+export const saveResumeVersion = (data) => request.post('/resume-workbench/versions', data)
+export const generateResumeVersion = (data) => request.post('/resume-workbench/versions/generate', data, { timeout: 95000 })
+export const getResumeReview = (params) => request.get('/resume-workbench/review', { params })
+export const exportResumeVersion = (id, format = 'pdf') =>
+  downloadRequest.get(`/resume-workbench/versions/${id}/export`, { params: { format }, responseType: 'blob' })
 
 /* ==================== Interview ==================== */
 export const getInterviewRecords = () => request.get('/interview/records')

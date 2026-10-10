@@ -8,7 +8,7 @@ import lombok.Data;
 import java.util.List;
 
 /**
- * 开始面试请求。resumeId 由服务端按当前用户解析，不从前端接收。
+ * 开始面试请求。可选定工作台简历版本；所有权仍由服务端核验。
  */
 @Data
 public class StartInterviewRequest {
@@ -22,6 +22,12 @@ public class StartInterviewRequest {
 
     @NotNull(message = "岗位不能为空")
     private Long jobId;
+
+    /** 未传时沿用旧版“当前简历”流程。 */
+    private Long resumeVersionId;
+
+    /** 用户在准备页明确选择“暂不上传”时不使用历史简历。 */
+    private Boolean skipResume;
 
     /** 难度: 1简单 2中等 3困难，缺省按中等处理 */
     @Min(1)
