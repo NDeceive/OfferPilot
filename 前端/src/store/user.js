@@ -46,7 +46,11 @@ export const useUserStore = defineStore('user', {
       this.username = ''
       this.nickname = ''
       this.role = ''
-      localStorage.clear()
+      // 只删自己这五个键，不用 localStorage.clear()——clear() 会把别人的数据一起清掉：
+      // 专项训练的本地会话（offerpilot.learning.session）、运行时服务器地址、
+      // 离线演示开关，退出登录后全都消失了。
+      const authKeys = ['token', 'userId', 'username', 'nickname', 'role']
+      authKeys.forEach((key) => localStorage.removeItem(key))
     },
   },
 })

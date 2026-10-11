@@ -25,5 +25,7 @@ public class StudentBackendSchema {
                 .execute(jdbc.getDataSource());
         new ResourceDatabasePopulator(new ClassPathResource("db/resume_workbench.sql"))
                 .execute(jdbc.getDataSource());
+        new ResourceDatabasePopulator(new ClassPathResource("db/migration_meeting.sql"))
+                .execute(jdbc.getDataSource());
     }
 }

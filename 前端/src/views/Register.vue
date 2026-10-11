@@ -14,8 +14,8 @@
           <BrandLogo variant="bilingual" :width="210" />
         </router-link>
 
-        <h1 class="brand-title">从一次完整练习<br /><span class="title-accent">开始准备</span></h1>
-        <p class="brand-desc">建立岗位、简历与回答之间的联系，让每一步准备都有记录可循。</p>
+        <h1 class="brand-title">{{ isEnterpriseForm ? '发起一场视频面试' : '从一次完整练习' }}<br /><span class="title-accent">{{ isEnterpriseForm ? '面对面沟通' : '开始准备' }}</span></h1>
+        <p class="brand-desc">{{ isEnterpriseForm ? '把会议号发给候选人，实时视频交流，每场面试的建议与记录都留档。' : '建立岗位、简历与回答之间的联系，让每一步准备都有记录可循。' }}</p>
         <AuthShowcase :initial-slide="1" />
 
       </div>
@@ -33,10 +33,33 @@
 
         <div class="form-header">
           <h1 class="form-title">创建账号</h1>
-          <p class="form-sub">创建账号，保存每次练习与复盘</p>
+          <p class="form-sub">{{ isEnterpriseForm ? '创建企业账号，开启视频面试' : '创建账号，保存每次练习与复盘' }}</p>
         </div>
 
         <form class="auth-form" @submit.prevent="handleRegister">
+          <!-- 身份选择：只有学生/企业可自助注册（后端白名单归一，非法值静默降级为学生） -->
+          <div class="field">
+            <label class="field-label">身份</label>
+            <div class="role-picker">
+              <button
+                type="button"
+                :class="['role-chip', { active: form.role === 'STUDENT' }]"
+                @click="form.role = 'STUDENT'"
+              >
+                学生
+                <small>模拟面试、查看复盘</small>
+              </button>
+              <button
+                type="button"
+                :class="['role-chip', { active: form.role === 'ENTERPRISE' }]"
+                @click="form.role = 'ENTERPRISE'"
+              >
+                企业
+                <small>发起会议、视频面试</small>
+              </button>
+            </div>
+          </div>
+
           <div class="field">
             <label class="field-label">用户名</label>
             <div class="field-input">
@@ -134,7 +157,11 @@ const form = reactive({
   password: '',
   confirmPwd: '',
   agree: false,
+  role: 'STUDENT',
 })
+
+// 左栏品牌文案跟随「身份」选择切换：企业注册者看到的是会议/建议的说法，而不是学生练习
+const isEnterpriseForm = computed(() => form.role === 'ENTERPRISE')
 
 const pwdStrength = computed(() => {
   const p = form.password
@@ -176,7 +203,7 @@ async function handleRegister() {
   errorMsg.value = ''
   loading.value = true
   try {
-    await registerApi({ username: form.username, email: form.email, password: form.password })
+    await registerApi({ username: form.username, email: form.email, password: form.password, role: form.role })
     router.push('/login')
   } catch (e) {
     errorMsg.value = e.response?.data?.message || e.message || '注册失败，请重试'
@@ -242,6 +269,14 @@ async function handleRegister() {
 .pwd-toggle { position: absolute; right: 10px; background: none; border: none; color: var(--neutral-400); cursor: pointer; padding: 4px; transition: color var(--duration-fast); }
 .pwd-toggle:hover { color: var(--accent-600); }
 .field-error { font-size: 12px; color: var(--color-error); margin-top: 4px; display: block; }
+
+/* 身份选择（学生 / 企业） */
+.role-picker { display: flex; gap: var(--space-2); }
+.role-chip { flex: 1; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 12px; border: 1.5px solid var(--neutral-200); border-radius: var(--radius-md); background: var(--surface-elevated); color: var(--neutral-600); font-family: inherit; font-size: var(--text-sm); font-weight: 600; cursor: pointer; transition: all var(--duration-normal) var(--ease-out-expo); }
+.role-chip small { font-size: 11px; font-weight: 400; color: var(--neutral-400); }
+.role-chip:hover { border-color: var(--neutral-300); }
+.role-chip.active { border-color: var(--accent-400); background: rgba(16, 185, 129, 0.06); color: var(--accent-700); }
+.role-chip.active small { color: var(--accent-600); }
 
 /* Password Strength */
 .pwd-strength { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-2); }

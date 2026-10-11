@@ -1,12 +1,12 @@
 <template>
-  <div class="app-layout" :class="{ 'teacher-shell': isTeacherRoute, 'class-insights-shell': route.path.startsWith('/teacher/classes'), 'training-task-shell': route.path.startsWith('/teacher/tasks') || route.path.startsWith('/teacher/students') || route.path.startsWith('/teacher/analytics') || route.path.startsWith('/teacher/reports') || route.path.startsWith('/teacher/account') }">
+  <div class="app-layout" :class="{ 'teacher-shell': isTeacherShell, 'enterprise-shell': isEnterpriseShell, 'class-insights-shell': route.path.startsWith('/teacher/classes'), 'training-task-shell': route.path.startsWith('/teacher/tasks') || route.path.startsWith('/teacher/students') || route.path.startsWith('/teacher/analytics') || route.path.startsWith('/teacher/reports') || route.path.startsWith('/teacher/account') }">
     <!-- Top Navigation -->
     <header class="topnav" :class="{ scrolled: isScrolled }">
       <div class="topnav-inner">
         <!-- Logo -->
-        <router-link to="/" class="nav-logo">
-          <BrandLogo :variant="isTeacherRoute ? 'en' : 'cn'" :width="isTeacherRoute ? 185 : 180" />
-          <span v-if="isTeacherRoute" class="brand-en">教师端</span>
+        <router-link :to="logoHome" class="nav-logo">
+          <BrandLogo :variant="brandedShell ? 'en' : 'cn'" :width="brandedShell ? 185 : 180" />
+          <span v-if="shellLabel" class="brand-en">{{ shellLabel }}</span>
         </router-link>
 
         <!-- Main Nav Links -->
@@ -26,7 +26,9 @@
 
         <!-- Right Actions -->
         <div class="nav-actions">
-          <router-link :to="isTeacherRoute?'/teacher/messages':'/my/messages'" class="message-trigger" aria-label="消息中心" title="消息中心">
+          <!-- 消息中心：企业账号没有对应的消息页（点了会被守卫弹回），仅学生/教师显示。
+               按账号角色判断而不是按路径——否则 /meeting 属企业壳，学生/教师进会议页也会被误藏。 -->
+          <router-link v-if="!isEnterpriseUser" :to="isTeacherUser?'/teacher/messages':'/my/messages'" class="message-trigger" aria-label="消息中心" title="消息中心">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Z"/><path d="M10 21h4"/></svg>
             <span>消息中心</span>
           </router-link>
@@ -58,12 +60,12 @@
                 </div>
               </div>
               <div class="dropdown-divider"></div>
-              <router-link v-if="!isTeacherRoute" to="/my/classes" class="dropdown-item" @click="userMenuOpen=false">我的班级</router-link>
-              <router-link :to="isTeacherRoute?'/teacher/account':'/profile'" class="dropdown-item" @click="userMenuOpen = false">
+              <router-link v-if="isStudentUser" to="/my/classes" class="dropdown-item" @click="userMenuOpen=false">我的班级</router-link>
+              <router-link :to="isTeacherUser?'/teacher/account':'/profile'" class="dropdown-item" @click="userMenuOpen = false">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                 个人中心
               </router-link>
-              <router-link :to="isTeacherRoute?'/teacher/settings':'/settings'" class="dropdown-item" @click="userMenuOpen = false">
+              <router-link :to="isTeacherUser?'/teacher/settings':'/settings'" class="dropdown-item" @click="userMenuOpen = false">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.32 9c.26.46.81.77 1.4.77H21a2 2 0 1 1 0 4h-.09c-.59 0-1.14.31-1.4.77z"/></svg>
                 设置
               </router-link>
@@ -113,9 +115,13 @@
     </header>
 
     <!-- Page Content -->
-    <main class="main-content">
+    <main class="main-content" :class="{ 'has-mobile-tabbar': showMobileTabBar }">
       <slot />
     </main>
+
+    <!-- 小屏补一个底部导航。走 AppLayout 的都是桌面页，原本在手机上只隐藏了顶栏链接、
+         没有任何返回/切换入口，用户从移动页跳进来就出不去。教师端不挂（路径对不上）。 -->
+    <MobileTabBar v-if="showMobileTabBar" />
   </div>
 </template>
 
@@ -124,6 +130,8 @@ import {teacherContext} from '../../services/teacherContext.js'
 import { getMe } from '../../api'
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import MobileTabBar from '../../mobile/components/MobileTabBar.vue'
+import { useIsMobile } from '../../mobile/composables/useIsMobile'
 import BrandLogo from '../ui/BrandLogo.vue'
 
 import { useUserStore } from '../../store/user'
@@ -138,6 +146,45 @@ const userTriggerRef = ref(null)
 const dropdownRef = ref(null)
 
 const isTeacherRoute = computed(() => route.path.startsWith('/teacher'))
+
+// 登录角色（store.user.setAuth 写入 localStorage.role），会话内不变，无需响应式。
+// isEnterpriseUser 用于「企业账号在自己的企业域里才换企业导航/副标」——
+// 学生、教师从 /meeting 进会时保留各自导航，避免出现点不动（被守卫弹回）的入口。
+const ROLE = (localStorage.getItem('role') || '').toUpperCase()
+const isEnterpriseUser = ROLE === 'ENTERPRISE'
+const isTeacherUser = ROLE === 'TEACHER' || ROLE === 'ADMIN'
+/** 学生账号：既非教师也非企业。学生专属入口（我的班级）只对他显示 */
+const isStudentUser = !isTeacherUser && !isEnterpriseUser
+
+/** 账号页：企业账号点「个人中心/设置」时不掉出企业壳——这两个路径本身不分角色，
+ *  必须叠加 isEnterpriseUser 判断，学生/教师访问时行为保持不变 */
+const ENTERPRISE_ACCOUNT_PATHS = ['/profile', '/settings']
+/** 企业域：企业门户与企业会议的整段路径（含 /meeting）+ 企业账号的账号页 */
+const isEnterpriseShell = computed(() =>
+  route.path.startsWith('/enterprise')
+  || route.path.startsWith('/meeting')
+  || (isEnterpriseUser && ENTERPRISE_ACCOUNT_PATHS.some((p) => route.path === p || route.path.startsWith(p + '/')))
+)
+/** 教师样式壳：/teacher/* 一律教师壳；教师账号到共享页（如 /meeting）也不再掉回学生样式/学生入口 */
+const isTeacherShell = computed(() => isTeacherRoute.value || isTeacherUser)
+/** 走「专业版」品牌壳（英文 Logo + 副标）：教师端原样，企业端仅企业账号 */
+const brandedShell = computed(() => isTeacherShell.value || (isEnterpriseShell.value && isEnterpriseUser))
+const shellLabel = computed(() => {
+  if (isTeacherShell.value) return '教师端'
+  if (brandedShell.value) return '企业端'
+  return ''
+})
+/** 顶栏 Logo 的落点：教师/企业账号回自己的工作台，别落进面向游客的营销着陆页 */
+const logoHome = computed(() => {
+  if (isEnterpriseUser) return '/enterprise/dashboard'
+  if (isTeacherUser) return '/teacher/dashboard'
+  return '/'
+})
+const isMobile = useIsMobile()
+// 教师/企业账号在各自的壳里都不挂学生底部导航（否则窄窗口/手机上冒出「面试记录」这些入口）
+const showMobileTabBar = computed(() =>
+  isMobile.value && !isTeacherShell.value && !(isEnterpriseUser && isEnterpriseShell.value))
+
 const userName = computed(() => userStore.nickname || userStore.username || '用户')
 const userEmail = computed(() => userStore.username || '')
 
@@ -164,6 +211,12 @@ const studentNav = [
     label: '学习资源',
     icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg>',
   },
+  {
+    // 企业端发来会议号后凭码进会：视频面试 / 现场接受建议
+    path: '/meeting',
+    label: '视频会议',
+    icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m23 7-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>',
+  },
   {path:'/my/tasks',label:'教学任务',icon:''},
 ]
 
@@ -173,11 +226,22 @@ const teacherNav = [
   { path: '/teacher/tasks', label: '训练任务' },
   { path: '/teacher/students', label: '学生中心' },
   { path: '/teacher/analytics', label: '数据分析' },
+  { path: '/meeting', label: '视频会议' },
+]
+
+/** 企业端导航：仅企业账号在企业域下显示（会议中心开会 / 凭码加入他人的会议） */
+const enterpriseNav = [
+  { path: '/enterprise/dashboard', label: '会议中心' },
+  { path: '/meeting', label: '加入会议' },
 ]
 const navTarget = path => isTeacherRoute.value ? { path, query: Object.fromEntries(Object.entries(teacherContext(route.query)).filter(([k])=>!k.startsWith('return')&&!k.startsWith('source'))) } : path
 
-const mainNav = computed(() => isTeacherRoute.value ? teacherNav : studentNav)
-const allNav = computed(() => [...(isTeacherRoute.value ? teacherNav : studentNav)])
+const mainNav = computed(() => {
+  if (isEnterpriseShell.value && isEnterpriseUser) return enterpriseNav
+  if (isTeacherRoute.value || isTeacherUser) return teacherNav
+  return studentNav
+})
+const allNav = computed(() => [...mainNav.value])
 
 const isActive = (path) => route.path === path || route.path.startsWith(path + '/')
 
@@ -545,6 +609,14 @@ onUnmounted(() => {
   min-height: 100dvh;
 }
 
+/* 挂了底部导航时：留出底栏高度 + 安全区，并把左右内边距收窄到与移动页一致（24 → 16）
+   否则 393px 下正文可用宽度只剩 393-48=345，比移动页的 353 还窄，看着更挤。 */
+.main-content.has-mobile-tabbar {
+  padding-left: var(--space-4);
+  padding-right: var(--space-4);
+  padding-bottom: calc(64px + 40px + env(safe-area-inset-bottom));
+}
+
 @media (max-width: 768px) {
   .topnav-inner {
     padding-inline: 16px;
@@ -576,6 +648,9 @@ onUnmounted(() => {
     margin-left: 0;
   }
 }
+/* Enterprise shell：副标小字同教师端规格（底色不动，会议室视觉在房间页里定） */
+.enterprise-shell .brand-en { font-size:12px;font-weight:600;letter-spacing:.08em;color:var(--neutral-500); }
+
 /* Teacher surface overrides only; student layout remains unchanged. */
 .teacher-shell .topnav { background:#fff;backdrop-filter:none; }
 .teacher-shell .topnav-inner { max-width:1920px;padding-inline:clamp(28px,3.75vw,72px); }

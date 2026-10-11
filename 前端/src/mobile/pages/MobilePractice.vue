@@ -5,7 +5,7 @@
       <input v-model.trim="query" type="search" placeholder="搜索知识点，如：JVM、Redis、MySQL" />
     </label>
 
-    <MobileState v-if="loading" kind="loading" title="正在加载学习资源" />
+    <MobileSkeleton v-if="loading" variant="card" :rows="3" label="正在加载学习资源" />
     <template v-else>
       <section class="mobile-role-card">
         <span class="mobile-square-icon">岗</span>
@@ -45,6 +45,7 @@ import { useRouter } from 'vue-router'
 import { createTrainingSession, getTopics, loadLearningResources } from '../../services/learningResources'
 import MobileShell from '../components/MobileShell.vue'
 import MobileState from '../components/MobileState.vue'
+import MobileSkeleton from '../components/MobileSkeleton.vue'
 
 const router = useRouter()
 const loading = ref(true)

@@ -33,7 +33,7 @@
 
         <div class="form-header">
           <h1 class="form-title">欢迎回来</h1>
-          <p class="form-sub">登录后继续查看练习记录与复盘</p>
+          <p class="form-sub">{{ formSub }}</p>
         </div>
 
         <!-- Role Tabs -->
@@ -104,18 +104,58 @@
         <p class="form-foot">
           还没有账号?<router-link to="/register" class="reg-link">立即注册</router-link>
         </p>
+
+        <!-- 服务器地址：手机 APK 靠局域网连开发机时，构建时写死的 IP 换了就得重新打包。
+             这里留一个能就地改的口子，现场换 WiFi 只要填一下。 -->
+        <div class="server-setting">
+          <button type="button" class="server-toggle" @click="showServer = !showServer">
+            服务器：{{ apiBaseLabel }}
+          </button>
+          <div v-if="showServer" class="server-panel">
+            <input
+              v-model="serverInput"
+              class="server-input"
+              type="text"
+              placeholder="http://192.168.1.50:8080/api"
+            />
+            <div class="server-actions">
+              <button type="button" class="server-save" @click="applyServer">保存</button>
+              <button type="button" class="server-reset" @click="resetServer">恢复默认</button>
+            </div>
+            <p class="server-hint">
+              改完立即生效，不用重装。留空保存 = 用构建时配置的地址。
+            </p>
+            <!-- 正常不用管这一项：连不上后端时会自己弹框问。放这儿是为了「明知现场
+                 没网」的时候能直接进去，不必先等一次连接失败。 -->
+            <label class="server-demo">
+              <input
+                type="checkbox"
+                :checked="demoState.active"
+                @change="toggleDemo($event.target.checked)"
+              />
+              <span>
+                离线演示模式
+                <small>不连后端，全部用内置演示数据</small>
+              </span>
+            </label>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { computed, ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../store/user'
 import { login as loginApi } from '../api'
 import BrandLogo from '../components/ui/BrandLogo.vue'
 import AuthShowcase from '../components/auth/AuthShowcase.vue'
+import { getApiBase, setApiBase, getRuntimeApiBase } from '../utils/apiBase'
+import { demoState, setDemoActive } from '../utils/offlineDemo'
+// 登录成功后的角色分流与路由守卫共用同一份判断（企业端 / 教师端 / 学生端）
+import { roleHome } from '../router'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -124,13 +164,50 @@ const showPwd = ref(false)
 const errorMsg = ref('')
 const loading = ref(false)
 
+// getApiBase() 读的是 localStorage，不是响应式的，所以用一个 ref 快照展示，
+// 保存后手动同步一次。
+const showServer = ref(false)
+const serverInput = ref(getRuntimeApiBase())
+const apiBaseLabel = ref(getApiBase())
+
+function applyServer() {
+  setApiBase(serverInput.value)
+  apiBaseLabel.value = getApiBase()
+  showServer.value = false
+  errorMsg.value = ''
+}
+
+function resetServer() {
+  serverInput.value = ''
+  setApiBase('')
+  apiBaseLabel.value = getApiBase()
+}
+
+function toggleDemo(value) {
+  setDemoActive(value)
+  // 开着演示模式时服务器地址就是个摆设，顺手把标签同步一下免得误会
+  apiBaseLabel.value = getApiBase()
+}
+
 const mouse = reactive({ x: -200, y: -200 })
 
 const roles = [
   { id: 'student', label: '学生端', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>' },
   { id: 'teacher', label: '教师端', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>' },
+  { id: 'enterprise', label: '企业端', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>' },
   { id: 'admin', label: '管理端', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4"/></svg>' },
 ]
+
+// tab 不决定登录归属（账号角色说了算，见 handleLogin 里的 roleHome），
+// 但点选后副标题跟着切换，让「学生/教师/企业/管理」的切换有可见反馈，
+// 而不是一个点了没反应的装饰。
+const ROLE_SUBS = {
+  student: '登录后继续查看练习记录与复盘',
+  teacher: '登录后进入教师工作台，管理班级、任务与数据分析',
+  enterprise: '登录后进入会议中心，开启视频面试并留存面试建议',
+  admin: '登录后进入管理工作台',
+}
+const formSub = computed(() => ROLE_SUBS[activeRole.value] || ROLE_SUBS.student)
 
 const form = reactive({ account: '', password: '', remember: false })
 
@@ -146,12 +223,7 @@ async function handleLogin() {
   try {
     const data = await loginApi({ username: form.account, password: form.password })
     userStore.setAuth(data)
-    const role = (data.role || '').toUpperCase()
-    if (role === 'TEACHER' || role === 'ADMIN') {
-      router.push('/teacher/dashboard')
-    } else {
-      router.push('/home')
-    }
+    router.push(roleHome((data.role || '').toUpperCase()))
   } catch (e) {
     errorMsg.value = e.response?.data?.message || e.message || '登录失败，请重试'
   } finally {
@@ -699,6 +771,98 @@ async function handleLogin() {
   text-decoration: none;
 }
 .reg-link:hover { color: var(--accent-700); }
+
+/* === 服务器设置（手机端现场改地址用，故意做得不起眼） === */
+.server-setting {
+  margin-top: var(--space-5);
+  text-align: center;
+}
+.server-toggle {
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: var(--text-xs);
+  color: var(--neutral-400);
+  font-family: inherit;
+  word-break: break-all;
+}
+.server-toggle:hover { color: var(--neutral-600); }
+.server-panel {
+  margin-top: var(--space-3);
+  padding: var(--space-4);
+  background: var(--neutral-50);
+  border: 1px solid var(--neutral-200);
+  border-radius: var(--radius-sm);
+  text-align: left;
+}
+.server-input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--neutral-300);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-family: inherit;
+  box-sizing: border-box;
+}
+.server-input:focus {
+  outline: none;
+  border-color: var(--accent-500);
+}
+.server-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+.server-save,
+.server-reset {
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-family: inherit;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.server-save {
+  background: var(--accent-600);
+  color: #fff;
+}
+.server-save:hover { background: var(--accent-700); }
+.server-reset {
+  background: transparent;
+  border-color: var(--neutral-300);
+  color: var(--neutral-600);
+}
+.server-reset:hover { border-color: var(--neutral-400); }
+.server-hint {
+  margin: var(--space-3) 0 0;
+  font-size: var(--text-xs);
+  color: var(--neutral-400);
+  line-height: 1.5;
+}
+.server-demo {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--neutral-200);
+  cursor: pointer;
+}
+.server-demo input {
+  margin: 2px 0 0;
+  flex: none;
+  accent-color: var(--accent-600);
+}
+.server-demo span {
+  font-size: var(--text-xs);
+  color: var(--neutral-600);
+  line-height: 1.5;
+}
+.server-demo small {
+  display: block;
+  color: var(--neutral-400);
+}
 
 /* === Responsive === */
 @media (max-width: 900px) {

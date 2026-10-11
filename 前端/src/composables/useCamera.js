@@ -1,4 +1,5 @@
 import { computed, onUnmounted, ref } from 'vue'
+import { ensureAppPermissions } from '../utils/plusPermissions'
 
 const CAMERA_CONSTRAINTS = {
   width: { ideal: 1280 },
@@ -37,15 +38,18 @@ export function useCamera() {
   async function startCamera(deviceId = '') {
     if (!navigator.mediaDevices?.getUserMedia) {
       status.value = 'error'
-      errorMessage.value = '当前浏览器不支持摄像头，请使用最新版 Chrome 或 Edge。'
+      errorMessage.value = `当前环境不支持摄像头（mediaDevices 缺失，secureContext=${window.isSecureContext}），请使用最新版 Chrome 或 Edge。`
       return
     }
 
     status.value = 'requesting'
     errorMessage.value = ''
     const currentRequestId = ++requestId
+    let appPermission = 'skipped'
 
     try {
+      // App（5+ 运行时）里系统「相机」权限必须先主动申请，getUserMedia 才能拿到设备
+      appPermission = await ensureAppPermissions(['android.permission.CAMERA'])
       stopTracks()
       const videoConstraints = deviceId
         ? { ...CAMERA_CONSTRAINTS, deviceId: { exact: deviceId } }
@@ -68,7 +72,13 @@ export function useCamera() {
       if (disposed || currentRequestId !== requestId) return
       status.value = 'error'
       if (error?.name === 'NotAllowedError' || error?.name === 'SecurityError') {
-        errorMessage.value = '摄像头权限被拒绝，请在浏览器地址栏中允许访问。'
+        if (appPermission === 'denied') {
+          errorMessage.value = '摄像头权限被拒绝：请到手机「设置 → 应用 → OfferPilot → 权限」中允许「相机」，然后回到这里重试。'
+        } else if (appPermission === 'granted') {
+          errorMessage.value = '系统权限已允许，但摄像头请求仍被 WebView 拒绝（NotAllowedError），请重启 App 后重试。'
+        } else {
+          errorMessage.value = '摄像头权限被拒绝，请在浏览器地址栏中允许访问。'
+        }
       } else if (error?.name === 'NotFoundError' || error?.name === 'OverconstrainedError') {
         errorMessage.value = '没有找到可用的摄像头设备。'
       } else if (error?.name === 'NotReadableError' || error?.name === 'AbortError') {
