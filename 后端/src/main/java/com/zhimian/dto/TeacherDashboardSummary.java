@@ -4,21 +4,21 @@ import lombok.Data;
 
 /**
  * 教师仪表盘 - 顶部汇总指标（Phase 5.3）。
- * 全部为教师视角的全局统计，不按单个用户隔离。
+ * 仅统计当前教师名下班级及任务的教学数据。
  */
 @Data
 public class TeacherDashboardSummary {
 
-    /** 学生总数（sys_user 中 role=STUDENT） */
+    /** 当前教师班级中的已加入学生数（跨班去重） */
     private Integer studentTotal;
-    /** 已参与训练的学生数（在 interview_session 中出现过的学生去重数） */
+    /** 已完成至少一份发布任务所要求有效训练的学生去重数 */
     private Integer trainedStudentCount;
     /** 训练完成率 = trainedStudentCount / studentTotal（0~1，保留 2 位小数；学生为 0 时为 0） */
     private Double trainingCompletionRate;
-    /** 平均分（interview_report.totalScore 的平均值，保留 1 位小数；无报告时为 0） */
+    /** 当前教师任务中 READY 且有效的报告平均分；无报告时为 0 */
     private Double averageScore;
-    /** AI 追问数（interview_followup_record 中 source=AI） */
+    /** 当前教师教学任务会话中的 AI 追问数 */
     private Long aiFollowupCount;
-    /** 规则兜底追问数（interview_followup_record 中 source=RULE） */
+    /** 当前教师教学任务会话中的规则兜底追问数 */
     private Long ruleFollowupCount;
 }

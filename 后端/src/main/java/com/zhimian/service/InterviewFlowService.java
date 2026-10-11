@@ -60,6 +60,7 @@ public class InterviewFlowService {
     private final InterviewMessageMapper messageMapper;
     private final JobPositionMapper jobMapper;
     private final ResumeService resumeService;
+    private final ResumeWorkbenchService resumeWorkbenchService;
     private final ReportService reportService;
     private final FollowUpService followUpService;
     private final InterviewFollowupRecordService followupRecordService;
@@ -138,8 +139,23 @@ public class InterviewFlowService {
         }
 
         // 获取用户简历画像标签 + 岗位标签
-        Resume resume = resumeService.getMine();
-        Long resumeId = (resume != null) ? resume.getId() : null;
+        Resume resume;
+        Long resumeId;
+        if (Boolean.TRUE.equals(req.getSkipResume()) && req.getResumeVersionId() != null)
+            throw new BizException("跳过简历与指定简历版本不能同时使用");
+        if (Boolean.TRUE.equals(req.getSkipResume())) {
+            resume = null;
+            resumeId = null;
+        } else if (req.getResumeVersionId() != null) {
+            var selectedVersion = resumeWorkbenchService.version(req.getResumeVersionId());
+            if (selectedVersion.jobId() != null && !selectedVersion.jobId().equals(req.getJobId()))
+                throw new BizException("所选简历属于其他岗位，请重新选择简历版本");
+            resume = resumeWorkbenchService.interviewSnapshot(req.getResumeVersionId());
+            resumeId = null; // Workbench versions are captured in the immutable session snapshot.
+        } else {
+            resume = resumeService.getMine();
+            resumeId = resume != null ? resume.getId() : null;
+        }
         List<String> userTags = extractTagsFromResume(resume);
         List<String> jobTags = extractTagsFromJob(job);
         Set<String> mergedTags = new LinkedHashSet<>();

@@ -48,6 +48,14 @@ ai:
   # 调用超时（毫秒），同时作为连接与读取超时
   timeout-ms: 20000
 
+# Resume AI only. DeepSeek API Key is supplied by the backend environment, never by the browser.
+resume-ai:
+  deepseek:
+    enabled: ${RESUME_DEEPSEEK_ENABLED:true}
+    base-url: ${DEEPSEEK_RESUME_BASE_URL:https://api.deepseek.com}
+    model: ${DEEPSEEK_RESUME_MODEL:deepseek-flash}
+    api-key: ${DEEPSEEK_RESUME_API_KEY:}
+
 # 智谱 GLM-ASR-2512 文件转写
 asr:
   base-url: ${ZHIPU_ASR_BASE_URL:https://open.bigmodel.cn/api/paas/v4}

@@ -37,6 +37,7 @@ const routes = [
   { path: '/interview/ai', name: 'AiPrep', component: AdaptiveStudentView, meta: { mobileSurface: 'aiPrep' } },
   { path: '/jobs', name: 'JobSelect', component: AdaptiveStudentView, meta: { mobileSurface: 'jobSetup' } },
   { path: '/resume', name: 'Resume', component: AdaptiveStudentView, meta: { mobileSurface: 'jobSetup' } },
+  { path: '/resume/builder', name: 'ResumeBuilder', component: () => import('../views/ResumeBuilder.vue') },
   { path: '/interview', name: 'Interview', component: () => import('../views/Interview.vue') },
   { path: '/history', name: 'History', component: AdaptiveStudentView, meta: { mobileSurface: 'records' } },
   { path: '/history/:id', name: 'HistoryDetail', component: AdaptiveStudentView, meta: { mobileSurface: 'report' } },

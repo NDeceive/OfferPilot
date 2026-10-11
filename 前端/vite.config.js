@@ -20,7 +20,7 @@ export default defineConfig(({ mode }) => {
     server: {
       proxy: {
         '/api': {
-          target: 'http://localhost:8080',
+          target: env.VITE_BACKEND_PROXY_TARGET || 'http://localhost:8080',
           changeOrigin: true,
         },
         // 会议信令 WebSocket：不配 ws:true 时 Vite 会按普通 HTTP 代理回 200

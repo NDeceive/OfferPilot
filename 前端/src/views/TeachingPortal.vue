@@ -110,7 +110,7 @@ async function load(){
   else{
    const [counts,all,roster]=await Promise.all([teaching.summary(),loadTaskDataset(),teaching.people()]),details=all.filter(t=>t.publishedAt);
    let result=details.flatMap(t=>t.assignments.flatMap(a=>a.attempts.filter(p=>p.reportId).map(p=>({...p,name:a.name,studentId:a.studentId,title:t.title,taskId:t.id,classId:t.classId,className:t.className,jobId:t.jobId,jobName:t.jobName}))));
-   if(route.path.includes('analytics')||route.path==='/teacher/dashboard'){const loaded=[];for(let offset=0;offset<result.length;offset+=4){loaded.push(...await Promise.allSettled(result.slice(offset,offset+4).map(async p=>({...p,detailReport:(await teaching.report(p.reportId)).report}))));if(own!==generation)return;}if(own!==generation)return;reportLoadError.value=loaded.some(r=>r.status==='rejected');result=loaded.map((r,i)=>r.status==='fulfilled'?r.value:result[i])}
+   if(route.path.includes('analytics')){const loaded=[];for(let offset=0;offset<result.length;offset+=4){loaded.push(...await Promise.allSettled(result.slice(offset,offset+4).map(async p=>({...p,detailReport:(await teaching.report(p.reportId)).report}))));if(own!==generation)return;}if(own!==generation)return;reportLoadError.value=loaded.some(r=>r.status==='rejected');result=loaded.map((r,i)=>r.status==='fulfilled'?r.value:result[i])}
    if(currentMode==='reviews'){const checked=await Promise.all(result.map(async p=>({p,reviews:await teaching.reviews(p.reportId)})));result=checked.filter(r=>!r.reviews.length).map(r=>r.p)}
    if(own===generation){taskStats.value=details;summary.value=counts;people.value=roster;reports.value=result.sort((a,b)=>parseTime(b.submittedAt)-parseTime(a.submittedAt))}
   }

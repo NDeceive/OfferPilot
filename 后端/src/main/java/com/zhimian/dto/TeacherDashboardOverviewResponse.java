@@ -15,7 +15,7 @@ public class TeacherDashboardOverviewResponse {
     private TeacherDashboardSummary summary;
     /** 近 7 天训练趋势（固定 7 条，从 6 天前到今天） */
     private List<TeacherTrainingTrendItem> trainingTrend;
-    /** 薄弱项分布（固定四类） */
+    /** 有可归类的真实追问记录时返回四类分布，否则为空 */
     private List<TeacherWeaknessItem> weaknessDistribution;
     /** 学生训练情况列表 */
     private List<TeacherStudentTrainingItem> studentTrainingList;
