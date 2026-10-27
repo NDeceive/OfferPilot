@@ -34,6 +34,9 @@ export const uploadResumeFile = (file) => {
   })
 }
 export const getResumeFileProfile = () => request.get('/resume/file-profile')
+export const getResumeAnalysis = (params) => request.get('/resume-workbench/analysis', { params })
+export const createResumeAnalysis = (data) => request.post('/resume-workbench/analysis', data, { timeout: 200000 })
+export const getResumeAnalysisReport = (id) => request.get(`/resume-workbench/analysis/${id}`)
 export const updateResumeTags = (tags) => request.put('/resume/tags', { tags })
 export const getSkillTags = () => request.get('/tags')
 export const getResumeClaims = () => request.get('/resume-workbench/claims')
@@ -55,18 +58,19 @@ export const exportResumeVersion = (id, format = 'pdf') =>
 /* ==================== Interview ==================== */
 export const getInterviewRecords = () => request.get('/interview/records')
 export const startInterview = (data) => request.post('/interview/start', data)
-export const submitAnswer = (sessionId, data) => request.post(`/interview/${sessionId}/answer`, data)
+export const submitAnswer = (sessionId, data) => request.post(`/interview/${sessionId}/answer`, data, { timeout: 90000 })
 export const getNextQuestion = (sessionId) => request.get(`/interview/${sessionId}/next`)
 export const finishInterview = (sessionId) => request.post(`/interview/${sessionId}/finish`, undefined, { timeout: 15000 })
 export const saveExpressionSamples = (sessionId, data) => request.post(`/interview/${sessionId}/expressions`, data)
 export const getExpressionContext = (sessionId) => request.get(`/interview/${sessionId}/expression-context`)
 export const setInterviewPaused = (sessionId, paused) => request.post(`/interview/${sessionId}/pause`, { paused })
 export const getReportStatus = (sessionId, config) => request.get(`/interview/${sessionId}/report-status`, { timeout: 3000, ...config })
+export const retryInterviewReport = (sessionId) => request.post(`/interview/${sessionId}/report-retry`)
 export const getSessionMessages = (sessionId) => request.get(`/interview/${sessionId}/messages`)
 export const getInterviewResume = (sessionId, config) => request.get(`/interview/${sessionId}/resume`, config)
 export const deleteInterview = (sessionId) => request.delete(`/interview/${sessionId}`)
 export const batchDeleteInterview = (sessionIds) => request.post('/interview/batch-delete', { sessionIds })
-export const submitFollowUp = (data) => request.post('/interview/follow-up', data)
+export const submitFollowUp = (data) => request.post('/interview/follow-up', data, { timeout: 90000 })
 
 /* ==================== Speech ==================== */
 export const transcribeSpeech = (audioBlob, sessionId, duration) => {
@@ -87,9 +91,9 @@ export const getFollowUpStats = () => request.get('/interview/follow-up-records/
 /* ==================== Reports ==================== */
 export const getReportDetail = (reportId) => request.get(`/report/${reportId}`)
 export const getImprovementPath = (reportId) => request.get(`/report/${reportId}/improvement-path`)
-export const exportReport = (reportId, format = 'pdf') =>
+export const exportReport = (reportId, format = 'pdf', includeTranscript = false) =>
   downloadRequest.get(`/report/${reportId}/export`, {
-    params: { format },
+    params: { format, includeTranscript },
     responseType: 'blob',
   })
 

@@ -140,6 +140,7 @@ public class AiPrepService {
             // 未配置 key：一帧 delta 都不发，前端凭「一字未收」自动使用预置文案
             log.debug("AI 未启用，面试教练走脚本话术：userId={} stage={}", userId, stage);
             send(emitter, closed, EVENT_META, Map.of("mode", MODE_RULE, "stage", stage));
+            send(emitter, closed, EVENT_FALLBACK, Map.of("reason", "AI_DISABLED"));
             send(emitter, closed, EVENT_DONE, Map.of());
             finish(emitter, closed);
             return;
@@ -152,8 +153,7 @@ public class AiPrepService {
         AtomicBoolean actSent = new AtomicBoolean(false);
 
         boolean ok = deepSeekClient.chatStream(
-                promptBuilder.systemPrompt(),
-                promptBuilder.userPrompt(req),
+                promptBuilder.conversation(req),
                 closed::get, // 浏览器断开后不再继续读 DeepSeek 的流，省下配额
                 delta -> {
                     String text = splitter.feed(delta);
@@ -194,7 +194,7 @@ public class AiPrepService {
      * 也不能让一个不存在的岗位 code 流到前端去查题库。
      * <p>
      * confidence 由 jobCode 是否定得下来 + 模型自己的说法共同决定，不单听模型的：
-     * 它几乎总说自己 HIGH，而「高置信直接跳、低置信出确认条」全押在这个字段上。
+     * 置信度仅用于表达识别把握，前端始终等待用户确认后才执行。
      */
     private Map<String, Object> buildAct(AiPrepRequest req, String headerJson) {
         JsonNode node;
@@ -220,8 +220,15 @@ public class AiPrepService {
             family = null;
         }
 
+        // 提问、建议与闲聊即使误带了推荐岗位，也不能变成选岗操作。
+        if (!"PICK_JOB".equals(intent) || req.getMessage() == null || req.getMessage().isBlank()) {
+            jobCode = null;
+            family = null;
+            if ("PICK_JOB".equals(intent)) intent = INTENT_OTHER;
+        }
+
         // confidence 只对 PICK_JOB 有意义：「高置信」的定义就是「用户明确说了某个具体岗位」，
-        // 前端据此直接跳转。别的意图也必须卡死——实测模型会在说「我没有简历」时顺手把
+        // 前端仍需用户确认。别的意图也必须卡死——实测模型会在说「我没有简历」时顺手把
         // 当前岗位回填进 jobCode，只看 jobCode 的话这句问话就变成高置信，弹窗自己就弹出来了。
         boolean modelSure = CONFIDENCE_HIGH.equalsIgnoreCase(text(node, "confidence"));
         String confidence = ("PICK_JOB".equals(intent) && jobCode != null && modelSure)

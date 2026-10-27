@@ -7,6 +7,7 @@ export default defineConfig(({ mode }) => {
   // 绝对路径资源全部解析失败 → base 切 './'，产物另出 dist-app/ 不覆盖待部署的 dist/。
   const isAppShell = env.VITE_APP_SHELL === 'true'
   const digitalHumanTarget = env.DIGITAL_HUMAN_PROXY_TARGET || 'http://127.0.0.1:8010'
+  const backendTarget = env.BACKEND_PROXY_TARGET || 'http://localhost:8080'
   const digitalHumanApiProxy = {
     target: digitalHumanTarget,
     changeOrigin: true,
@@ -20,13 +21,13 @@ export default defineConfig(({ mode }) => {
     server: {
       proxy: {
         '/api': {
-          target: env.VITE_BACKEND_PROXY_TARGET || 'http://localhost:8080',
+          target: backendTarget,
           changeOrigin: true,
         },
         // 会议信令 WebSocket：不配 ws:true 时 Vite 会按普通 HTTP 代理回 200
         // （而不是 101），排查时会误判成后端问题。
         '/ws': {
-          target: 'http://localhost:8080',
+          target: backendTarget,
           ws: true,
           changeOrigin: true,
         },

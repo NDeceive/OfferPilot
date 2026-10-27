@@ -192,6 +192,22 @@ public class MeetingService {
         db.update("UPDATE meeting_participant SET leave_time=NOW() WHERE meeting_id=? AND leave_time IS NULL", meetingId);
     }
 
+    /** 仅发起人或管理员可以删除已结束会议，关联记录在同一事务内清理。 */
+    @Transactional
+    public void delete(long meetingId) {
+        staff();
+        Map<String, Object> m = requireAccess(meetingId);
+        if (id(m, "hostId") != user() && !"ADMIN".equals(role())) {
+            throw new BizException("只有会议发起人可以删除会议记录");
+        }
+        if (!"ENDED".equals(m.get("status"))) {
+            throw new BizException("请先结束会议再删除记录");
+        }
+        db.update("DELETE FROM meeting_advice WHERE meeting_id=?", meetingId);
+        db.update("DELETE FROM meeting_participant WHERE meeting_id=?", meetingId);
+        db.update("DELETE FROM meeting WHERE id=?", meetingId);
+    }
+
     /** 参会记录（WS 进房时调用）：重复进房更新时间戳，不产生新行。 */
     public void touchParticipant(long meetingId, long userId, String name, String role) {
         db.update("INSERT INTO meeting_participant(meeting_id,user_id,display_name,role,join_time,leave_time) "

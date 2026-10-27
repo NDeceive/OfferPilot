@@ -1,6 +1,7 @@
 ﻿param([switch]$CheckOnly)
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
+$listenPort = if ($env:DIGITAL_HUMAN_PORT) { [int]$env:DIGITAL_HUMAN_PORT } else { 8010 }
 
 function Test-Python310([string]$Executable, [string[]]$Prefix = @()) {
     try {
@@ -36,7 +37,7 @@ try {
             $python = Join-Path $root '.venv/Scripts/python.exe'
         }
         Write-Host "[Digital Human] Python: $python"
-        $importCheck = 'import app, avatars.wav2lip_avatar, tts.edge; from avatars.wav2lip.audio import melspectrogram; import numpy as np; melspectrogram(np.zeros(16000, dtype=np.float32))'
+        $importCheck = "import app, avatars.wav2lip_avatar, tts.edge; from importlib.metadata import version; assert tuple(map(int, version('edge-tts').split('.')[:3])) >= (7, 3, 1), 'edge-tts>=7.3.1 is required for the updated speech service'; from avatars.wav2lip.audio import melspectrogram; import numpy as np; melspectrogram(np.zeros(16000, dtype=np.float32))"
         $ErrorActionPreference = 'Continue'
         & $python -c $importCheck 1>$null 2>$null
         $dependencyExit = $LASTEXITCODE
@@ -55,14 +56,14 @@ try {
 
         $listener = [Net.Sockets.TcpClient]::new()
         try {
-            try { $listener.Connect('127.0.0.1', 8010) } catch {}
-            if ($listener.Connected) { throw 'Port 8010 is already occupied. Reuse the existing service or stop it before starting another instance.' }
+            try { $listener.Connect('127.0.0.1', $listenPort) } catch {}
+            if ($listener.Connected) { throw "Port $listenPort is already occupied. Reuse the existing service or stop it before starting another instance." }
         } finally { $listener.Dispose() }
         $batch = 4
         if ($env:OFFERPILOT_BATCH_SIZE) {
             if (-not [int]::TryParse($env:OFFERPILOT_BATCH_SIZE, [ref]$batch) -or $batch -lt 1) { throw 'OFFERPILOT_BATCH_SIZE must be a positive integer.' }
         }
-        & $python (Join-Path $root 'app.py') --transport webrtc --model wav2lip --batch_size $batch --listenport 8010
+        & $python (Join-Path $root 'app.py') --transport webrtc --model wav2lip --batch_size $batch --listenport $listenPort
         if ($LASTEXITCODE -ne 0) { throw "Digital human exited with code $LASTEXITCODE." }
     } finally { Pop-Location }
 } catch {

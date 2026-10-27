@@ -19,6 +19,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
@@ -74,7 +75,8 @@ public class DeepSeekClient {
             return extractContent(raw);
         } catch (Exception e) {
             // 失败只记日志并返回 null，触发上层规则兜底
-            log.warn("DeepSeek 调用失败，将使用规则兜底：{}", e.getMessage());
+            log.warn("DeepSeek 调用失败，将使用规则兜底：{}；原因：{}", e.getMessage(),
+                    org.springframework.core.NestedExceptionUtils.getMostSpecificCause(e).getMessage());
             return null;
         }
     }
@@ -100,65 +102,89 @@ public class DeepSeekClient {
      */
     public boolean chatStream(String systemPrompt, String userPrompt,
                               BooleanSupplier shouldStop, Consumer<String> onDelta) {
+        return chatStream(List.of(
+                Map.of("role", "system", "content", systemPrompt),
+                Map.of("role", "user", "content", userPrompt)), shouldStop, onDelta);
+    }
+
+    /** 带对话历史的选岗引导；历史角色由提示词构建器校验。 */
+    public boolean chatStream(List<Map<String, String>> messages,
+                              BooleanSupplier shouldStop, Consumer<String> onDelta) {
         if (!props.isUsable()) {
             return false;
         }
         Map<String, Object> body = Map.of(
                 "model", props.getModel(),
-                "messages", List.of(
-                        Map.of("role", "system", "content", systemPrompt),
-                        Map.of("role", "user", "content", userPrompt)
-                ),
+                "messages", messages,
                 "temperature", 0.8,
-                // 话术本来就要求很短，这里再兜一道，防止模型絮叨拖长首字延迟
-                "max_tokens", 200,
+                // 意图头加多轮解释需要足够篇幅，避免比较岗位时被截成半句话。
+                "max_tokens", 1000,
                 "stream", true
         );
 
-        try {
-            Boolean ok = streamRestClient().post()
-                    .uri("/chat/completions")
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + props.getApiKey())
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .accept(MediaType.TEXT_EVENT_STREAM)
-                    .body(body)
-                    // 必须用 exchange：retrieve() 会把整个响应体缓冲下来，流式就没了。
-                    // 且响应必须在 lambda 内读完——exchange 返回后 body 会被关闭。
-                    .exchange((request, response) -> {
-                        if (!response.getStatusCode().is2xxSuccessful()) {
-                            log.warn("DeepSeek 流式返回 {}，将降级", response.getStatusCode());
-                            return Boolean.FALSE;
-                        }
-                        boolean produced = false;
-                        try (BufferedReader reader = new BufferedReader(
-                                new InputStreamReader(response.getBody(), StandardCharsets.UTF_8))) {
-                            String line;
-                            while ((line = reader.readLine()) != null) {
-                                if (shouldStop != null && shouldStop.getAsBoolean()) {
-                                    return Boolean.FALSE;
-                                }
-                                // 只认 data: 行，天然跳过空行分隔符、": keep-alive" 注释和 event: 行
-                                if (!line.startsWith("data:")) {
-                                    continue;
-                                }
-                                String payload = line.substring(5).trim();
-                                if (payload.isEmpty() || "[DONE]".equals(payload)) {
-                                    continue;
-                                }
-                                String delta = extractDelta(payload);
-                                if (delta != null && !delta.isEmpty()) {
-                                    produced = true;
-                                    onDelta.accept(delta);
+        for (int attempt = 0; attempt < 2; attempt++) {
+            if (shouldStop != null && shouldStop.getAsBoolean()) return false;
+            AtomicBoolean produced = new AtomicBoolean(false);
+            AtomicBoolean retryable = new AtomicBoolean(false);
+            try {
+                Boolean ok = streamRestClient().post()
+                        .uri("/chat/completions")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + props.getApiKey())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.TEXT_EVENT_STREAM)
+                        .body(body)
+                        // 必须用 exchange：retrieve() 会把整个响应体缓冲下来，流式就没了。
+                        // 且响应必须在 lambda 内读完——exchange 返回后 body 会被关闭。
+                        .exchange((request, response) -> {
+                            if (!response.getStatusCode().is2xxSuccessful()) {
+                                log.warn("DeepSeek 流式返回 {}，将降级", response.getStatusCode());
+                                int status = response.getStatusCode().value();
+                                retryable.set(status == 502 || status == 503 || status == 504);
+                                return Boolean.FALSE;
+                            }
+                            boolean completed = false;
+                            try (BufferedReader reader = new BufferedReader(
+                                    new InputStreamReader(response.getBody(), StandardCharsets.UTF_8))) {
+                                String line;
+                                while ((line = reader.readLine()) != null) {
+                                    if (shouldStop != null && shouldStop.getAsBoolean()) {
+                                        return Boolean.FALSE;
+                                    }
+                                    // 只认 data: 行，天然跳过空行分隔符、": keep-alive" 注释和 event: 行
+                                    if (!line.startsWith("data:")) {
+                                        continue;
+                                    }
+                                    String payload = line.substring(5).trim();
+                                    if ("[DONE]".equals(payload)) {
+                                        completed = true;
+                                        break;
+                                    }
+                                    if (payload.isEmpty()) {
+                                        continue;
+                                    }
+                                    String delta = extractDelta(payload);
+                                    if (delta != null && !delta.isEmpty()) {
+                                        produced.set(true);
+                                        onDelta.accept(delta);
+                                    }
                                 }
                             }
-                        }
-                        return produced;
-                    });
-            return Boolean.TRUE.equals(ok);
-        } catch (Exception e) {
-            log.warn("DeepSeek 流式调用失败，将降级：{}", e.getMessage());
-            return false;
+                            retryable.set(!produced.get());
+                            return produced.get() && completed;
+                        });
+                if (Boolean.TRUE.equals(ok)) return true;
+            } catch (ResourceAccessException e) {
+                retryable.set(true);
+                log.warn("DeepSeek 流式连接中断：{}", e.getMessage());
+            } catch (Exception e) {
+                log.warn("DeepSeek 流式调用失败，将降级：{}", e.getMessage());
+                return false;
+            }
+            // 只在尚未发出任何内容时重试一次，避免重复正文、重复意图和重放已取消的请求。
+            if (produced.get() || !retryable.get() || (shouldStop != null && shouldStop.getAsBoolean())) return false;
+            if (attempt == 0) log.info("DeepSeek 尚未返回内容，重试一次流式连接");
         }
+        return false;
     }
 
     /** 解析流式分片里的 choices[0].delta.content；首帧 role 帧与结束帧没有该字段，返回 null */

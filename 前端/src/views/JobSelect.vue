@@ -5,10 +5,10 @@
       <header class="page-header reveal">
         <h1 class="page-title">面试准备</h1>
         <p class="page-desc">{{ stepDescriptions[currentStep] }}</p>
-        <button type="button" class="mode-switch" @click="goAiPrep">对话录入 ⇄</button>
       </header>
 
       <!-- Step Indicator -->
+      <div class="prep-flow-bar">
       <nav class="stepper reveal" aria-label="面试准备步骤">
         <div
           v-for="(step, i) in stepsInfo"
@@ -35,6 +35,8 @@
           <div class="stepper__track-fill" :style="{ transform: `scaleX(${currentStep / (stepsInfo.length - 1)})` }" />
         </div>
       </nav>
+      <PrepModeSwitch mode="manual" :job="selectedJob?.directionCode" />
+      </div>
 
       <!-- ========== Step 1: Select Job ========== -->
         <section v-show="currentStep === 0" key="step0" class="step-panel">
@@ -374,28 +376,9 @@
 
         <!-- ========== Step 3: Resume review ========== -->
         <section v-show="currentStep === 2" key="step2" class="step-panel">
-          <div class="resume-review card reveal">
-            <span class="resume-review__eyebrow">简历评价 · 训练建议</span>
-            <h2>先看简历证据，再确定训练重点</h2>
-            <p>这是基于简历文本和目标岗位的初步提示，不是招聘结论，也不会替你决定训练目标。</p>
-            <div v-if="reviewLoading" role="status">正在分析简历与岗位的关联…</div>
-            <div v-else-if="reviewError" class="resume-review__error" role="alert">{{ reviewError }} <button type="button" @click="fetchResumeReview">重试</button></div>
-            <div v-else-if="resumeReview?.status === 'NO_RESUME' || !uploadedFile" class="resume-review__empty">本轮未使用简历，仍可继续选择训练目标；也可以返回上传或在线制作。</div>
-            <template v-else-if="resumeReview">
-              <p>{{ resumeReview.summary }}</p>
-              <ul class="resume-review__findings">
-                <li v-for="(finding, index) in resumeReview.findings" :key="index">
-                  <strong>{{ finding.title }}</strong><span>{{ finding.detail }}</span>
-                </li>
-              </ul>
-              <div class="resume-review__suggestion">
-                <strong>建议优先训练</strong>
-                <span>{{ suggestedModuleNames.join('、') || '请在下一步自行选择' }}</span>
-                <button v-if="suggestedModuleNames.length" type="button" class="btn btn--ghost" @click="applyRecommendedModules">采用这组建议</button>
-              </div>
-            </template>
+          <div class="resume-review card">
+            <ResumeAnalysisPanel v-if="currentStep === 2" preparation-flow :job-id="selectedJob?.id" :version-id="resumeVersionId || undefined" :available="Boolean(uploadedFile) && !resumeUploading && !resumeError" :source-key="uploadedFile?.name || ''" @report="resumeReview = $event" @edit="editAnalysis" @recommend="applyRecommendedModules" @previous="currentStep = 1" @next="currentStep = 3" />
           </div>
-          <div class="step-actions"><button class="btn btn--ghost" @click="currentStep = 1">上一步</button><button class="btn btn--primary" @click="currentStep = 3">下一步：训练目标</button></div>
         </section>
 
         <!-- ========== Step 4: Training goals ========== -->
@@ -405,26 +388,48 @@
               <div class="module-heading">
                 <div>
                   <h2 class="card__title">选择训练目标</h2>
-                  <p class="card__desc">选择 5 个本次重点评价维度，系统会按优先级生成岗位面试与能力报告。</p>
+                  <p class="card__desc">{{ selectedCompanyPreset ? `已应用${selectedCompanyPreset.name}预设，评分维度与优先级已固定，可调整训练深度。` : '选择 5 个本次重点评价维度，系统会按优先级生成岗位面试与能力报告。' }}</p>
                 </div>
                 <span class="module-count" :class="{ 'is-ready': selectedModuleCodes.size === 5 }">{{ selectedModuleCodes.size }}/5</span>
               </div>
               <div v-if="modulesLoading" class="catalog-state"><span class="catalog-state__spinner" /><p>正在加载能力维度…</p></div>
               <div v-else-if="modulesError" class="catalog-state catalog-state--error"><p>{{ modulesError }}</p><button type="button" @click="fetchModules">重新加载</button></div>
               <div v-else class="module-grid">
-                <label v-for="module in allModules" :key="module.code" class="module-option" :class="{ 'is-selected': selectedModuleCodes.has(module.code) }">
-                  <input type="checkbox" :checked="selectedModuleCodes.has(module.code)" @change="toggleModule(module.code)" />
+                <label v-for="module in allModules" :key="module.code" class="module-option" :class="{ 'is-selected': selectedModuleCodes.has(module.code), 'is-fixed': selectedCompanyPreset }">
+                  <input type="checkbox" :checked="selectedModuleCodes.has(module.code)" :disabled="Boolean(selectedCompanyPreset)" @change="toggleModule(module.code)" />
                   <span class="module-option__check">✓</span>
                   <strong>{{ module.name }}</strong>
                   <small>{{ module.description || '岗位能力评价维度' }}</small>
                 </label>
               </div>
               <p v-if="moduleFeedback" class="module-feedback" role="status">{{ moduleFeedback }}</p>
+              <section class="company-preset" aria-labelledby="company-preset-title">
+                <header class="company-preset__heading">
+                  <div><h3 id="company-preset-title">选择企业</h3><span>按企业文化匹配固定的评分维度与优先级</span></div>
+                  <button type="button" class="company-preset__custom" :aria-pressed="!selectedCompanyPreset" @click="selectCompanyPreset(null)">{{ selectedCompanyPreset ? '切换自定义' : '自定义中' }}</button>
+                </header>
+                <div class="company-preset__options" role="group" aria-label="企业训练预设">
+                  <button
+                    v-for="company in companyTrainingPresets"
+                    :key="company.name"
+                    type="button"
+                    :aria-pressed="selectedCompanyPreset?.name === company.name"
+                    :disabled="modulesLoading || Boolean(modulesError) || !availableCompanyPresets.has(company.name)"
+                    @click="selectCompanyPreset(company)"
+                  ><CompanyLogo :name="company.name" /><span>{{ company.name }}</span></button>
+                </div>
+                <p v-if="!modulesLoading && !modulesError && availableCompanyPresets.size < companyTrainingPresets.length" class="company-preset__hint" role="status">部分企业预设所需的维度暂未提供，可继续自定义训练。</p>
+                <div v-if="selectedCompanyPreset" class="company-preset__detail" role="status">
+                  <p><strong>{{ selectedCompanyPreset.culture }}</strong><a :href="selectedCompanyPreset.source" target="_blank" rel="noopener noreferrer" :aria-label="`查看${selectedCompanyPreset.name}企业文化来源（新窗口）`">文化来源 ↗</a></p>
+                  <p><span>平台训练预设</span>{{ selectedCompanyPreset.focus }}</p>
+                </div>
+                <p v-else class="company-preset__hint">选择企业即可应用 5 项训练重点，也可继续自定义选择。</p>
+              </section>
             </div>
 
             <aside class="module-priority card">
               <h3>本轮训练策略</h3>
-              <p>拖动调整顺序，优先级越高，本轮训练与复盘关注越多。</p>
+              <p>{{ selectedCompanyPreset ? `${selectedCompanyPreset.name}预设 · 维度与排序固定，切换自定义后可自由调整。` : '拖动调整顺序，优先级越高，本轮训练与复盘关注越多。' }}</p>
               <div v-if="!sortedSelectedModules.length" class="module-priority__empty">从左侧选择训练目标</div>
               <TransitionGroup v-else tag="ol" name="priority" class="priority-list">
                 <li
@@ -439,8 +444,9 @@
                   <button
                     type="button"
                     class="drag-handle"
-                    draggable="true"
-                    :aria-label="`拖动${module.name}调整优先级；按 Alt 加上下方向键也可排序`"
+                    :draggable="!selectedCompanyPreset"
+                    :disabled="Boolean(selectedCompanyPreset)"
+                    :aria-label="selectedCompanyPreset ? `${module.name}优先级已固定` : `拖动${module.name}调整优先级；按 Alt 加上下方向键也可排序`"
                     @dragstart="startModuleDrag(module.code, $event)"
                     @dragend="finishModuleDrag"
                     @keydown="handleModuleSortKey(index, module.name, $event)"
@@ -500,6 +506,7 @@
 
               <div class="config-section">
                 <div class="config-section__head"><strong>本轮训练重点</strong><button type="button" @click="currentStep = 3">修改目标 →</button></div>
+                <p v-if="selectedCompanyPreset" class="config-company"><CompanyLogo :name="selectedCompanyPreset.name" />{{ selectedCompanyPreset.name }}<span>企业训练预设</span></p>
                 <ol class="config-priorities">
                   <li v-for="(module, index) in sortedSelectedModules" :key="module.code">
                     <b>{{ String(index + 1).padStart(2, '0') }}</b>
@@ -659,11 +666,17 @@
 </template>
 
 <script setup>
+import { prepareInterviewCamera, releaseInterviewCamera } from "../utils/interviewCamera"
+import ResumeAnalysisPanel from '../components/resume/ResumeAnalysisPanel.vue'
+import { recommendedTargets } from '../utils/resumeAnalysis'
+import PrepModeSwitch from '../components/PrepModeSwitch.vue'
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AppLayout from '../components/layout/AppLayout.vue'
 import JobLogo from '../components/jobs/JobLogo.vue'
-import { getJobList, getCareerProfile, getModules, getResumeFileProfile, getResumeReview, getResumeVersion, getResumeVersions, getSkillTags, startInterview, updateResumeTags, uploadResumeFile } from '../api'
+import CompanyLogo from '../components/learning/CompanyLogo.vue'
+import { companyTrainingPresets } from '../utils/companyTrainingPresets'
+import { getJobList, getCareerProfile, getModules, getResumeFileProfile, getResumeAnalysisReport, getResumeVersion, getResumeVersions, getSkillTags, startInterview, updateResumeTags, uploadResumeFile } from '../api'
 
 /* ------------------------------------------------------------------ */
 /*  State                                                              */
@@ -671,10 +684,6 @@ import { getJobList, getCareerProfile, getModules, getResumeFileProfile, getResu
 const router = useRouter()
 const route = useRoute()
 
-/** 与 AI 对话页的「手动录入 ⇄」互为出口：这边是手动录入，那边是对话录入 */
-function goAiPrep() {
-  router.push('/interview/ai')
-}
 const currentStep = ref(0)
 const searchQuery = ref('')
 const activeFamily = ref('BE')
@@ -700,6 +709,8 @@ const allModules = ref([])
 const modulesLoading = ref(false)
 const modulesError = ref('')
 const selectedModuleCodes = ref(new Set())
+const selectedCompanyPreset = ref(null)
+let customModuleSelection = null
 const moduleOrder = ref([])
 const moduleLevels = ref({})
 const activeModuleCode = ref('')
@@ -731,7 +742,7 @@ const jobsError = ref('')
 const resumeUploading = ref(false)
 const resumeError = ref('')
 
-const stepsInfo = ['选择岗位', '上传简历', '简历评价', '训练目标', '确认信息']
+const stepsInfo = ['选择岗位', '上传简历', '简历分析', '训练目标', '确认信息']
 const stepDescriptions = [
   '选择目标岗位，为后续简历解析与训练方案生成做准备',
   '上传简历，让后续题目更贴近你的真实经历',
@@ -749,7 +760,7 @@ const moduleLevelOptions = [
 function isStepDone(index) {
   if (index === 0) return currentStep.value > 0 && Boolean(selectedJob.value)
   if (index === 1) return currentStep.value > 1 && Boolean(uploadedFile.value)
-  if (index === 2) return currentStep.value > 2 && Boolean(uploadedFile.value) && resumeReview.value?.status === 'READY'
+  if (index === 2) return currentStep.value > 2 && Boolean(uploadedFile.value) && ['COMPLETED','PARTIAL'].includes(resumeReview.value?.status)
   if (index === 3) return currentStep.value > 3 && selectedModuleCodes.value.size === 5
   return false
 }
@@ -877,6 +888,9 @@ const draftDurationSeconds = computed(() =>
 
 const formattedDuration = computed(() => formatDuration(durationSeconds.value))
 const formattedDraftDuration = computed(() => formatDuration(draftDurationSeconds.value))
+const availableCompanyPresets = computed(() => new Set(companyTrainingPresets
+  .filter(company => company.codes.every(code => allModules.value.some(module => module.code === code)))
+  .map(company => company.name)))
 const sortedSelectedModules = computed(() => moduleOrder.value
   .map(code => allModules.value.find(module => module.code === code))
   .filter(Boolean))
@@ -913,12 +927,13 @@ async function fetchResumeVersions() {
 }
 
 async function selectResumeVersion(id) {
+  const request = ++uploadRequest
   if (!id) { resumeVersionId.value = null; removeFile(); return }
+  resumeUploading.value = true
   try {
     const version = await getResumeVersion(Number(id))
+    if (request !== uploadRequest) return
     if (version.jobId != null && version.jobId !== selectedJob.value?.id) throw new Error('简历版本与目标岗位不匹配')
-    ++uploadRequest
-    resumeUploading.value = false
     resumeVersionId.value = version.id
     uploadedFile.value = { name: version.title, size: 0, existing: true, workbench: true }
     extractedSkills.value = String(version.content?.skills || '').split(/[、,，\n]/).map(value => value.trim()).filter(Boolean)
@@ -926,33 +941,25 @@ async function selectResumeVersion(id) {
     resumeError.value = ''
     resumeReview.value = null
     if (currentStep.value === 2) fetchResumeReview()
-  } catch (error) { resumeError.value = error.message || '简历版本加载失败' }
+  } catch (error) { if (request === uploadRequest) resumeError.value = error.message || '简历版本加载失败' }
+  finally { if (request === uploadRequest) resumeUploading.value = false }
 }
 
-async function fetchResumeReview() {
-  const request = ++reviewRequest
-  resumeReview.value = null
-  reviewError.value = ''
-  if (!selectedJob.value || !uploadedFile.value) {
-    resumeReview.value = { status: 'NO_RESUME', summary: '本轮未使用简历' }
-    reviewLoading.value = false
-    return
-  }
-  reviewLoading.value = true
-  const jobId = selectedJob.value.id
-  const versionId = resumeVersionId.value
-  try {
-    const result = await getResumeReview({ jobId, versionId: versionId || undefined })
-    if (request === reviewRequest && jobId === selectedJob.value?.id && versionId === resumeVersionId.value)
-      resumeReview.value = result
-  } catch (error) {
-    if (request === reviewRequest) reviewError.value = error.message || '评价失败，请重试'
-  } finally { if (request === reviewRequest) reviewLoading.value = false }
+function fetchResumeReview() { resumeReview.value = null }
+function editAnalysis({ report, item }) {
+  if (!report) return
+  router.push({ path: '/resume/builder', query: { jobId: report.snapshot.jobId,
+    versionId: report.snapshot.versionId || undefined, tab: report.snapshot.versionId ? 'editor' : 'claims',
+    analysisId: report.id, analysisItem: item ? report.items.indexOf(item) : undefined, section: item?.field } })
 }
-
-function applyRecommendedModules() {
-  const suggested = suggestedModuleCodes.value
-  const codes = [...suggested, ...allModules.value.map(module => module.code)].filter((code, index, items) => items.indexOf(code) === index).slice(0, 5)
+function applyRecommendedModules(report) {
+  const suggested = report?.suggestedModules || suggestedModuleCodes.value
+  const codes = recommendedTargets(suggested, allModules.value, moduleOrder.value)
+  if (!suggested.length) { moduleFeedback.value = '暂无有效建议，请手动选择'; return }
+  const names = items => items.map(c => allModules.value.find(m => m.code === c)?.name || c).join('、') || '无'
+  if (!window.confirm(`本轮目标将调整为：${names(codes)}。\n新增：${names(codes.filter(c => !selectedModuleCodes.value.has(c)))}\n移出：${names(moduleOrder.value.filter(c => !codes.includes(c)))}\n保留目标的训练深度不变。确认采用？`)) return
+  selectedCompanyPreset.value = null
+  customModuleSelection = null
   selectedModuleCodes.value = new Set(codes)
   moduleOrder.value = codes
   moduleLevels.value = Object.fromEntries(codes.map(code => [code, moduleLevels.value[code] || 2]))
@@ -1146,7 +1153,26 @@ function formatSize(bytes) {
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
 }
 
+function selectCompanyPreset(company) {
+  if (company) {
+    if (modulesLoading.value || modulesError.value || !availableCompanyPresets.value.has(company.name)) return
+    if (!selectedCompanyPreset.value) customModuleSelection = { order: [...moduleOrder.value], levels: { ...moduleLevels.value } }
+    moduleOrder.value = [...company.codes]
+    moduleLevels.value = Object.fromEntries(company.codes.map(code => [code, moduleLevels.value[code] || 2]))
+  } else if (customModuleSelection) {
+    moduleOrder.value = [...customModuleSelection.order]
+    moduleLevels.value = { ...customModuleSelection.levels }
+    customModuleSelection = null
+  }
+  selectedCompanyPreset.value = company
+  selectedModuleCodes.value = new Set(moduleOrder.value)
+  activeModuleCode.value = moduleOrder.value[0] || ''
+  moduleFeedback.value = ''
+  finishModuleDrag()
+}
+
 function toggleModule(code) {
+  if (selectedCompanyPreset.value) return
   moduleFeedback.value = ''
   const next = new Set(selectedModuleCodes.value)
   if (next.has(code)) {
@@ -1217,6 +1243,7 @@ function toggleTag(name) {
 }
 
 function moveModule(index, direction) {
+  if (selectedCompanyPreset.value) return
   const target = index + direction
   if (target < 0 || target >= moduleOrder.value.length) return
   const next = [...moduleOrder.value]
@@ -1225,6 +1252,7 @@ function moveModule(index, direction) {
 }
 
 function startModuleDrag(code, event) {
+  if (selectedCompanyPreset.value) { event.preventDefault(); return }
   draggedModuleCode.value = code
   event.dataTransfer.effectAllowed = 'move'
   event.dataTransfer.setData('text/plain', code)
@@ -1238,6 +1266,7 @@ function setModuleDropTarget(targetCode) {
 }
 
 function dropModule(targetCode) {
+  if (selectedCompanyPreset.value) return
   const sourceCode = draggedModuleCode.value
   if (!sourceCode || sourceCode === targetCode) return
   const next = [...moduleOrder.value]
@@ -1261,6 +1290,7 @@ function finishModuleDrag() {
 }
 
 function handleModuleSortKey(index, moduleName, event) {
+  if (selectedCompanyPreset.value) return
   if (!event.altKey || !['ArrowUp', 'ArrowDown'].includes(event.key)) return
   event.preventDefault()
   const direction = event.key === 'ArrowUp' ? -1 : 1
@@ -1300,6 +1330,7 @@ async function handleStartInterview() {
   startingInterview.value = true
   startError.value = ''
   try {
+    await prepareInterviewCamera()
     const res = await startInterview({
       jobId: selectedJob.value.id,
       durationSeconds: durationSeconds.value,
@@ -1307,7 +1338,7 @@ async function handleStartInterview() {
       resumeVersionId: resumeVersionId.value || undefined,
       skipResume: !uploadedFile.value,
     })
-    router.push({
+    await router.push({
       path: '/interview',
       query: {
         sessionId: String(res.sessionId),
@@ -1323,7 +1354,8 @@ async function handleStartInterview() {
     })
   } catch (error) {
     console.error('Failed to start interview:', error)
-    startError.value = '面试创建失败，请检查网络后重试'
+    releaseInterviewCamera()
+    startError.value = error.message || '面试创建失败，请检查网络后重试'
   } finally {
     startingInterview.value = false
   }
@@ -1376,13 +1408,16 @@ onMounted(() => {
   }
 
   scheduleObserve()
-  fetchJobs().then(async () => {
+  Promise.all([fetchJobs(), fetchModules(), fetchSavedResume(), fetchResumeVersions()]).then(async () => {
     if (route.query.resumeVersionId) await selectResumeVersion(route.query.resumeVersionId)
-    if (currentStep.value === 2) fetchResumeReview()
+    if (route.query.applyAnalysis === '1' && route.query.analysisId) {
+      try {
+        const report = await getResumeAnalysisReport(Number(route.query.analysisId))
+        if (report.applicable && report.snapshot.jobId === selectedJob.value?.id && report.snapshot.versionId === resumeVersionId.value) applyRecommendedModules(report)
+        else moduleFeedback.value = '报告与当前简历不一致，请重新分析'
+      } catch (e) { moduleFeedback.value = e.message || '建议读取失败，请手动选择' }
+    }
   })
-  fetchModules()
-  fetchSavedResume()
-  fetchResumeVersions()
 })
 onUnmounted(() => { ++reviewRequest; ++uploadRequest; if (observer) observer.disconnect() })
 </script>
@@ -1468,7 +1503,7 @@ onUnmounted(() => { ++reviewRequest; ++uploadRequest; if (observer) observer.dis
 }
 
 /* Training goals */
-.module-layout { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(320px, .75fr); gap: var(--space-6); align-items: start; }
+.module-layout { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(320px, .75fr); gap: var(--space-6); align-items: stretch; }
 .module-select, .module-priority { padding: var(--space-6); }
 .module-heading { display: flex; justify-content: space-between; gap: var(--space-4); align-items: flex-start; margin-bottom: var(--space-5); }
 .module-count { flex: none; display: grid; place-items: center; min-width: 52px; height: 32px; padding: 0 10px; border-radius: var(--radius-full); background: var(--neutral-100); color: var(--neutral-500); font-size: var(--text-sm); font-weight: 700; }
@@ -3443,7 +3478,72 @@ onUnmounted(() => { ++reviewRequest; ++uploadRequest; if (observer) observer.dis
 .stepper{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0}.stepper__item{min-width:0}.stepper__track{left:10%;right:10%}
 .resume-builder-link{display:block;margin:12px 0 4px;padding:0;border:0;background:none;color:var(--accent-700);font:inherit;font-weight:700;text-align:left;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 .saved-resume select{min-width:190px;max-width:100%;padding:8px;border:1px solid var(--neutral-200);border-radius:8px;background:white;color:inherit}
-.resume-review{max-width:980px;margin:0 auto;padding:30px;min-height:320px}.resume-review h2{font-size:25px;margin:8px 0}.resume-review>p{color:var(--neutral-600);line-height:1.65}.resume-review__eyebrow{color:var(--accent-700);font-weight:700;font-size:13px;letter-spacing:.08em}.resume-review__findings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;list-style:none;padding:0;margin:24px 0}.resume-review__findings li{display:grid;gap:7px;border:1px solid var(--neutral-200);border-radius:12px;padding:15px;background:#fafdfb}.resume-review__findings span{color:var(--neutral-600);line-height:1.6;font-size:13px}.resume-review__suggestion{display:flex;align-items:center;flex-wrap:wrap;gap:12px;border-top:1px solid var(--neutral-200);padding-top:18px}.resume-review__suggestion span{flex:1;color:var(--accent-700)}.resume-review__error{color:#a23327}.resume-review__error button{border:0;background:none;color:inherit;text-decoration:underline;cursor:pointer}.resume-review__empty{margin-top:30px;padding:24px;border-radius:12px;background:var(--neutral-100);color:var(--neutral-600)}
+.resume-review{max-width:1280px;margin:0 auto;padding:30px;min-height:320px}.resume-review h2{font-size:25px;margin:8px 0}.resume-review>p{color:var(--neutral-600);line-height:1.65}.resume-review__eyebrow{color:var(--accent-700);font-weight:700;font-size:13px;letter-spacing:.08em}.resume-review__findings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;list-style:none;padding:0;margin:24px 0}.resume-review__findings li{display:grid;gap:7px;border:1px solid var(--neutral-200);border-radius:12px;padding:15px;background:#fafdfb}.resume-review__findings span{color:var(--neutral-600);line-height:1.6;font-size:13px}.resume-review__suggestion{display:flex;align-items:center;flex-wrap:wrap;gap:12px;border-top:1px solid var(--neutral-200);padding-top:18px}.resume-review__suggestion span{flex:1;color:var(--accent-700)}.resume-review__error{color:#a23327}.resume-review__error button{border:0;background:none;color:inherit;text-decoration:underline;cursor:pointer}.resume-review__empty{margin-top:30px;padding:24px;border-radius:12px;background:var(--neutral-100);color:var(--neutral-600)}
 @media(max-width:640px){.stepper__label{font-size:10px;text-align:center;white-space:normal}.stepper__item{gap:4px}.stepper__dot{width:28px;height:28px}.stepper__track{top:17px}.resume-review{padding:18px;min-height:0}.resume-review__findings{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){.resume-progress span{animation:none}.step-panel{animation:none}}
+/* Give every step a stable column; keep the remaining mode switch outside the sequence. */
+.prep-flow-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 760px) minmax(0, 1fr);
+  align-items: center;
+  gap: 24px;
+  margin: 16px 0 28px;
+}
+.prep-flow-bar .stepper {
+  grid-column: 2;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 8px 0;
+}
+.prep-flow-bar .stepper__item { min-width: 0; gap: 10px; }
+.prep-flow-bar .stepper__dot { width: 36px; height: 36px; box-shadow: none; }
+.prep-flow-bar .stepper__label { font-size: 14px; line-height: 1.5; white-space: nowrap; }
+.prep-flow-bar .stepper__track { top: 26px; left: 10%; right: 10%; }
+.prep-flow-bar > .prep-mode-switch { position: static; transform: none; justify-self: end; }
+@media(max-width:1200px) {
+  .prep-flow-bar { grid-template-columns: minmax(0, 1fr) auto; gap: 24px; }
+  .prep-flow-bar .stepper { grid-column: 1; }
+}
+@media(max-width:760px) {
+  .prep-flow-bar { grid-template-columns: minmax(0, 1fr); gap: 16px; margin: 16px 0 24px; }
+  .prep-flow-bar > .prep-mode-switch { grid-column: 1; }
+  .prep-flow-bar .stepper__label { font-size: 12px; }
+  .prep-flow-bar .stepper__item { gap: 8px; }
+  .prep-flow-bar .stepper__dot { width: 32px; height: 32px; }
+  .prep-flow-bar .stepper__track { top: 24px; }
+}
+/* Enterprise presets extend the existing training-goal card. */
+.company-preset { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--neutral-200); }
+.company-preset__heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.company-preset__heading h3 { margin: 0 0 4px; font-size: 15px; color: var(--neutral-900); }
+.company-preset__heading span { color: var(--neutral-500); font-size: 12px; line-height: 1.5; }
+.company-preset__custom { flex-shrink: 0; min-height: 44px; padding: 6px 10px; border: 0; border-radius: 8px; background: transparent; color: var(--accent-700); font: inherit; font-size: 12px; cursor: pointer; }
+.company-preset__custom[aria-pressed="true"] { background: var(--accent-50); }
+.company-preset__options { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.company-preset__options button { display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 5px 12px 5px 7px; border: 1px solid var(--neutral-200); border-radius: 10px; background: #fff; color: var(--neutral-700); font: inherit; font-size: 13px; cursor: pointer; }
+.company-preset__options button:hover:not(:disabled), .company-preset__options button[aria-pressed="true"] { border-color: var(--accent-400); background: var(--accent-50); color: var(--accent-700); }
+.company-preset__options button[aria-pressed="true"] { font-weight: 650; }
+.company-preset__options button:disabled { opacity: .5; cursor: not-allowed; }
+.company-preset__custom:hover { background: var(--accent-50); }
+.company-preset button:focus-visible, .company-preset a:focus-visible { outline: 2px solid var(--accent-600); outline-offset: 3px; }
+.company-preset__detail { margin-top: 12px; }
+.company-preset__detail p { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 5px 0 0; color: var(--neutral-600); font-size: 12px; line-height: 1.6; }
+.company-preset__detail strong { color: var(--accent-700); font-weight: 600; }
+.company-preset__detail a { color: var(--neutral-500); text-decoration: underline; text-underline-offset: 3px; }
+.company-preset__detail p > span { color: var(--neutral-500); }
+.company-preset__hint { margin: 12px 0 0; color: var(--neutral-500); font-size: 12px; line-height: 1.6; }
+.module-option.is-fixed, .module-option.is-fixed input { cursor: default; }
+.module-option.is-fixed:hover { transform: none; }
+.module-option.is-fixed:not(.is-selected):hover { border-color: var(--neutral-200); }
+.module-option:has(input:focus-visible) { outline: 2px solid var(--accent-600); outline-offset: 3px; }
+.drag-handle:disabled, .drag-handle:disabled:active { cursor: default; background: transparent; }
+.drag-handle:disabled span { opacity: .4; }
+.config-company { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 0 0 10px; color: var(--neutral-800); font-size: 13px; }
+.config-company > span:last-child { color: var(--neutral-500); font-size: 12px; }
+@media (max-width: 600px) {
+  .company-preset__heading { align-items: flex-start; }
+  .company-preset__options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .company-preset__options button { justify-content: flex-start; }
+}
 </style>

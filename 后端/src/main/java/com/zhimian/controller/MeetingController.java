@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -61,6 +62,14 @@ public class MeetingController {
     public Result<Void> end(@PathVariable long id) {
         meetingService.end(id);
         signalHandler.pushMeetingEnded(id);
+        return Result.success();
+    }
+
+    /** 删除已结束会议及关联记录 */
+    @DeleteMapping("/{id}")
+    @RequireRole({"ENTERPRISE", "TEACHER", "ADMIN"})
+    public Result<Void> delete(@PathVariable long id) {
+        meetingService.delete(id);
         return Result.success();
     }
 

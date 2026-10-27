@@ -111,7 +111,9 @@
     </div>
 
     <!-- Empty State -->
-    <div v-if="filteredRecords.length === 0" class="empty-state">
+    <div v-if="loading" role="status">正在加载面试记录…</div>
+    <div v-else-if="loadError" role="alert">面试记录加载失败。<button type="button" @click="fetchRecords">重新加载</button></div>
+    <div v-else-if="filteredRecords.length === 0" class="empty-state">
       <div class="empty-icon">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--neutral-300)" stroke-width="1.5">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -179,6 +181,7 @@ import AppLayout from '../components/layout/AppLayout.vue'
 import JobLogo from '../components/jobs/JobLogo.vue'
 import { batchDeleteInterview, deleteInterview, getInterviewRecords, getJobList } from '../api'
 import { getJobPresentation } from '../utils/jobPresentation'
+import { interviewReportRoute } from '../utils/interviewCompletion'
 
 const router = useRouter()
 const activeStatus = ref('全部')
@@ -227,7 +230,7 @@ async function fetchRecords() {
   loading.value = true
   loadError.value = false
   try {
-    const [data, jobs] = await Promise.all([getInterviewRecords(), getJobList()])
+    const [data, jobs] = await Promise.all([getInterviewRecords(), getJobList().catch(() => [])])
     const jobsById = new Map((jobs || []).map(job => [String(job.id), job]))
     records.value = (data || []).map(item => ({
       ...getJobPresentation(jobsById.get(String(item.jobId))),
@@ -274,9 +277,13 @@ function getScoreClass(score) {
 
 function viewReport(record) {
   if (record.reportId) {
-    router.push({path:`/history/${record.reportId}`,query:record.assignmentId?{assignmentId:record.assignmentId}:{}})
+    router.push(interviewReportRoute(record.id, record.reportId, record.assignmentId))
   } else if(record.assignmentId){
     router.push('/my/tasks/'+record.assignmentId)
+  } else if(record.status==='completed'){
+    router.push(interviewReportRoute(record.id))
+  } else {
+    showToast('info', '本次面试尚未结束，暂无报告。')
   }
 }
 

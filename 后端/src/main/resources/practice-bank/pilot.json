@@ -1,0 +1,5804 @@
+{
+  "batchId": "pilot-2026-10-v1",
+  "reviewStatus": "APPROVED",
+  "reviewNote": "项目内容审阅及自动校验；编程参考解法需由 verify-practice-pack.py 验证。不是外部专家认证。",
+  "companies": [
+    {
+      "code": "bytedance",
+      "name": "字节跳动",
+      "aliases": [
+        "ByteDance"
+      ],
+      "evidence": {
+        "checkedAt": "2026-10-08",
+        "scope": "企业文化公开资料；不证明招聘考点、技术栈或出题频率",
+        "items": [
+          {
+            "id": "candid",
+            "label": "坦诚清晰",
+            "summary": "问题沟通应准确直接，结论应有事实依据。",
+            "url": "https://jobs.bytedance.com/experienced/m/culture",
+            "type": "OFFICIAL_CULTURE"
+          },
+          {
+            "id": "practical",
+            "label": "求真务实",
+            "summary": "通过一手信息验证问题，关注实际效果。",
+            "url": "https://jobs.bytedance.com/experienced/m/culture",
+            "type": "OFFICIAL_CULTURE"
+          }
+        ]
+      }
+    },
+    {
+      "code": "alibaba",
+      "name": "阿里巴巴",
+      "aliases": [
+        "Alibaba"
+      ],
+      "evidence": {
+        "checkedAt": "2026-10-08",
+        "scope": "企业文化公开资料；不证明招聘考点、技术栈或出题频率",
+        "items": [
+          {
+            "id": "customer",
+            "label": "客户第一",
+            "summary": "决策关注持续的客户价值。",
+            "url": "https://www.alibabagroup.com/en-US/about-alibaba",
+            "type": "OFFICIAL_CULTURE"
+          }
+        ]
+      }
+    },
+    {
+      "code": "tencent",
+      "name": "腾讯",
+      "aliases": [
+        "Tencent"
+      ],
+      "evidence": {
+        "checkedAt": "2026-10-08",
+        "scope": "企业文化公开资料；不证明招聘考点、技术栈或出题频率",
+        "items": [
+          {
+            "id": "user",
+            "label": "用户价值",
+            "summary": "产品与服务以用户价值为指引。",
+            "url": "https://www.tencent.com/who-we-are/",
+            "type": "OFFICIAL_CULTURE"
+          },
+          {
+            "id": "collaboration",
+            "label": "协作",
+            "summary": "倡导协作并关注共同贡献。",
+            "url": "https://www.tencent.com/who-we-are/",
+            "type": "OFFICIAL_CULTURE"
+          }
+        ]
+      }
+    }
+  ],
+  "questions": [
+    {
+      "canonicalId": "offerpilot:java:2026-10:1",
+      "type": "KNOWLEDGE",
+      "title": "equals 与 hashCode 为什么需要一起重写？",
+      "content": "equals 与 hashCode 为什么需要一起重写？\n请解释原因，并举例说明适用范围或边界条件。",
+      "referenceAnswer": "相等对象必须拥有相同哈希值，反向不成立。哈希集合先定位桶再判断相等；只重写 equals 会破坏查找一致性。自评：是否解释契约、冲突及可变键风险。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA",
+        "FS-JAVA"
+      ],
+      "topics": [
+        "Java核心"
+      ],
+      "tags": [
+        "Java"
+      ],
+      "source": {
+        "repo": "Snailclimb/JavaGuide",
+        "commit": "9eab7aaf1a538dc139e6886cb2237b6c61e9a000",
+        "path": "README.md",
+        "url": "https://github.com/Snailclimb/JavaGuide/blob/9eab7aaf1a538dc139e6886cb2237b6c61e9a000/README.md",
+        "license": "Apache-2.0",
+        "author": "Snailclimb",
+        "adaptation": "OfferPilot 原创措辞的问题与自评要点；参考该仓库所列知识主题，不是逐字摘录或企业真题",
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:java:2026-10:2",
+      "type": "KNOWLEDGE",
+      "title": "String 不可变性带来哪些收益和限制？",
+      "content": "String 不可变性带来哪些收益和限制？\n请解释原因，并举例说明适用范围或边界条件。",
+      "referenceAnswer": "不可变有利于共享、哈希缓存和线程安全，修改会创建新对象。大量循环拼接宜使用 StringBuilder；并不意味着包含 String 的对象自动线程安全。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA",
+        "FS-JAVA"
+      ],
+      "topics": [
+        "Java核心"
+      ],
+      "tags": [
+        "Java"
+      ],
+      "source": {
+        "repo": "Snailclimb/JavaGuide",
+        "commit": "9eab7aaf1a538dc139e6886cb2237b6c61e9a000",
+        "path": "README.md",
+        "url": "https://github.com/Snailclimb/JavaGuide/blob/9eab7aaf1a538dc139e6886cb2237b6c61e9a000/README.md",
+        "license": "Apache-2.0",
+        "author": "Snailclimb",
+        "adaptation": "OfferPilot 原创措辞的问题与自评要点；参考该仓库所列知识主题，不是逐字摘录或企业真题",
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:java:2026-10:3",
+      "type": "KNOWLEDGE",
+      "title": "重载与重写分别在什么时候确定？",
+      "content": "重载与重写分别在什么时候确定？\n请解释原因，并举例说明适用范围或边界条件。",
+      "referenceAnswer": "重载依据参数列表在编译期选择，重写由运行期对象类型参与动态分派。自评：是否说明返回类型不能单独区分重载，以及静态方法不参与同样的动态分派。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA",
+        "FS-JAVA"
+      ],
+      "topics": [
+        "Java核心"
+      ],
+      "tags": [
+        "Java"
+      ],
+      "source": {
+        "repo": "Snailclimb/JavaGuide",
+        "commit": "9eab7aaf1a538dc139e6886cb2237b6c61e9a000",
+        "path": "README.md",
+        "url": "https://github.com/Snailclimb/JavaGuide/blob/9eab7aaf1a538dc139e6886cb2237b6c61e9a000/README.md",
+        "license": "Apache-2.0",
+        "author": "Snailclimb",
+        "adaptation": "OfferPilot 原创措辞的问题与自评要点；参考该仓库所列知识主题，不是逐字摘录或企业真题",
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:java:2026-10:4",
+      "type": "KNOWLEDGE",
+      "title": "泛型类型擦除有什么影响？",
+      "content": "泛型类型擦除有什么影响？\n请解释原因，并举例说明适用范围或边界条件。",
+      "referenceAnswer": "泛型主要提供编译期类型约束，运行期通常保留原始类型并插入转换。不能直接创建泛型数组或用类型参数实例化对象；需区分泛型元数据与实例类型检查。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA",
+        "FS-JAVA"
+      ],
+      "topics": [
+        "Java核心"
+      ],
+      "tags": [
+        "Java"
+      ],
+      "source": {
+        "repo": "Snailclimb/JavaGuide",
+        "commit": "9eab7aaf1a538dc139e6886cb2237b6c61e9a000",
+        "path": "README.md",
+        "url": "https://github.com/Snailclimb/JavaGuide/blob/9eab7aaf1a538dc139e6886cb2237b6c61e9a000/README.md",
+        "license": "Apache-2.0",
+        "author": "Snailclimb",
+        "adaptation": "OfferPilot 原创措辞的问题与自评要点；参考该仓库所列知识主题，不是逐字摘录或企业真题",
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:java:2026-10:5",
+      "type": "KNOWLEDGE",
+      "title": "try-with-resources 如何处理多个异常？",
+      "content": "try-with-resources 如何处理多个异常？\n请解释原因，并举例说明适用范围或边界条件。",
+      "referenceAnswer": "资源按声明逆序关闭。主体抛出的异常优先保留，关闭异常可作为 suppressed exception 附加。自评：是否说明 AutoCloseable 与异常信息保留。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA",
+        "FS-JAVA"
+      ],
+      "topics": [
+        "Java核心"
+      ],
+      "tags": [
+        "Java"
+      ],
+      "source": {
+        "repo": "Snailclimb/JavaGuide",
+        "commit": "9eab7aaf1a538dc139e6886cb2237b6c61e9a000",
+        "path": "README.md",
+        "url": "https://github.com/Snailclimb/JavaGuide/blob/9eab7aaf1a538dc139e6886cb2237b6c61e9a000/README.md",
+        "license": "Apache-2.0",
+        "author": "Snailclimb",
+        "adaptation": "OfferPilot 原创措辞的问题与自评要点；参考该仓库所列知识主题，不是逐字摘录或企业真题",
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:java:2026-10:6",
+      "type": "KNOWLEDGE",
+      "title": "ArrayList 与 LinkedList 的取舍是什么？",
+      "content": "ArrayList 与 LinkedList 的取舍是什么？\n请解释原因，并举例说明适用范围或边界条件。",
+      "referenceAnswer": "ArrayList 随机访问快但中间插入需搬移元素；LinkedList 定位通常需遍历，且节点有额外内存成本。不能仅凭链表插入常数时间就断言其整体更快。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA",
+        "FS-JAVA"
+      ],
+      "topics": [
+        "Java核心"
+      ],
+      "tags": [
+        "Java",
+        "数据结构"
+      ],
+      "source": {
+        "repo": "Snailclimb/JavaGuide",
+        "commit": "9eab7aaf1a538dc139e6886cb2237b6c61e9a000",
+        "path": "README.md",
+        "url": "https://github.com/Snailclimb/JavaGuide/blob/9eab7aaf1a538dc139e6886cb2237b6c61e9a000/README.md",
+        "license": "Apache-2.0",
+        "author": "Snailclimb",
+        "adaptation": "OfferPilot 原创措辞的问题与自评要点；参考该仓库所列知识主题，不是逐字摘录或企业真题",
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:java:2026-10:7",
+      "type": "KNOWLEDGE",
+      "title": "HashMap 为什么需要扩容？",
+      "content": "HashMap 为什么需要扩容？\n请解释原因，并举例说明适用范围或边界条件。",
+      "referenceAnswer": "扩容降低桶的负载与冲突，但会带来重新分布和瞬时开销。自评：是否解释容量、负载因子、相等判断，以及普通 HashMap 不能用于无同步并发写入。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA",
+        "FS-JAVA"
+      ],
+      "topics": [
+        "Java核心"
+      ],
+      "tags": [
+        "Java",
+        "HashMap"
+      ],
+      "source": {
+        "repo": "Snailclimb/JavaGuide",
+        "commit": "9eab7aaf1a538dc139e6886cb2237b6c61e9a000",
+        "path": "README.md",
+        "url": "https://github.com/Snailclimb/JavaGuide/blob/9eab7aaf1a538dc139e6886cb2237b6c61e9a000/README.md",
+        "license": "Apache-2.0",
+        "author": "Snailclimb",
+        "adaptation": "OfferPilot 原创措辞的问题与自评要点；参考该仓库所列知识主题，不是逐字摘录或企业真题",
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:java:2026-10:8",
+      "type": "KNOWLEDGE",
+      "title": "JVM 运行时内存区域如何区分？",
+      "content": "JVM 运行时内存区域如何区分？\n请解释原因，并举例说明适用范围或边界条件。",
+      "referenceAnswer": "堆主要存放对象，虚拟机栈维护线程调用帧，方法区承载类相关信息，程序计数器记录执行位置。需区分规范概念与具体实现，并说明线程共享和私有区域。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA",
+        "FS-JAVA"
+      ],
+      "topics": [
+        "JVM"
+      ],
+      "tags": [
+        "JVM"
+      ],
+      "source": {
+        "repo": "Snailclimb/JavaGuide",
+        "commit": "9eab7aaf1a538dc139e6886cb2237b6c61e9a000",
+        "path": "README.md",
+        "url": "https://github.com/Snailclimb/JavaGuide/blob/9eab7aaf1a538dc139e6886cb2237b6c61e9a000/README.md",
+        "license": "Apache-2.0",
+        "author": "Snailclimb",
+        "adaptation": "OfferPilot 原创措辞的问题与自评要点；参考该仓库所列知识主题，不是逐字摘录或企业真题",
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:java:2026-10:9",
+      "type": "KNOWLEDGE",
+      "title": "如何判断对象能否被垃圾回收？",
+      "content": "如何判断对象能否被垃圾回收？\n请解释原因，并举例说明适用范围或边界条件。",
+      "referenceAnswer": "可达性分析从 GC Roots 出发判断对象是否可达，而非简单按引用次数。自评：是否解释循环引用、强弱引用及不可达与立即回收的区别。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA",
+        "FS-JAVA"
+      ],
+      "topics": [
+        "JVM"
+      ],
+      "tags": [
+        "JVM"
+      ],
+      "source": {
+        "repo": "Snailclimb/JavaGuide",
+        "commit": "9eab7aaf1a538dc139e6886cb2237b6c61e9a000",
+        "path": "README.md",
+        "url": "https://github.com/Snailclimb/JavaGuide/blob/9eab7aaf1a538dc139e6886cb2237b6c61e9a000/README.md",
+        "license": "Apache-2.0",
+        "author": "Snailclimb",
+        "adaptation": "OfferPilot 原创措辞的问题与自评要点；参考该仓库所列知识主题，不是逐字摘录或企业真题",
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:java:2026-10:10",
+      "type": "KNOWLEDGE",
+      "title": "类加载的双亲委派有什么作用？",
+      "content": "类加载的双亲委派有什么作用？\n请解释原因，并举例说明适用范围或边界条件。",
+      "referenceAnswer": "优先委派父加载器可减少重复加载并保护基础类型的一致性，但不是所有加载场景都严格遵循。自评：是否说明类型身份与类加载器有关，且加载不等于初始化。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA",
+        "FS-JAVA"
+      ],
+      "topics": [
+        "JVM"
+      ],
+      "tags": [
+        "JVM"
+      ],
+      "source": {
+        "repo": "Snailclimb/JavaGuide",
+        "commit": "9eab7aaf1a538dc139e6886cb2237b6c61e9a000",
+        "path": "README.md",
+        "url": "https://github.com/Snailclimb/JavaGuide/blob/9eab7aaf1a538dc139e6886cb2237b6c61e9a000/README.md",
+        "license": "Apache-2.0",
+        "author": "Snailclimb",
+        "adaptation": "OfferPilot 原创措辞的问题与自评要点；参考该仓库所列知识主题，不是逐字摘录或企业真题",
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:java:2026-10:11",
+      "type": "KNOWLEDGE",
+      "title": "volatile 能保证哪些并发性质？",
+      "content": "volatile 能保证哪些并发性质？\n请解释原因，并举例说明适用范围或边界条件。",
+      "referenceAnswer": "volatile 提供可见性及相关有序性，不保证复合操作原子性。计数自增仍需锁或原子类。自评：是否使用读改写过程说明原因。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA",
+        "FS-JAVA"
+      ],
+      "topics": [
+        "并发编程"
+      ],
+      "tags": [
+        "多线程",
+        "Java"
+      ],
+      "source": {
+        "repo": "Snailclimb/JavaGuide",
+        "commit": "9eab7aaf1a538dc139e6886cb2237b6c61e9a000",
+        "path": "README.md",
+        "url": "https://github.com/Snailclimb/JavaGuide/blob/9eab7aaf1a538dc139e6886cb2237b6c61e9a000/README.md",
+        "license": "Apache-2.0",
+        "author": "Snailclimb",
+        "adaptation": "OfferPilot 原创措辞的问题与自评要点；参考该仓库所列知识主题，不是逐字摘录或企业真题",
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:java:2026-10:12",
+      "type": "KNOWLEDGE",
+      "title": "synchronized 与 ReentrantLock 如何选择？",
+      "content": "synchronized 与 ReentrantLock 如何选择？\n请解释原因，并举例说明适用范围或边界条件。",
+      "referenceAnswer": "两者均可实现互斥与可见性。显式锁提供可中断、限时尝试和多个条件队列，但必须可靠释放。选择应基于控制需求与可维护性，而非笼统的性能结论。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA",
+        "FS-JAVA"
+      ],
+      "topics": [
+        "并发编程"
+      ],
+      "tags": [
+        "多线程",
+        "Java"
+      ],
+      "source": {
+        "repo": "Snailclimb/JavaGuide",
+        "commit": "9eab7aaf1a538dc139e6886cb2237b6c61e9a000",
+        "path": "README.md",
+        "url": "https://github.com/Snailclimb/JavaGuide/blob/9eab7aaf1a538dc139e6886cb2237b6c61e9a000/README.md",
+        "license": "Apache-2.0",
+        "author": "Snailclimb",
+        "adaptation": "OfferPilot 原创措辞的问题与自评要点；参考该仓库所列知识主题，不是逐字摘录或企业真题",
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:java:2026-10:13",
+      "type": "KNOWLEDGE",
+      "title": "线程池队列满了该怎么办？",
+      "content": "线程池队列满了该怎么办？\n请解释原因，并举例说明适用范围或边界条件。",
+      "referenceAnswer": "应依据任务性质设计容量、超时、背压与拒绝策略，并监控队列等待和失败。无限队列会掩盖过载；不能无条件丢弃重要任务或无限重试。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA",
+        "FS-JAVA"
+      ],
+      "topics": [
+        "并发编程"
+      ],
+      "tags": [
+        "多线程",
+        "Java"
+      ],
+      "source": {
+        "repo": "Snailclimb/JavaGuide",
+        "commit": "9eab7aaf1a538dc139e6886cb2237b6c61e9a000",
+        "path": "README.md",
+        "url": "https://github.com/Snailclimb/JavaGuide/blob/9eab7aaf1a538dc139e6886cb2237b6c61e9a000/README.md",
+        "license": "Apache-2.0",
+        "author": "Snailclimb",
+        "adaptation": "OfferPilot 原创措辞的问题与自评要点；参考该仓库所列知识主题，不是逐字摘录或企业真题",
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:java:2026-10:14",
+      "type": "KNOWLEDGE",
+      "title": "CAS 为什么会遇到 ABA 问题？",
+      "content": "CAS 为什么会遇到 ABA 问题？\n请解释原因，并举例说明适用范围或边界条件。",
+      "referenceAnswer": "值从 A 变 B 再回 A，比较相等可能遗漏中间变化。版本戳可辅助识别；是否需要处理取决于算法对历史变化的敏感性，并需考虑自旋成本。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA",
+        "FS-JAVA"
+      ],
+      "topics": [
+        "并发编程"
+      ],
+      "tags": [
+        "多线程",
+        "Java"
+      ],
+      "source": {
+        "repo": "Snailclimb/JavaGuide",
+        "commit": "9eab7aaf1a538dc139e6886cb2237b6c61e9a000",
+        "path": "README.md",
+        "url": "https://github.com/Snailclimb/JavaGuide/blob/9eab7aaf1a538dc139e6886cb2237b6c61e9a000/README.md",
+        "license": "Apache-2.0",
+        "author": "Snailclimb",
+        "adaptation": "OfferPilot 原创措辞的问题与自评要点；参考该仓库所列知识主题，不是逐字摘录或企业真题",
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:java:2026-10:15",
+      "type": "KNOWLEDGE",
+      "title": "Spring 单例 Bean 是否线程安全？",
+      "content": "Spring 单例 Bean 是否线程安全？\n请解释原因，并举例说明适用范围或边界条件。",
+      "referenceAnswer": "单例描述实例数量，不提供线程安全保证。无状态 Bean 较易安全共享；可变共享状态需同步、隔离或重新设计。自评：是否区分容器作用域与并发访问。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA",
+        "FS-JAVA"
+      ],
+      "topics": [
+        "Spring"
+      ],
+      "tags": [
+        "Spring"
+      ],
+      "source": {
+        "repo": "Snailclimb/JavaGuide",
+        "commit": "9eab7aaf1a538dc139e6886cb2237b6c61e9a000",
+        "path": "README.md",
+        "url": "https://github.com/Snailclimb/JavaGuide/blob/9eab7aaf1a538dc139e6886cb2237b6c61e9a000/README.md",
+        "license": "Apache-2.0",
+        "author": "Snailclimb",
+        "adaptation": "OfferPilot 原创措辞的问题与自评要点；参考该仓库所列知识主题，不是逐字摘录或企业真题",
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:java:2026-10:16",
+      "type": "KNOWLEDGE",
+      "title": "如何理解事务 ACID？",
+      "content": "如何理解事务 ACID？\n请解释原因，并举例说明适用范围或边界条件。",
+      "referenceAnswer": "原子性关注事务整体提交或回滚，一致性依赖约束和正确业务逻辑，隔离性限制并发干扰，持久性关注提交后的保存。不能把所有业务一致性都归因于数据库隔离。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA",
+        "FS-JAVA"
+      ],
+      "topics": [
+        "MySQL"
+      ],
+      "tags": [
+        "MySQL",
+        "数据库"
+      ],
+      "source": {
+        "repo": "Snailclimb/JavaGuide",
+        "commit": "9eab7aaf1a538dc139e6886cb2237b6c61e9a000",
+        "path": "README.md",
+        "url": "https://github.com/Snailclimb/JavaGuide/blob/9eab7aaf1a538dc139e6886cb2237b6c61e9a000/README.md",
+        "license": "Apache-2.0",
+        "author": "Snailclimb",
+        "adaptation": "OfferPilot 原创措辞的问题与自评要点；参考该仓库所列知识主题，不是逐字摘录或企业真题",
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:java:2026-10:17",
+      "type": "KNOWLEDGE",
+      "title": "事务隔离级别解决了哪些并发异常？",
+      "content": "事务隔离级别解决了哪些并发异常？\n请解释原因，并举例说明适用范围或边界条件。",
+      "referenceAnswer": "隔离级别控制脏读、不可重复读等现象；具体行为还受数据库实现和读写方式影响。自评：是否用并发例子说明异常，并区分快照读与锁定读。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA",
+        "FS-JAVA"
+      ],
+      "topics": [
+        "MySQL"
+      ],
+      "tags": [
+        "MySQL",
+        "数据库"
+      ],
+      "source": {
+        "repo": "Snailclimb/JavaGuide",
+        "commit": "9eab7aaf1a538dc139e6886cb2237b6c61e9a000",
+        "path": "README.md",
+        "url": "https://github.com/Snailclimb/JavaGuide/blob/9eab7aaf1a538dc139e6886cb2237b6c61e9a000/README.md",
+        "license": "Apache-2.0",
+        "author": "Snailclimb",
+        "adaptation": "OfferPilot 原创措辞的问题与自评要点；参考该仓库所列知识主题，不是逐字摘录或企业真题",
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:java:2026-10:18",
+      "type": "KNOWLEDGE",
+      "title": "B+ 树索引为什么适合数据库查询？",
+      "content": "B+ 树索引为什么适合数据库查询？\n请解释原因，并举例说明适用范围或边界条件。",
+      "referenceAnswer": "较高扇出减少树高，叶子有序且相连便于范围扫描。索引仍有存储和写入维护成本；其效果取决于选择性、查询条件及访问模式。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA",
+        "FS-JAVA"
+      ],
+      "topics": [
+        "MySQL"
+      ],
+      "tags": [
+        "MySQL",
+        "数据库"
+      ],
+      "source": {
+        "repo": "Snailclimb/JavaGuide",
+        "commit": "9eab7aaf1a538dc139e6886cb2237b6c61e9a000",
+        "path": "README.md",
+        "url": "https://github.com/Snailclimb/JavaGuide/blob/9eab7aaf1a538dc139e6886cb2237b6c61e9a000/README.md",
+        "license": "Apache-2.0",
+        "author": "Snailclimb",
+        "adaptation": "OfferPilot 原创措辞的问题与自评要点；参考该仓库所列知识主题，不是逐字摘录或企业真题",
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:java:2026-10:19",
+      "type": "KNOWLEDGE",
+      "title": "联合索引与最左前缀如何理解？",
+      "content": "联合索引与最左前缀如何理解？\n请解释原因，并举例说明适用范围或边界条件。",
+      "referenceAnswer": "联合索引按字段顺序组织，前导字段通常决定可利用的扫描范围。需结合等值、范围条件与执行计划分析；不要把经验规则当成所有优化器行为的绝对结论。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA",
+        "FS-JAVA"
+      ],
+      "topics": [
+        "MySQL"
+      ],
+      "tags": [
+        "MySQL",
+        "数据库"
+      ],
+      "source": {
+        "repo": "Snailclimb/JavaGuide",
+        "commit": "9eab7aaf1a538dc139e6886cb2237b6c61e9a000",
+        "path": "README.md",
+        "url": "https://github.com/Snailclimb/JavaGuide/blob/9eab7aaf1a538dc139e6886cb2237b6c61e9a000/README.md",
+        "license": "Apache-2.0",
+        "author": "Snailclimb",
+        "adaptation": "OfferPilot 原创措辞的问题与自评要点；参考该仓库所列知识主题，不是逐字摘录或企业真题",
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:java:2026-10:20",
+      "type": "KNOWLEDGE",
+      "title": "如何诊断慢 SQL？",
+      "content": "如何诊断慢 SQL？\n请解释原因，并举例说明适用范围或边界条件。",
+      "referenceAnswer": "先确认耗时、频率与数据规模，再看执行计划、扫描行数、索引和锁等待。优化前后使用同条件验证；避免只看到慢就盲目加索引。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA",
+        "FS-JAVA"
+      ],
+      "topics": [
+        "MySQL"
+      ],
+      "tags": [
+        "MySQL",
+        "数据库"
+      ],
+      "source": {
+        "repo": "Snailclimb/JavaGuide",
+        "commit": "9eab7aaf1a538dc139e6886cb2237b6c61e9a000",
+        "path": "README.md",
+        "url": "https://github.com/Snailclimb/JavaGuide/blob/9eab7aaf1a538dc139e6886cb2237b6c61e9a000/README.md",
+        "license": "Apache-2.0",
+        "author": "Snailclimb",
+        "adaptation": "OfferPilot 原创措辞的问题与自评要点；参考该仓库所列知识主题，不是逐字摘录或企业真题",
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:java:2026-10:21",
+      "type": "KNOWLEDGE",
+      "title": "Redis 缓存穿透如何处理？",
+      "content": "Redis 缓存穿透如何处理？\n请解释原因，并举例说明适用范围或边界条件。",
+      "referenceAnswer": "对不存在数据的重复查询可结合参数校验、短期空值缓存或布隆过滤器。方案需考虑误判、过期策略及合法新增数据，不应无限缓存不存在结果。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA",
+        "FS-JAVA"
+      ],
+      "topics": [
+        "Redis"
+      ],
+      "tags": [
+        "Redis"
+      ],
+      "source": {
+        "repo": "Snailclimb/JavaGuide",
+        "commit": "9eab7aaf1a538dc139e6886cb2237b6c61e9a000",
+        "path": "README.md",
+        "url": "https://github.com/Snailclimb/JavaGuide/blob/9eab7aaf1a538dc139e6886cb2237b6c61e9a000/README.md",
+        "license": "Apache-2.0",
+        "author": "Snailclimb",
+        "adaptation": "OfferPilot 原创措辞的问题与自评要点；参考该仓库所列知识主题，不是逐字摘录或企业真题",
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:java:2026-10:22",
+      "type": "KNOWLEDGE",
+      "title": "缓存击穿与雪崩有什么区别？",
+      "content": "缓存击穿与雪崩有什么区别？\n请解释原因，并举例说明适用范围或边界条件。",
+      "referenceAnswer": "击穿通常是热点键失效，雪崩是大面积同时失效或缓存服务故障。可按情境采用过期时间抖动、互斥重建、限流和降级，并评估恢复过程。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA",
+        "FS-JAVA"
+      ],
+      "topics": [
+        "Redis"
+      ],
+      "tags": [
+        "Redis"
+      ],
+      "source": {
+        "repo": "Snailclimb/JavaGuide",
+        "commit": "9eab7aaf1a538dc139e6886cb2237b6c61e9a000",
+        "path": "README.md",
+        "url": "https://github.com/Snailclimb/JavaGuide/blob/9eab7aaf1a538dc139e6886cb2237b6c61e9a000/README.md",
+        "license": "Apache-2.0",
+        "author": "Snailclimb",
+        "adaptation": "OfferPilot 原创措辞的问题与自评要点；参考该仓库所列知识主题，不是逐字摘录或企业真题",
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:java:2026-10:23",
+      "type": "KNOWLEDGE",
+      "title": "为什么网络请求重试需要幂等设计？",
+      "content": "为什么网络请求重试需要幂等设计？\n请解释原因，并举例说明适用范围或边界条件。",
+      "referenceAnswer": "超时不代表服务端未执行，重试可能造成重复业务操作。应通过业务唯一键、幂等记录与一致性约束控制重复，并设置有限重试和退避。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA",
+        "FS-JAVA"
+      ],
+      "topics": [
+        "分布式"
+      ],
+      "tags": [
+        "分布式"
+      ],
+      "source": {
+        "repo": "Snailclimb/JavaGuide",
+        "commit": "9eab7aaf1a538dc139e6886cb2237b6c61e9a000",
+        "path": "README.md",
+        "url": "https://github.com/Snailclimb/JavaGuide/blob/9eab7aaf1a538dc139e6886cb2237b6c61e9a000/README.md",
+        "license": "Apache-2.0",
+        "author": "Snailclimb",
+        "adaptation": "OfferPilot 原创措辞的问题与自评要点；参考该仓库所列知识主题，不是逐字摘录或企业真题",
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:java:2026-10:24",
+      "type": "KNOWLEDGE",
+      "title": "HTTP 与 HTTPS 的主要区别是什么？",
+      "content": "HTTP 与 HTTPS 的主要区别是什么？\n请解释原因，并举例说明适用范围或边界条件。",
+      "referenceAnswer": "HTTPS 在 HTTP 通信之外使用 TLS 提供传输保护与身份验证。保护传输并不自动解决应用鉴权、输入验证或终端被攻破问题。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA",
+        "FS-JAVA"
+      ],
+      "topics": [
+        "网络"
+      ],
+      "tags": [
+        "HTTP/HTTPS"
+      ],
+      "source": {
+        "repo": "Snailclimb/JavaGuide",
+        "commit": "9eab7aaf1a538dc139e6886cb2237b6c61e9a000",
+        "path": "README.md",
+        "url": "https://github.com/Snailclimb/JavaGuide/blob/9eab7aaf1a538dc139e6886cb2237b6c61e9a000/README.md",
+        "license": "Apache-2.0",
+        "author": "Snailclimb",
+        "adaptation": "OfferPilot 原创措辞的问题与自评要点；参考该仓库所列知识主题，不是逐字摘录或企业真题",
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:java:2026-10:25",
+      "type": "KNOWLEDGE",
+      "title": "Cookie 与 Session 如何协作？",
+      "content": "Cookie 与 Session 如何协作？\n请解释原因，并举例说明适用范围或边界条件。",
+      "referenceAnswer": "Cookie 是浏览器保存并发送的数据机制，Session 是服务端会话状态方案，常通过 Cookie 携带会话标识。需说明失效、Secure、HttpOnly 和跨站请求风险。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA",
+        "FS-JAVA"
+      ],
+      "topics": [
+        "网络"
+      ],
+      "tags": [
+        "HTTP/HTTPS"
+      ],
+      "source": {
+        "repo": "Snailclimb/JavaGuide",
+        "commit": "9eab7aaf1a538dc139e6886cb2237b6c61e9a000",
+        "path": "README.md",
+        "url": "https://github.com/Snailclimb/JavaGuide/blob/9eab7aaf1a538dc139e6886cb2237b6c61e9a000/README.md",
+        "license": "Apache-2.0",
+        "author": "Snailclimb",
+        "adaptation": "OfferPilot 原创措辞的问题与自评要点；参考该仓库所列知识主题，不是逐字摘录或企业真题",
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:web:2026-10:1",
+      "type": "KNOWLEDGE",
+      "title": "var、let 与 const 的作用域有什么区别？",
+      "content": "var、let 与 const 的作用域有什么区别？\n请解释原因，并举例说明适用范围或边界条件。",
+      "referenceAnswer": "var 通常为函数作用域，let 与 const 为块作用域并存在暂时性死区。const 限制绑定重新赋值，不使对象内部属性不可变。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "FE-WEB",
+        "FS-JAVA",
+        "FS-NODE"
+      ],
+      "topics": [
+        "JavaScript"
+      ],
+      "tags": [
+        "JavaScript/Typescript"
+      ],
+      "source": {
+        "repo": "yangshun/front-end-interview-handbook",
+        "commit": "75ee62afc63bb9b48be160b0710bfcba6ab01a75",
+        "path": "README.md",
+        "url": "https://github.com/yangshun/front-end-interview-handbook/blob/75ee62afc63bb9b48be160b0710bfcba6ab01a75/README.md",
+        "license": "MIT",
+        "author": "yangshun",
+        "adaptation": "OfferPilot 原创措辞的问题与自评要点；参考该仓库所列知识主题，不是逐字摘录或企业真题",
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:web:2026-10:2",
+      "type": "KNOWLEDGE",
+      "title": "闭包为什么可能造成内存滞留？",
+      "content": "闭包为什么可能造成内存滞留？\n请解释原因，并举例说明适用范围或边界条件。",
+      "referenceAnswer": "函数保留对词法环境的访问，仍被引用的闭包可能延长捕获对象的生命周期。自评：是否区分有用的状态封装与不必要的长期引用。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "FE-WEB",
+        "FS-JAVA",
+        "FS-NODE"
+      ],
+      "topics": [
+        "JavaScript"
+      ],
+      "tags": [
+        "JavaScript/Typescript"
+      ],
+      "source": {
+        "repo": "yangshun/front-end-interview-handbook",
+        "commit": "75ee62afc63bb9b48be160b0710bfcba6ab01a75",
+        "path": "README.md",
+        "url": "https://github.com/yangshun/front-end-interview-handbook/blob/75ee62afc63bb9b48be160b0710bfcba6ab01a75/README.md",
+        "license": "MIT",
+        "author": "yangshun",
+        "adaptation": "OfferPilot 原创措辞的问题与自评要点；参考该仓库所列知识主题，不是逐字摘录或企业真题",
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:web:2026-10:3",
+      "type": "KNOWLEDGE",
+      "title": "Promise.then 与同步日志的执行顺序是什么？",
+      "content": "Promise.then 与同步日志的执行顺序是什么？\n请解释原因，并举例说明适用范围或边界条件。",
+      "referenceAnswer": "当前同步任务先完成，随后执行相关微任务。需结合实际代码区分 Promise 执行器同步执行与 then 回调排队，不能简单说 Promise 全部异步。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "FE-WEB",
+        "FS-JAVA",
+        "FS-NODE"
+      ],
+      "topics": [
+        "JavaScript"
+      ],
+      "tags": [
+        "JavaScript/Typescript"
+      ],
+      "source": {
+        "repo": "yangshun/front-end-interview-handbook",
+        "commit": "75ee62afc63bb9b48be160b0710bfcba6ab01a75",
+        "path": "README.md",
+        "url": "https://github.com/yangshun/front-end-interview-handbook/blob/75ee62afc63bb9b48be160b0710bfcba6ab01a75/README.md",
+        "license": "MIT",
+        "author": "yangshun",
+        "adaptation": "OfferPilot 原创措辞的问题与自评要点；参考该仓库所列知识主题，不是逐字摘录或企业真题",
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:web:2026-10:4",
+      "type": "KNOWLEDGE",
+      "title": "async 函数抛出异常后如何捕获？",
+      "content": "async 函数抛出异常后如何捕获？\n请解释原因，并举例说明适用范围或边界条件。",
+      "referenceAnswer": "async 函数返回 Promise，异常表现为拒绝。调用者可 await 后用 try/catch，或使用 catch；只用同步 try/catch 包住未 await 的调用通常捕获不到拒绝。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "FE-WEB",
+        "FS-JAVA",
+        "FS-NODE"
+      ],
+      "topics": [
+        "JavaScript"
+      ],
+      "tags": [
+        "JavaScript/Typescript"
+      ],
+      "source": {
+        "repo": "yangshun/front-end-interview-handbook",
+        "commit": "75ee62afc63bb9b48be160b0710bfcba6ab01a75",
+        "path": "README.md",
+        "url": "https://github.com/yangshun/front-end-interview-handbook/blob/75ee62afc63bb9b48be160b0710bfcba6ab01a75/README.md",
+        "license": "MIT",
+        "author": "yangshun",
+        "adaptation": "OfferPilot 原创措辞的问题与自评要点；参考该仓库所列知识主题，不是逐字摘录或企业真题",
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:web:2026-10:5",
+      "type": "KNOWLEDGE",
+      "title": "普通函数与箭头函数的 this 有何区别？",
+      "content": "普通函数与箭头函数的 this 有何区别？\n请解释原因，并举例说明适用范围或边界条件。",
+      "referenceAnswer": "普通函数的 this 与调用方式有关；箭头函数使用创建时词法环境中的 this。call、apply、bind 不会为箭头函数重新绑定 this。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "FE-WEB",
+        "FS-JAVA",
+        "FS-NODE"
+      ],
+      "topics": [
+        "JavaScript"
+      ],
+      "tags": [
+        "JavaScript/Typescript"
+      ],
+      "source": {
+        "repo": "yangshun/front-end-interview-handbook",
+        "commit": "75ee62afc63bb9b48be160b0710bfcba6ab01a75",
+        "path": "README.md",
+        "url": "https://github.com/yangshun/front-end-interview-handbook/blob/75ee62afc63bb9b48be160b0710bfcba6ab01a75/README.md",
+        "license": "MIT",
+        "author": "yangshun",
+        "adaptation": "OfferPilot 原创措辞的问题与自评要点；参考该仓库所列知识主题，不是逐字摘录或企业真题",
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:web:2026-10:6",
+      "type": "KNOWLEDGE",
+      "title": "浅拷贝与深拷贝各有哪些限制？",
+      "content": "浅拷贝与深拷贝各有哪些限制？\n请解释原因，并举例说明适用范围或边界条件。",
+      "referenceAnswer": "浅拷贝复制第一层属性，嵌套对象仍共享。深拷贝需处理循环引用及特殊类型；JSON 序列化会丢失或改变部分值，不能普遍替代深拷贝。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "FE-WEB",
+        "FS-JAVA",
+        "FS-NODE"
+      ],
+      "topics": [
+        "JavaScript"
+      ],
+      "tags": [
+        "JavaScript/Typescript"
+      ],
+      "source": {
+        "repo": "yangshun/front-end-interview-handbook",
+        "commit": "75ee62afc63bb9b48be160b0710bfcba6ab01a75",
+        "path": "README.md",
+        "url": "https://github.com/yangshun/front-end-interview-handbook/blob/75ee62afc63bb9b48be160b0710bfcba6ab01a75/README.md",
+        "license": "MIT",
+        "author": "yangshun",
+        "adaptation": "OfferPilot 原创措辞的问题与自评要点；参考该仓库所列知识主题，不是逐字摘录或企业真题",
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:web:2026-10:7",
+      "type": "KNOWLEDGE",
+      "title": "原型链查找如何工作？",
+      "content": "原型链查找如何工作？\n请解释原因，并举例说明适用范围或边界条件。",
+      "referenceAnswer": "属性先在对象自身查找，再沿原型链逐级查找。应区分自身属性与继承属性，并注意原型修改和不受控属性合并带来的风险。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "FE-WEB",
+        "FS-JAVA",
+        "FS-NODE"
+      ],
+      "topics": [
+        "JavaScript"
+      ],
+      "tags": [
+        "JavaScript/Typescript"
+      ],
+      "source": {
+        "repo": "yangshun/front-end-interview-handbook",
+        "commit": "75ee62afc63bb9b48be160b0710bfcba6ab01a75",
+        "path": "README.md",
+        "url": "https://github.com/yangshun/front-end-interview-handbook/blob/75ee62afc63bb9b48be160b0710bfcba6ab01a75/README.md",
+        "license": "MIT",
+        "author": "yangshun",
+        "adaptation": "OfferPilot 原创措辞的问题与自评要点；参考该仓库所列知识主题，不是逐字摘录或企业真题",
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:web:2026-10:8",
+      "type": "KNOWLEDGE",
+      "title": "TypeScript 类型检查能替代接口数据校验吗？",
+      "content": "TypeScript 类型检查能替代接口数据校验吗？\n请解释原因，并举例说明适用范围或边界条件。",
+      "referenceAnswer": "静态类型通常不在运行期验证外部数据。接口响应、用户输入仍需运行期检查；类型断言只是告诉编译器如何理解数据，不会实际转换或校验。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "FE-WEB",
+        "FS-JAVA",
+        "FS-NODE"
+      ],
+      "topics": [
+        "TypeScript"
+      ],
+      "tags": [
+        "JavaScript/Typescript"
+      ],
+      "source": {
+        "repo": "yangshun/front-end-interview-handbook",
+        "commit": "75ee62afc63bb9b48be160b0710bfcba6ab01a75",
+        "path": "README.md",
+        "url": "https://github.com/yangshun/front-end-interview-handbook/blob/75ee62afc63bb9b48be160b0710bfcba6ab01a75/README.md",
+        "license": "MIT",
+        "author": "yangshun",
+        "adaptation": "OfferPilot 原创措辞的问题与自评要点；参考该仓库所列知识主题，不是逐字摘录或企业真题",
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:web:2026-10:9",
+      "type": "KNOWLEDGE",
+      "title": "事件委托有什么收益和边界？",
+      "content": "事件委托有什么收益和边界？\n请解释原因，并举例说明适用范围或边界条件。",
+      "referenceAnswer": "利用事件传播在祖先统一处理后代事件，减少监听器并支持动态元素。需正确识别目标，并考虑不冒泡事件、传播阻止与可访问性。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "FE-WEB",
+        "FS-JAVA",
+        "FS-NODE"
+      ],
+      "topics": [
+        "浏览器原理"
+      ],
+      "tags": [
+        "浏览器",
+        "JavaScript/Typescript"
+      ],
+      "source": {
+        "repo": "yangshun/front-end-interview-handbook",
+        "commit": "75ee62afc63bb9b48be160b0710bfcba6ab01a75",
+        "path": "README.md",
+        "url": "https://github.com/yangshun/front-end-interview-handbook/blob/75ee62afc63bb9b48be160b0710bfcba6ab01a75/README.md",
+        "license": "MIT",
+        "author": "yangshun",
+        "adaptation": "OfferPilot 原创措辞的问题与自评要点；参考该仓库所列知识主题，不是逐字摘录或企业真题",
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:web:2026-10:10",
+      "type": "KNOWLEDGE",
+      "title": "浏览器缓存协商如何工作？",
+      "content": "浏览器缓存协商如何工作？\n请解释原因，并举例说明适用范围或边界条件。",
+      "referenceAnswer": "强缓存依据有效期复用，协商缓存通过验证器向服务端确认是否变化。304 表示可复用已有内容；缓存策略应区分静态资源与敏感数据。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "FE-WEB",
+        "FS-JAVA",
+        "FS-NODE"
+      ],
+      "topics": [
+        "浏览器原理"
+      ],
+      "tags": [
+        "浏览器",
+        "HTTP/HTTPS"
+      ],
+      "source": {
+        "repo": "yangshun/front-end-interview-handbook",
+        "commit": "75ee62afc63bb9b48be160b0710bfcba6ab01a75",
+        "path": "README.md",
+        "url": "https://github.com/yangshun/front-end-interview-handbook/blob/75ee62afc63bb9b48be160b0710bfcba6ab01a75/README.md",
+        "license": "MIT",
+        "author": "yangshun",
+        "adaptation": "OfferPilot 原创措辞的问题与自评要点；参考该仓库所列知识主题，不是逐字摘录或企业真题",
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:web:2026-10:11",
+      "type": "KNOWLEDGE",
+      "title": "跨域限制为什么不能只靠前端解决？",
+      "content": "跨域限制为什么不能只靠前端解决？\n请解释原因，并举例说明适用范围或边界条件。",
+      "referenceAnswer": "同源策略由浏览器实施，CORS 授权通常由服务端响应头控制。代理改变请求路径但不替代鉴权；携带凭据时不能使用任意来源授权。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "FE-WEB",
+        "FS-JAVA",
+        "FS-NODE"
+      ],
+      "topics": [
+        "浏览器原理"
+      ],
+      "tags": [
+        "浏览器",
+        "HTTP/HTTPS"
+      ],
+      "source": {
+        "repo": "yangshun/front-end-interview-handbook",
+        "commit": "75ee62afc63bb9b48be160b0710bfcba6ab01a75",
+        "path": "README.md",
+        "url": "https://github.com/yangshun/front-end-interview-handbook/blob/75ee62afc63bb9b48be160b0710bfcba6ab01a75/README.md",
+        "license": "MIT",
+        "author": "yangshun",
+        "adaptation": "OfferPilot 原创措辞的问题与自评要点；参考该仓库所列知识主题，不是逐字摘录或企业真题",
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:web:2026-10:12",
+      "type": "KNOWLEDGE",
+      "title": "组件状态更新为什么要注意不可变数据？",
+      "content": "组件状态更新为什么要注意不可变数据？\n请解释原因，并举例说明适用范围或边界条件。",
+      "referenceAnswer": "明确状态变化有利于追踪更新和避免共享引用带来的意外修改。不同框架的响应式机制不同，不能套用单一规则；应结合具体组件说明更新如何触发。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "FE-WEB",
+        "FS-JAVA",
+        "FS-NODE"
+      ],
+      "topics": [
+        "Vue / React"
+      ],
+      "tags": [
+        "Vue",
+        "React"
+      ],
+      "source": {
+        "repo": "yangshun/front-end-interview-handbook",
+        "commit": "75ee62afc63bb9b48be160b0710bfcba6ab01a75",
+        "path": "README.md",
+        "url": "https://github.com/yangshun/front-end-interview-handbook/blob/75ee62afc63bb9b48be160b0710bfcba6ab01a75/README.md",
+        "license": "MIT",
+        "author": "yangshun",
+        "adaptation": "OfferPilot 原创措辞的问题与自评要点；参考该仓库所列知识主题，不是逐字摘录或企业真题",
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:web:2026-10:13",
+      "type": "KNOWLEDGE",
+      "title": "如何减少首屏 JavaScript 开销？",
+      "content": "如何减少首屏 JavaScript 开销？\n请解释原因，并举例说明适用范围或边界条件。",
+      "referenceAnswer": "结合分析结果拆包、按需加载和去除未使用依赖，避免盲目增加碎片请求。验证压缩体积、下载、解析执行时间及实际用户指标。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "FE-WEB",
+        "FS-JAVA",
+        "FS-NODE"
+      ],
+      "topics": [
+        "工程化"
+      ],
+      "tags": [
+        "Webpack",
+        "工程化"
+      ],
+      "source": {
+        "repo": "yangshun/front-end-interview-handbook",
+        "commit": "75ee62afc63bb9b48be160b0710bfcba6ab01a75",
+        "path": "README.md",
+        "url": "https://github.com/yangshun/front-end-interview-handbook/blob/75ee62afc63bb9b48be160b0710bfcba6ab01a75/README.md",
+        "license": "MIT",
+        "author": "yangshun",
+        "adaptation": "OfferPilot 原创措辞的问题与自评要点；参考该仓库所列知识主题，不是逐字摘录或企业真题",
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:web:2026-10:14",
+      "type": "KNOWLEDGE",
+      "title": "防抖与节流分别适合哪些场景？",
+      "content": "防抖与节流分别适合哪些场景？\n请解释原因，并举例说明适用范围或边界条件。",
+      "referenceAnswer": "防抖等待一段静默时间再执行，节流限制执行频率。搜索建议与高频滚动可能采用不同策略，并需处理取消、最后一次调用及组件销毁。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "FE-WEB",
+        "FS-JAVA",
+        "FS-NODE"
+      ],
+      "topics": [
+        "性能优化"
+      ],
+      "tags": [
+        "性能",
+        "JavaScript/Typescript"
+      ],
+      "source": {
+        "repo": "yangshun/front-end-interview-handbook",
+        "commit": "75ee62afc63bb9b48be160b0710bfcba6ab01a75",
+        "path": "README.md",
+        "url": "https://github.com/yangshun/front-end-interview-handbook/blob/75ee62afc63bb9b48be160b0710bfcba6ab01a75/README.md",
+        "license": "MIT",
+        "author": "yangshun",
+        "adaptation": "OfferPilot 原创措辞的问题与自评要点；参考该仓库所列知识主题，不是逐字摘录或企业真题",
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:web:2026-10:15",
+      "type": "KNOWLEDGE",
+      "title": "如何分析页面交互卡顿？",
+      "content": "如何分析页面交互卡顿？\n请解释原因，并举例说明适用范围或边界条件。",
+      "referenceAnswer": "先使用性能记录定位主线程长任务、布局与绘制，再针对瓶颈处理。减少同步工作、批量更新或移至 Worker 前，需验证数据传递成本与交互正确性。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "FE-WEB",
+        "FS-JAVA",
+        "FS-NODE"
+      ],
+      "topics": [
+        "性能优化"
+      ],
+      "tags": [
+        "性能",
+        "浏览器"
+      ],
+      "source": {
+        "repo": "yangshun/front-end-interview-handbook",
+        "commit": "75ee62afc63bb9b48be160b0710bfcba6ab01a75",
+        "path": "README.md",
+        "url": "https://github.com/yangshun/front-end-interview-handbook/blob/75ee62afc63bb9b48be160b0710bfcba6ab01a75/README.md",
+        "license": "MIT",
+        "author": "yangshun",
+        "adaptation": "OfferPilot 原创措辞的问题与自评要点；参考该仓库所列知识主题，不是逐字摘录或企业真题",
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "exercism:two-fer",
+      "type": "CODING",
+      "title": "分享一句话",
+      "content": "读取一行姓名；空行表示没有姓名。输出 One for NAME, one for me.；没有姓名时 NAME 使用 you。姓名长度不超过100。\n请使用 Java 17，标准输出仅包含答案。",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA",
+        "FE-WEB",
+        "FS-JAVA",
+        "FS-NODE"
+      ],
+      "topics": [
+        "编程与算法",
+        "Java核心"
+      ],
+      "tags": [
+        "字符串"
+      ],
+      "source": {
+        "repo": "exercism/problem-specifications",
+        "commit": "9943fd751b684ba1a6a8673c3700a6e79c10a808",
+        "path": "exercises/two-fer/canonical-data.json",
+        "url": "https://github.com/exercism/problem-specifications/blob/9943fd751b684ba1a6a8673c3700a6e79c10a808/exercises/two-fer/canonical-data.json",
+        "license": "MIT",
+        "author": "exercism",
+        "adaptation": "OfferPilot 中文改编；输入输出适配及自评要点由项目整理",
+        "reviewedAt": "2026-10-08",
+        "canonicalSha256": "40cb4dd318315f75eb11c3a7bbd5f31dec4eafb43709f46d3626766324c20f43",
+        "testAdaptation": "按题目属性选择canonical用例，异常映射为题面指定的error或-1；运行仅公开示例，正式提交最多12个代表用例。"
+      },
+      "language": "java",
+      "starter": "import java.io.*;\nimport java.util.*;\n\npublic class Main {\n    public static void main(String[] args) throws Exception {\n        // 根据题面读取标准输入，输出结果\n    }\n}\n",
+      "examples": [
+        {
+          "input": "\n",
+          "expected": "One for you, one for me.",
+          "uuid": "1cf3e15a-a3d7-4a87-aeb3-ba1b43bc8dce",
+          "public": "true"
+        },
+        {
+          "input": "Alice\n",
+          "expected": "One for Alice, one for me.",
+          "uuid": "b4c6dbb8-b4fb-42c2-bafd-10785abe7709",
+          "public": "true"
+        }
+      ],
+      "tests": [
+        {
+          "input": "\n",
+          "expected": "One for you, one for me.",
+          "uuid": "1cf3e15a-a3d7-4a87-aeb3-ba1b43bc8dce",
+          "public": "true"
+        },
+        {
+          "input": "Alice\n",
+          "expected": "One for Alice, one for me.",
+          "uuid": "b4c6dbb8-b4fb-42c2-bafd-10785abe7709",
+          "public": "true"
+        },
+        {
+          "input": "Bob\n",
+          "expected": "One for Bob, one for me.",
+          "uuid": "3549048d-1a6e-4653-9a79-b0bda163e8d5",
+          "public": "false"
+        }
+      ],
+      "verificationTests": [
+        {
+          "input": "\n",
+          "expected": "One for you, one for me.",
+          "uuid": "1cf3e15a-a3d7-4a87-aeb3-ba1b43bc8dce",
+          "public": "true"
+        },
+        {
+          "input": "Alice\n",
+          "expected": "One for Alice, one for me.",
+          "uuid": "b4c6dbb8-b4fb-42c2-bafd-10785abe7709",
+          "public": "true"
+        },
+        {
+          "input": "Bob\n",
+          "expected": "One for Bob, one for me.",
+          "uuid": "3549048d-1a6e-4653-9a79-b0bda163e8d5",
+          "public": "false"
+        }
+      ],
+      "referenceCode": "import java.io.*;import java.util.*;public class Main {public static void main(String[] args)throws Exception{BufferedReader r=new BufferedReader(new InputStreamReader(System.in,java.nio.charset.StandardCharsets.UTF_8));String s=r.readLine();System.out.println(\"One for \"+(s.isEmpty()?\"you\":s)+\", one for me.\");}}"
+    },
+    {
+      "canonicalId": "exercism:leap",
+      "type": "CODING",
+      "title": "判断闰年",
+      "content": "读取公历年份，输出 true 或 false。能被4整除且不能被100整除，或能被400整除的年份为闰年。年份1–9999。\n请使用 Java 17，标准输出仅包含答案。",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA",
+        "FE-WEB",
+        "FS-JAVA",
+        "FS-NODE"
+      ],
+      "topics": [
+        "编程与算法",
+        "Java核心"
+      ],
+      "tags": [
+        "数学"
+      ],
+      "source": {
+        "repo": "exercism/problem-specifications",
+        "commit": "9943fd751b684ba1a6a8673c3700a6e79c10a808",
+        "path": "exercises/leap/canonical-data.json",
+        "url": "https://github.com/exercism/problem-specifications/blob/9943fd751b684ba1a6a8673c3700a6e79c10a808/exercises/leap/canonical-data.json",
+        "license": "MIT",
+        "author": "exercism",
+        "adaptation": "OfferPilot 中文改编；输入输出适配及自评要点由项目整理",
+        "reviewedAt": "2026-10-08",
+        "canonicalSha256": "7df67cd020a9113be2afe2a44aff099ca089c52137a897e17af3c2eff7aa2bca",
+        "testAdaptation": "按题目属性选择canonical用例，异常映射为题面指定的error或-1；运行仅公开示例，正式提交最多12个代表用例。"
+      },
+      "language": "java",
+      "starter": "import java.io.*;\nimport java.util.*;\n\npublic class Main {\n    public static void main(String[] args) throws Exception {\n        // 根据题面读取标准输入，输出结果\n    }\n}\n",
+      "examples": [
+        {
+          "input": "2015\n",
+          "expected": "false",
+          "uuid": "6466b30d-519c-438e-935d-388224ab5223",
+          "public": "true"
+        },
+        {
+          "input": "1970\n",
+          "expected": "false",
+          "uuid": "ac227e82-ee82-4a09-9eb6-4f84331ffdb0",
+          "public": "true"
+        }
+      ],
+      "tests": [
+        {
+          "input": "2015\n",
+          "expected": "false",
+          "uuid": "6466b30d-519c-438e-935d-388224ab5223",
+          "public": "true"
+        },
+        {
+          "input": "1970\n",
+          "expected": "false",
+          "uuid": "ac227e82-ee82-4a09-9eb6-4f84331ffdb0",
+          "public": "true"
+        },
+        {
+          "input": "1996\n",
+          "expected": "true",
+          "uuid": "4fe9b84c-8e65-489e-970b-856d60b8b78e",
+          "public": "false"
+        },
+        {
+          "input": "1960\n",
+          "expected": "true",
+          "uuid": "7fc6aed7-e63c-48f5-ae05-5fe182f60a5d",
+          "public": "false"
+        },
+        {
+          "input": "2100\n",
+          "expected": "false",
+          "uuid": "78a7848f-9667-4192-ae53-87b30c9a02dd",
+          "public": "false"
+        },
+        {
+          "input": "1900\n",
+          "expected": "false",
+          "uuid": "9d70f938-537c-40a6-ba19-f50739ce8bac",
+          "public": "false"
+        },
+        {
+          "input": "2000\n",
+          "expected": "true",
+          "uuid": "42ee56ad-d3e6-48f1-8e3f-c84078d916fc",
+          "public": "false"
+        },
+        {
+          "input": "2400\n",
+          "expected": "true",
+          "uuid": "57902c77-6fe9-40de-8302-587b5c27121e",
+          "public": "false"
+        },
+        {
+          "input": "1800\n",
+          "expected": "false",
+          "uuid": "c30331f6-f9f6-4881-ad38-8ca8c12520c1",
+          "public": "false"
+        }
+      ],
+      "verificationTests": [
+        {
+          "input": "2015\n",
+          "expected": "false",
+          "uuid": "6466b30d-519c-438e-935d-388224ab5223",
+          "public": "true"
+        },
+        {
+          "input": "1970\n",
+          "expected": "false",
+          "uuid": "ac227e82-ee82-4a09-9eb6-4f84331ffdb0",
+          "public": "true"
+        },
+        {
+          "input": "1996\n",
+          "expected": "true",
+          "uuid": "4fe9b84c-8e65-489e-970b-856d60b8b78e",
+          "public": "false"
+        },
+        {
+          "input": "1960\n",
+          "expected": "true",
+          "uuid": "7fc6aed7-e63c-48f5-ae05-5fe182f60a5d",
+          "public": "false"
+        },
+        {
+          "input": "2100\n",
+          "expected": "false",
+          "uuid": "78a7848f-9667-4192-ae53-87b30c9a02dd",
+          "public": "false"
+        },
+        {
+          "input": "1900\n",
+          "expected": "false",
+          "uuid": "9d70f938-537c-40a6-ba19-f50739ce8bac",
+          "public": "false"
+        },
+        {
+          "input": "2000\n",
+          "expected": "true",
+          "uuid": "42ee56ad-d3e6-48f1-8e3f-c84078d916fc",
+          "public": "false"
+        },
+        {
+          "input": "2400\n",
+          "expected": "true",
+          "uuid": "57902c77-6fe9-40de-8302-587b5c27121e",
+          "public": "false"
+        },
+        {
+          "input": "1800\n",
+          "expected": "false",
+          "uuid": "c30331f6-f9f6-4881-ad38-8ca8c12520c1",
+          "public": "false"
+        }
+      ],
+      "referenceCode": "import java.io.*;import java.util.*;public class Main {public static void main(String[] args)throws Exception{BufferedReader r=new BufferedReader(new InputStreamReader(System.in,java.nio.charset.StandardCharsets.UTF_8));int y=Integer.parseInt(r.readLine());System.out.println(y%4==0&&(y%100!=0||y%400==0));}}"
+    },
+    {
+      "canonicalId": "exercism:raindrops",
+      "type": "CODING",
+      "title": "雨滴转换",
+      "content": "读取正整数。含因子3输出Pling，含因子5输出Plang，含因子7输出Plong，按此顺序拼接；都不含则输出原数。数值不超过1000000。\n请使用 Java 17，标准输出仅包含答案。",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA",
+        "FE-WEB",
+        "FS-JAVA",
+        "FS-NODE"
+      ],
+      "topics": [
+        "编程与算法",
+        "Java核心"
+      ],
+      "tags": [
+        "数学"
+      ],
+      "source": {
+        "repo": "exercism/problem-specifications",
+        "commit": "9943fd751b684ba1a6a8673c3700a6e79c10a808",
+        "path": "exercises/raindrops/canonical-data.json",
+        "url": "https://github.com/exercism/problem-specifications/blob/9943fd751b684ba1a6a8673c3700a6e79c10a808/exercises/raindrops/canonical-data.json",
+        "license": "MIT",
+        "author": "exercism",
+        "adaptation": "OfferPilot 中文改编；输入输出适配及自评要点由项目整理",
+        "reviewedAt": "2026-10-08",
+        "canonicalSha256": "4628e229cd1c6d916be07a4315e9e2da02160f35e3b28658a6bd47225d284fc5",
+        "testAdaptation": "按题目属性选择canonical用例，异常映射为题面指定的error或-1；运行仅公开示例，正式提交最多12个代表用例。"
+      },
+      "language": "java",
+      "starter": "import java.io.*;\nimport java.util.*;\n\npublic class Main {\n    public static void main(String[] args) throws Exception {\n        // 根据题面读取标准输入，输出结果\n    }\n}\n",
+      "examples": [
+        {
+          "input": "1\n",
+          "expected": "1",
+          "uuid": "1575d549-e502-46d4-a8e1-6b7bec6123d8",
+          "public": "true"
+        },
+        {
+          "input": "3\n",
+          "expected": "Pling",
+          "uuid": "1f51a9f9-4895-4539-b182-d7b0a5ab2913",
+          "public": "true"
+        }
+      ],
+      "tests": [
+        {
+          "input": "1\n",
+          "expected": "1",
+          "uuid": "1575d549-e502-46d4-a8e1-6b7bec6123d8",
+          "public": "true"
+        },
+        {
+          "input": "3\n",
+          "expected": "Pling",
+          "uuid": "1f51a9f9-4895-4539-b182-d7b0a5ab2913",
+          "public": "true"
+        },
+        {
+          "input": "5\n",
+          "expected": "Plang",
+          "uuid": "2d9bfae5-2b21-4bcd-9629-c8c0e388f3e0",
+          "public": "false"
+        },
+        {
+          "input": "6\n",
+          "expected": "Pling",
+          "uuid": "6bb4947b-a724-430c-923f-f0dc3d62e56a",
+          "public": "false"
+        },
+        {
+          "input": "8\n",
+          "expected": "8",
+          "uuid": "ce51e0e8-d9d4-446d-9949-96eac4458c2d",
+          "public": "false"
+        },
+        {
+          "input": "10\n",
+          "expected": "Plang",
+          "uuid": "022c44d3-2182-4471-95d7-c575af225c96",
+          "public": "false"
+        },
+        {
+          "input": "15\n",
+          "expected": "PlingPlang",
+          "uuid": "31f92999-6afb-40ee-9aa4-6d15e3334d0f",
+          "public": "false"
+        },
+        {
+          "input": "21\n",
+          "expected": "PlingPlong",
+          "uuid": "ff9bb95d-6361-4602-be2c-653fe5239b54",
+          "public": "false"
+        },
+        {
+          "input": "27\n",
+          "expected": "Pling",
+          "uuid": "a09c4c58-c662-4e32-97fe-f1501ef7125c",
+          "public": "false"
+        },
+        {
+          "input": "49\n",
+          "expected": "Plong",
+          "uuid": "c4680bee-69ba-439d-99b5-70c5fd1a7a83",
+          "public": "false"
+        },
+        {
+          "input": "52\n",
+          "expected": "52",
+          "uuid": "17f2bc9a-b65a-4d23-8ccd-266e8c271444",
+          "public": "false"
+        },
+        {
+          "input": "3125\n",
+          "expected": "Plang",
+          "uuid": "13c6837a-0fcd-4b86-a0eb-20572f7deb0b",
+          "public": "false"
+        }
+      ],
+      "verificationTests": [
+        {
+          "input": "1\n",
+          "expected": "1",
+          "uuid": "1575d549-e502-46d4-a8e1-6b7bec6123d8",
+          "public": "true"
+        },
+        {
+          "input": "3\n",
+          "expected": "Pling",
+          "uuid": "1f51a9f9-4895-4539-b182-d7b0a5ab2913",
+          "public": "true"
+        },
+        {
+          "input": "5\n",
+          "expected": "Plang",
+          "uuid": "2d9bfae5-2b21-4bcd-9629-c8c0e388f3e0",
+          "public": "false"
+        },
+        {
+          "input": "7\n",
+          "expected": "Plong",
+          "uuid": "d7e60daa-32ef-4c23-b688-2abff46c4806",
+          "public": "false"
+        },
+        {
+          "input": "6\n",
+          "expected": "Pling",
+          "uuid": "6bb4947b-a724-430c-923f-f0dc3d62e56a",
+          "public": "false"
+        },
+        {
+          "input": "8\n",
+          "expected": "8",
+          "uuid": "ce51e0e8-d9d4-446d-9949-96eac4458c2d",
+          "public": "false"
+        },
+        {
+          "input": "9\n",
+          "expected": "Pling",
+          "uuid": "0dd66175-e3e2-47fc-8750-d01739856671",
+          "public": "false"
+        },
+        {
+          "input": "10\n",
+          "expected": "Plang",
+          "uuid": "022c44d3-2182-4471-95d7-c575af225c96",
+          "public": "false"
+        },
+        {
+          "input": "14\n",
+          "expected": "Plong",
+          "uuid": "37ab74db-fed3-40ff-b7b9-04acdfea8edf",
+          "public": "false"
+        },
+        {
+          "input": "15\n",
+          "expected": "PlingPlang",
+          "uuid": "31f92999-6afb-40ee-9aa4-6d15e3334d0f",
+          "public": "false"
+        },
+        {
+          "input": "21\n",
+          "expected": "PlingPlong",
+          "uuid": "ff9bb95d-6361-4602-be2c-653fe5239b54",
+          "public": "false"
+        },
+        {
+          "input": "25\n",
+          "expected": "Plang",
+          "uuid": "d2e75317-b72e-40ab-8a64-6734a21dece1",
+          "public": "false"
+        },
+        {
+          "input": "27\n",
+          "expected": "Pling",
+          "uuid": "a09c4c58-c662-4e32-97fe-f1501ef7125c",
+          "public": "false"
+        },
+        {
+          "input": "35\n",
+          "expected": "PlangPlong",
+          "uuid": "bdf061de-8564-4899-a843-14b48b722789",
+          "public": "false"
+        },
+        {
+          "input": "49\n",
+          "expected": "Plong",
+          "uuid": "c4680bee-69ba-439d-99b5-70c5fd1a7a83",
+          "public": "false"
+        },
+        {
+          "input": "52\n",
+          "expected": "52",
+          "uuid": "17f2bc9a-b65a-4d23-8ccd-266e8c271444",
+          "public": "false"
+        },
+        {
+          "input": "105\n",
+          "expected": "PlingPlangPlong",
+          "uuid": "e46677ed-ff1a-419f-a740-5c713d2830e4",
+          "public": "false"
+        },
+        {
+          "input": "3125\n",
+          "expected": "Plang",
+          "uuid": "13c6837a-0fcd-4b86-a0eb-20572f7deb0b",
+          "public": "false"
+        }
+      ],
+      "referenceCode": "import java.io.*;import java.util.*;public class Main {public static void main(String[] args)throws Exception{BufferedReader r=new BufferedReader(new InputStreamReader(System.in,java.nio.charset.StandardCharsets.UTF_8));int n=Integer.parseInt(r.readLine());String s=(n%3==0?\"Pling\":\"\")+(n%5==0?\"Plang\":\"\")+(n%7==0?\"Plong\":\"\");System.out.println(s.isEmpty()?n:s);}}"
+    },
+    {
+      "canonicalId": "exercism:hamming",
+      "type": "CODING",
+      "title": "汉明距离",
+      "content": "读取两行DNA字符串，字符为A/C/G/T，计算同位置不同字符数。长度可为0且不超过1000；长度不同输出 error。\n请使用 Java 17，标准输出仅包含答案。",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA",
+        "FE-WEB",
+        "FS-JAVA",
+        "FS-NODE"
+      ],
+      "topics": [
+        "编程与算法",
+        "Java核心"
+      ],
+      "tags": [
+        "字符串"
+      ],
+      "source": {
+        "repo": "exercism/problem-specifications",
+        "commit": "9943fd751b684ba1a6a8673c3700a6e79c10a808",
+        "path": "exercises/hamming/canonical-data.json",
+        "url": "https://github.com/exercism/problem-specifications/blob/9943fd751b684ba1a6a8673c3700a6e79c10a808/exercises/hamming/canonical-data.json",
+        "license": "MIT",
+        "author": "exercism",
+        "adaptation": "OfferPilot 中文改编；输入输出适配及自评要点由项目整理",
+        "reviewedAt": "2026-10-08",
+        "canonicalSha256": "c932d8511912c5ca2cc5a15550a266436c637d8c2af4f3a055173808b0fb0086",
+        "testAdaptation": "按题目属性选择canonical用例，异常映射为题面指定的error或-1；运行仅公开示例，正式提交最多12个代表用例。"
+      },
+      "language": "java",
+      "starter": "import java.io.*;\nimport java.util.*;\n\npublic class Main {\n    public static void main(String[] args) throws Exception {\n        // 根据题面读取标准输入，输出结果\n    }\n}\n",
+      "examples": [
+        {
+          "input": "\n\n",
+          "expected": "0",
+          "uuid": "f6dcb64f-03b0-4b60-81b1-3c9dbf47e887",
+          "public": "true"
+        },
+        {
+          "input": "A\nA\n",
+          "expected": "0",
+          "uuid": "54681314-eee2-439a-9db0-b0636c656156",
+          "public": "true"
+        }
+      ],
+      "tests": [
+        {
+          "input": "\n\n",
+          "expected": "0",
+          "uuid": "f6dcb64f-03b0-4b60-81b1-3c9dbf47e887",
+          "public": "true"
+        },
+        {
+          "input": "A\nA\n",
+          "expected": "0",
+          "uuid": "54681314-eee2-439a-9db0-b0636c656156",
+          "public": "true"
+        },
+        {
+          "input": "G\nT\n",
+          "expected": "1",
+          "uuid": "294479a3-a4c8-478f-8d63-6209815a827b",
+          "public": "false"
+        },
+        {
+          "input": "GGACTGAAATCTG\nGGACTGAAATCTG\n",
+          "expected": "0",
+          "uuid": "9aed5f34-5693-4344-9b31-40c692fb5592",
+          "public": "false"
+        },
+        {
+          "input": "AATG\nAAA\n",
+          "expected": "error",
+          "uuid": "919f8ef0-b767-4d1b-8516-6379d07fcb28",
+          "public": "false"
+        },
+        {
+          "input": "AATG\nAAA\n",
+          "expected": "error",
+          "uuid": "b9228bb1-465f-4141-b40f-1f99812de5a8",
+          "public": "false"
+        },
+        {
+          "input": "ATA\nAGTG\n",
+          "expected": "error",
+          "uuid": "8a2d4ed0-ead5-4fdd-924d-27c4cf56e60e",
+          "public": "false"
+        },
+        {
+          "input": "\nG\n",
+          "expected": "error",
+          "uuid": "5dce058b-28d4-4ca7-aa64-adfe4e17784c",
+          "public": "false"
+        },
+        {
+          "input": "\nG\n",
+          "expected": "error",
+          "uuid": "db92e77e-7c72-499d-8fe6-9354d2bfd504",
+          "public": "false"
+        },
+        {
+          "input": "\nG\n",
+          "expected": "error",
+          "uuid": "b764d47c-83ff-4de2-ab10-6cfe4b15c0f3",
+          "public": "false"
+        },
+        {
+          "input": "G\n\n",
+          "expected": "error",
+          "uuid": "920cd6e3-18f4-4143-b6b8-74270bb8f8a3",
+          "public": "false"
+        },
+        {
+          "input": "G\n\n",
+          "expected": "error",
+          "uuid": "9ab9262f-3521-4191-81f5-0ed184a5aa89",
+          "public": "false"
+        }
+      ],
+      "verificationTests": [
+        {
+          "input": "\n\n",
+          "expected": "0",
+          "uuid": "f6dcb64f-03b0-4b60-81b1-3c9dbf47e887",
+          "public": "true"
+        },
+        {
+          "input": "A\nA\n",
+          "expected": "0",
+          "uuid": "54681314-eee2-439a-9db0-b0636c656156",
+          "public": "true"
+        },
+        {
+          "input": "G\nT\n",
+          "expected": "1",
+          "uuid": "294479a3-a4c8-478f-8d63-6209815a827b",
+          "public": "false"
+        },
+        {
+          "input": "GGACTGAAATCTG\nGGACTGAAATCTG\n",
+          "expected": "0",
+          "uuid": "9aed5f34-5693-4344-9b31-40c692fb5592",
+          "public": "false"
+        },
+        {
+          "input": "GGACGGATTCTG\nAGGACGGATTCT\n",
+          "expected": "9",
+          "uuid": "cd2273a5-c576-46c8-a52b-dee251c3e6e5",
+          "public": "false"
+        },
+        {
+          "input": "AATG\nAAA\n",
+          "expected": "error",
+          "uuid": "919f8ef0-b767-4d1b-8516-6379d07fcb28",
+          "public": "false"
+        },
+        {
+          "input": "AATG\nAAA\n",
+          "expected": "error",
+          "uuid": "b9228bb1-465f-4141-b40f-1f99812de5a8",
+          "public": "false"
+        },
+        {
+          "input": "ATA\nAGTG\n",
+          "expected": "error",
+          "uuid": "8a2d4ed0-ead5-4fdd-924d-27c4cf56e60e",
+          "public": "false"
+        },
+        {
+          "input": "ATA\nAGTG\n",
+          "expected": "error",
+          "uuid": "dab38838-26bb-4fff-acbe-3b0a9bfeba2d",
+          "public": "false"
+        },
+        {
+          "input": "\nG\n",
+          "expected": "error",
+          "uuid": "5dce058b-28d4-4ca7-aa64-adfe4e17784c",
+          "public": "false"
+        },
+        {
+          "input": "\nG\n",
+          "expected": "error",
+          "uuid": "db92e77e-7c72-499d-8fe6-9354d2bfd504",
+          "public": "false"
+        },
+        {
+          "input": "\nG\n",
+          "expected": "error",
+          "uuid": "b764d47c-83ff-4de2-ab10-6cfe4b15c0f3",
+          "public": "false"
+        },
+        {
+          "input": "G\n\n",
+          "expected": "error",
+          "uuid": "38826d4b-16fb-4639-ac3e-ba027dec8b5f",
+          "public": "false"
+        },
+        {
+          "input": "G\n\n",
+          "expected": "error",
+          "uuid": "920cd6e3-18f4-4143-b6b8-74270bb8f8a3",
+          "public": "false"
+        },
+        {
+          "input": "G\n\n",
+          "expected": "error",
+          "uuid": "9ab9262f-3521-4191-81f5-0ed184a5aa89",
+          "public": "false"
+        }
+      ],
+      "referenceCode": "import java.io.*;import java.util.*;public class Main {public static void main(String[] args)throws Exception{BufferedReader r=new BufferedReader(new InputStreamReader(System.in,java.nio.charset.StandardCharsets.UTF_8));String a=r.readLine(),b=r.readLine();if(a.length()!=b.length()){System.out.println(\"error\");return;}int n=0;for(int i=0;i<a.length();i++)if(a.charAt(i)!=b.charAt(i))n++;System.out.println(n);}}"
+    },
+    {
+      "canonicalId": "exercism:difference-of-squares",
+      "type": "CODING",
+      "title": "平方差",
+      "content": "读取整数n（0–100）。输出前n个正整数之和的平方与前n个正整数平方之和的差。\n请使用 Java 17，标准输出仅包含答案。",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA",
+        "FE-WEB",
+        "FS-JAVA",
+        "FS-NODE"
+      ],
+      "topics": [
+        "编程与算法",
+        "Java核心"
+      ],
+      "tags": [
+        "数学"
+      ],
+      "source": {
+        "repo": "exercism/problem-specifications",
+        "commit": "9943fd751b684ba1a6a8673c3700a6e79c10a808",
+        "path": "exercises/difference-of-squares/canonical-data.json",
+        "url": "https://github.com/exercism/problem-specifications/blob/9943fd751b684ba1a6a8673c3700a6e79c10a808/exercises/difference-of-squares/canonical-data.json",
+        "license": "MIT",
+        "author": "exercism",
+        "adaptation": "OfferPilot 中文改编；输入输出适配及自评要点由项目整理",
+        "reviewedAt": "2026-10-08",
+        "canonicalSha256": "d097c48a4783565372af2a6c67c84ef86f5494d13393e6fd7f42f569f099f40a",
+        "testAdaptation": "按题目属性选择canonical用例，异常映射为题面指定的error或-1；运行仅公开示例，正式提交最多12个代表用例。"
+      },
+      "language": "java",
+      "starter": "import java.io.*;\nimport java.util.*;\n\npublic class Main {\n    public static void main(String[] args) throws Exception {\n        // 根据题面读取标准输入，输出结果\n    }\n}\n",
+      "examples": [
+        {
+          "input": "1\n",
+          "expected": "0",
+          "uuid": "44f72ae6-31a7-437f-858d-2c0837adabb6",
+          "public": "true"
+        },
+        {
+          "input": "5\n",
+          "expected": "170",
+          "uuid": "005cb2bf-a0c8-46f3-ae25-924029f8b00b",
+          "public": "true"
+        }
+      ],
+      "tests": [
+        {
+          "input": "1\n",
+          "expected": "0",
+          "uuid": "44f72ae6-31a7-437f-858d-2c0837adabb6",
+          "public": "true"
+        },
+        {
+          "input": "5\n",
+          "expected": "170",
+          "uuid": "005cb2bf-a0c8-46f3-ae25-924029f8b00b",
+          "public": "true"
+        },
+        {
+          "input": "100\n",
+          "expected": "25164150",
+          "uuid": "b1bf19de-9a16-41c0-a62b-1f02ecc0b036",
+          "public": "false"
+        }
+      ],
+      "verificationTests": [
+        {
+          "input": "1\n",
+          "expected": "0",
+          "uuid": "44f72ae6-31a7-437f-858d-2c0837adabb6",
+          "public": "true"
+        },
+        {
+          "input": "5\n",
+          "expected": "170",
+          "uuid": "005cb2bf-a0c8-46f3-ae25-924029f8b00b",
+          "public": "true"
+        },
+        {
+          "input": "100\n",
+          "expected": "25164150",
+          "uuid": "b1bf19de-9a16-41c0-a62b-1f02ecc0b036",
+          "public": "false"
+        }
+      ],
+      "referenceCode": "import java.io.*;import java.util.*;public class Main {public static void main(String[] args)throws Exception{BufferedReader r=new BufferedReader(new InputStreamReader(System.in,java.nio.charset.StandardCharsets.UTF_8));long n=Long.parseLong(r.readLine()),s=n*(n+1)/2;System.out.println(s*s-n*(n+1)*(2*n+1)/6);}}"
+    },
+    {
+      "canonicalId": "exercism:grains",
+      "type": "CODING",
+      "title": "棋盘上的麦粒",
+      "content": "读取格子编号1–64，第一格1粒，每格翻倍，输出该格麦粒数；超出范围输出error。使用大整数避免溢出。\n请使用 Java 17，标准输出仅包含答案。",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA",
+        "FE-WEB",
+        "FS-JAVA",
+        "FS-NODE"
+      ],
+      "topics": [
+        "编程与算法",
+        "Java核心"
+      ],
+      "tags": [
+        "数学"
+      ],
+      "source": {
+        "repo": "exercism/problem-specifications",
+        "commit": "9943fd751b684ba1a6a8673c3700a6e79c10a808",
+        "path": "exercises/grains/canonical-data.json",
+        "url": "https://github.com/exercism/problem-specifications/blob/9943fd751b684ba1a6a8673c3700a6e79c10a808/exercises/grains/canonical-data.json",
+        "license": "MIT",
+        "author": "exercism",
+        "adaptation": "OfferPilot 中文改编；输入输出适配及自评要点由项目整理",
+        "reviewedAt": "2026-10-08",
+        "canonicalSha256": "b5c2c1a38ed4527681f0f4dcc09b91fe26f87162188146d919fb478f23d3e473",
+        "testAdaptation": "按题目属性选择canonical用例，异常映射为题面指定的error或-1；运行仅公开示例，正式提交最多12个代表用例。"
+      },
+      "language": "java",
+      "starter": "import java.io.*;\nimport java.util.*;\n\npublic class Main {\n    public static void main(String[] args) throws Exception {\n        // 根据题面读取标准输入，输出结果\n    }\n}\n",
+      "examples": [
+        {
+          "input": "1\n",
+          "expected": "1",
+          "uuid": "9fbde8de-36b2-49de-baf2-cd42d6f28405",
+          "public": "true"
+        },
+        {
+          "input": "2\n",
+          "expected": "2",
+          "uuid": "ee1f30c2-01d8-4298-b25d-c677331b5e6d",
+          "public": "true"
+        }
+      ],
+      "tests": [
+        {
+          "input": "1\n",
+          "expected": "1",
+          "uuid": "9fbde8de-36b2-49de-baf2-cd42d6f28405",
+          "public": "true"
+        },
+        {
+          "input": "2\n",
+          "expected": "2",
+          "uuid": "ee1f30c2-01d8-4298-b25d-c677331b5e6d",
+          "public": "true"
+        },
+        {
+          "input": "3\n",
+          "expected": "4",
+          "uuid": "10f45584-2fc3-4875-8ec6-666065d1163b",
+          "public": "false"
+        },
+        {
+          "input": "4\n",
+          "expected": "8",
+          "uuid": "a7cbe01b-36f4-4601-b053-c5f6ae055170",
+          "public": "false"
+        },
+        {
+          "input": "16\n",
+          "expected": "32768",
+          "uuid": "c50acc89-8535-44e4-918f-b848ad2817d4",
+          "public": "false"
+        },
+        {
+          "input": "32\n",
+          "expected": "2147483648",
+          "uuid": "acd81b46-c2ad-4951-b848-80d15ed5a04f",
+          "public": "false"
+        },
+        {
+          "input": "64\n",
+          "expected": "9223372036854775808",
+          "uuid": "c73b470a-5efb-4d53-9ac6-c5f6487f227b",
+          "public": "false"
+        },
+        {
+          "input": "0\n",
+          "expected": "error",
+          "uuid": "1d47d832-3e85-4974-9466-5bd35af484e3",
+          "public": "false"
+        },
+        {
+          "input": "-1\n",
+          "expected": "error",
+          "uuid": "61974483-eeb2-465e-be54-ca5dde366453",
+          "public": "false"
+        },
+        {
+          "input": "65\n",
+          "expected": "error",
+          "uuid": "a95e4374-f32c-45a7-a10d-ffec475c012f",
+          "public": "false"
+        }
+      ],
+      "verificationTests": [
+        {
+          "input": "1\n",
+          "expected": "1",
+          "uuid": "9fbde8de-36b2-49de-baf2-cd42d6f28405",
+          "public": "true"
+        },
+        {
+          "input": "2\n",
+          "expected": "2",
+          "uuid": "ee1f30c2-01d8-4298-b25d-c677331b5e6d",
+          "public": "true"
+        },
+        {
+          "input": "3\n",
+          "expected": "4",
+          "uuid": "10f45584-2fc3-4875-8ec6-666065d1163b",
+          "public": "false"
+        },
+        {
+          "input": "4\n",
+          "expected": "8",
+          "uuid": "a7cbe01b-36f4-4601-b053-c5f6ae055170",
+          "public": "false"
+        },
+        {
+          "input": "16\n",
+          "expected": "32768",
+          "uuid": "c50acc89-8535-44e4-918f-b848ad2817d4",
+          "public": "false"
+        },
+        {
+          "input": "32\n",
+          "expected": "2147483648",
+          "uuid": "acd81b46-c2ad-4951-b848-80d15ed5a04f",
+          "public": "false"
+        },
+        {
+          "input": "64\n",
+          "expected": "9223372036854775808",
+          "uuid": "c73b470a-5efb-4d53-9ac6-c5f6487f227b",
+          "public": "false"
+        },
+        {
+          "input": "0\n",
+          "expected": "error",
+          "uuid": "1d47d832-3e85-4974-9466-5bd35af484e3",
+          "public": "false"
+        },
+        {
+          "input": "-1\n",
+          "expected": "error",
+          "uuid": "61974483-eeb2-465e-be54-ca5dde366453",
+          "public": "false"
+        },
+        {
+          "input": "65\n",
+          "expected": "error",
+          "uuid": "a95e4374-f32c-45a7-a10d-ffec475c012f",
+          "public": "false"
+        }
+      ],
+      "referenceCode": "import java.io.*;import java.util.*;public class Main {public static void main(String[] args)throws Exception{BufferedReader r=new BufferedReader(new InputStreamReader(System.in,java.nio.charset.StandardCharsets.UTF_8));int n=Integer.parseInt(r.readLine());System.out.println(n<1||n>64?\"error\":java.math.BigInteger.ONE.shiftLeft(n-1));}}"
+    },
+    {
+      "canonicalId": "exercism:armstrong-numbers",
+      "type": "CODING",
+      "title": "阿姆斯特朗数",
+      "content": "读取非负整数n（最多40位）。若各位数字的位数次幂之和等于n，输出true，否则false。\n请使用 Java 17，标准输出仅包含答案。",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA",
+        "FE-WEB",
+        "FS-JAVA",
+        "FS-NODE"
+      ],
+      "topics": [
+        "编程与算法",
+        "Java核心"
+      ],
+      "tags": [
+        "数学"
+      ],
+      "source": {
+        "repo": "exercism/problem-specifications",
+        "commit": "9943fd751b684ba1a6a8673c3700a6e79c10a808",
+        "path": "exercises/armstrong-numbers/canonical-data.json",
+        "url": "https://github.com/exercism/problem-specifications/blob/9943fd751b684ba1a6a8673c3700a6e79c10a808/exercises/armstrong-numbers/canonical-data.json",
+        "license": "MIT",
+        "author": "exercism",
+        "adaptation": "OfferPilot 中文改编；输入输出适配及自评要点由项目整理",
+        "reviewedAt": "2026-10-08",
+        "canonicalSha256": "e8567a19cfaa0cf711fa2a1b2d4ec92b9fcdfddf42d89b969ce32f99fcc7a1fe",
+        "testAdaptation": "按题目属性选择canonical用例，异常映射为题面指定的error或-1；运行仅公开示例，正式提交最多12个代表用例。"
+      },
+      "language": "java",
+      "starter": "import java.io.*;\nimport java.util.*;\n\npublic class Main {\n    public static void main(String[] args) throws Exception {\n        // 根据题面读取标准输入，输出结果\n    }\n}\n",
+      "examples": [
+        {
+          "input": "0\n",
+          "expected": "true",
+          "uuid": "c1ed103c-258d-45b2-be73-d8c6d9580c7b",
+          "public": "true"
+        },
+        {
+          "input": "5\n",
+          "expected": "true",
+          "uuid": "579e8f03-9659-4b85-a1a2-d64350f6b17a",
+          "public": "true"
+        }
+      ],
+      "tests": [
+        {
+          "input": "0\n",
+          "expected": "true",
+          "uuid": "c1ed103c-258d-45b2-be73-d8c6d9580c7b",
+          "public": "true"
+        },
+        {
+          "input": "5\n",
+          "expected": "true",
+          "uuid": "579e8f03-9659-4b85-a1a2-d64350f6b17a",
+          "public": "true"
+        },
+        {
+          "input": "10\n",
+          "expected": "false",
+          "uuid": "2d6db9dc-5bf8-4976-a90b-b2c2b9feba60",
+          "public": "false"
+        },
+        {
+          "input": "153\n",
+          "expected": "true",
+          "uuid": "509c087f-e327-4113-a7d2-26a4e9d18283",
+          "public": "false"
+        },
+        {
+          "input": "100\n",
+          "expected": "false",
+          "uuid": "7154547d-c2ce-468d-b214-4cb953b870cf",
+          "public": "false"
+        },
+        {
+          "input": "9474\n",
+          "expected": "true",
+          "uuid": "6bac5b7b-42e9-4ecb-a8b0-4832229aa103",
+          "public": "false"
+        },
+        {
+          "input": "9475\n",
+          "expected": "false",
+          "uuid": "eed4b331-af80-45b5-a80b-19c9ea444b2e",
+          "public": "false"
+        },
+        {
+          "input": "9926315\n",
+          "expected": "true",
+          "uuid": "f971ced7-8d68-4758-aea1-d4194900b864",
+          "public": "false"
+        },
+        {
+          "input": "9926314\n",
+          "expected": "false",
+          "uuid": "7ee45d52-5d35-4fbd-b6f1-5c8cd8a67f18",
+          "public": "false"
+        },
+        {
+          "input": "186709961001538790100634132976990\n",
+          "expected": "true",
+          "uuid": "5ee2fdf8-334e-4a46-bb8d-e5c19c02c148",
+          "public": "false"
+        },
+        {
+          "input": "115132219018763992565095597973971522401\n",
+          "expected": "true",
+          "uuid": "12ffbf10-307a-434e-b4ad-c925680e1dd4",
+          "public": "false"
+        }
+      ],
+      "verificationTests": [
+        {
+          "input": "0\n",
+          "expected": "true",
+          "uuid": "c1ed103c-258d-45b2-be73-d8c6d9580c7b",
+          "public": "true"
+        },
+        {
+          "input": "5\n",
+          "expected": "true",
+          "uuid": "579e8f03-9659-4b85-a1a2-d64350f6b17a",
+          "public": "true"
+        },
+        {
+          "input": "10\n",
+          "expected": "false",
+          "uuid": "2d6db9dc-5bf8-4976-a90b-b2c2b9feba60",
+          "public": "false"
+        },
+        {
+          "input": "153\n",
+          "expected": "true",
+          "uuid": "509c087f-e327-4113-a7d2-26a4e9d18283",
+          "public": "false"
+        },
+        {
+          "input": "100\n",
+          "expected": "false",
+          "uuid": "7154547d-c2ce-468d-b214-4cb953b870cf",
+          "public": "false"
+        },
+        {
+          "input": "9474\n",
+          "expected": "true",
+          "uuid": "6bac5b7b-42e9-4ecb-a8b0-4832229aa103",
+          "public": "false"
+        },
+        {
+          "input": "9475\n",
+          "expected": "false",
+          "uuid": "eed4b331-af80-45b5-a80b-19c9ea444b2e",
+          "public": "false"
+        },
+        {
+          "input": "9926315\n",
+          "expected": "true",
+          "uuid": "f971ced7-8d68-4758-aea1-d4194900b864",
+          "public": "false"
+        },
+        {
+          "input": "9926314\n",
+          "expected": "false",
+          "uuid": "7ee45d52-5d35-4fbd-b6f1-5c8cd8a67f18",
+          "public": "false"
+        },
+        {
+          "input": "186709961001538790100634132976990\n",
+          "expected": "true",
+          "uuid": "5ee2fdf8-334e-4a46-bb8d-e5c19c02c148",
+          "public": "false"
+        },
+        {
+          "input": "115132219018763992565095597973971522401\n",
+          "expected": "true",
+          "uuid": "12ffbf10-307a-434e-b4ad-c925680e1dd4",
+          "public": "false"
+        }
+      ],
+      "referenceCode": "import java.io.*;import java.util.*;public class Main {public static void main(String[] args)throws Exception{BufferedReader r=new BufferedReader(new InputStreamReader(System.in,java.nio.charset.StandardCharsets.UTF_8));String s=r.readLine();java.math.BigInteger n=new java.math.BigInteger(s),sum=java.math.BigInteger.ZERO;for(char c:s.toCharArray())sum=sum.add(java.math.BigInteger.valueOf(c-48).pow(s.length()));System.out.println(sum.equals(n));}}"
+    },
+    {
+      "canonicalId": "exercism:isogram",
+      "type": "CODING",
+      "title": "判断等值线单词",
+      "content": "读取一行英文短语，只检查英文字母是否重复，忽略大小写、空格与连字符。无重复输出true，否则false。长度不超过1000。\n请使用 Java 17，标准输出仅包含答案。",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA",
+        "FE-WEB",
+        "FS-JAVA",
+        "FS-NODE"
+      ],
+      "topics": [
+        "编程与算法",
+        "Java核心"
+      ],
+      "tags": [
+        "字符串"
+      ],
+      "source": {
+        "repo": "exercism/problem-specifications",
+        "commit": "9943fd751b684ba1a6a8673c3700a6e79c10a808",
+        "path": "exercises/isogram/canonical-data.json",
+        "url": "https://github.com/exercism/problem-specifications/blob/9943fd751b684ba1a6a8673c3700a6e79c10a808/exercises/isogram/canonical-data.json",
+        "license": "MIT",
+        "author": "exercism",
+        "adaptation": "OfferPilot 中文改编；输入输出适配及自评要点由项目整理",
+        "reviewedAt": "2026-10-08",
+        "canonicalSha256": "fdf198907ba98f5733607807eff65a582009201027fa51934c97131c08299626",
+        "testAdaptation": "按题目属性选择canonical用例，异常映射为题面指定的error或-1；运行仅公开示例，正式提交最多12个代表用例。"
+      },
+      "language": "java",
+      "starter": "import java.io.*;\nimport java.util.*;\n\npublic class Main {\n    public static void main(String[] args) throws Exception {\n        // 根据题面读取标准输入，输出结果\n    }\n}\n",
+      "examples": [
+        {
+          "input": "\n",
+          "expected": "true",
+          "uuid": "a0e97d2d-669e-47c7-8134-518a1e2c4555",
+          "public": "true"
+        },
+        {
+          "input": "isogram\n",
+          "expected": "true",
+          "uuid": "9a001b50-f194-4143-bc29-2af5ec1ef652",
+          "public": "true"
+        }
+      ],
+      "tests": [
+        {
+          "input": "\n",
+          "expected": "true",
+          "uuid": "a0e97d2d-669e-47c7-8134-518a1e2c4555",
+          "public": "true"
+        },
+        {
+          "input": "isogram\n",
+          "expected": "true",
+          "uuid": "9a001b50-f194-4143-bc29-2af5ec1ef652",
+          "public": "true"
+        },
+        {
+          "input": "eleven\n",
+          "expected": "false",
+          "uuid": "8ddb0ca3-276e-4f8b-89da-d95d5bae78a4",
+          "public": "false"
+        },
+        {
+          "input": "zzyzx\n",
+          "expected": "false",
+          "uuid": "6450b333-cbc2-4b24-a723-0b459b34fe18",
+          "public": "false"
+        },
+        {
+          "input": "subdermatoglyphic\n",
+          "expected": "true",
+          "uuid": "a15ff557-dd04-4764-99e7-02cc1a385863",
+          "public": "false"
+        },
+        {
+          "input": "alphAbet\n",
+          "expected": "false",
+          "uuid": "14a4f3c1-3b47-4695-b645-53d328298942",
+          "public": "false"
+        },
+        {
+          "input": "thumbscrew-japingly\n",
+          "expected": "true",
+          "uuid": "423b850c-7090-4a8a-b057-97f1cadd7c42",
+          "public": "false"
+        },
+        {
+          "input": "thumbscrew-jappingly\n",
+          "expected": "false",
+          "uuid": "93dbeaa0-3c5a-45c2-8b25-428b8eacd4f2",
+          "public": "false"
+        },
+        {
+          "input": "six-year-old\n",
+          "expected": "true",
+          "uuid": "36b30e5c-173f-49c6-a515-93a3e825553f",
+          "public": "false"
+        },
+        {
+          "input": "accentor\n",
+          "expected": "false",
+          "uuid": "5fc61048-d74e-48fd-bc34-abfc21552d4d",
+          "public": "false"
+        },
+        {
+          "input": "angola\n",
+          "expected": "false",
+          "uuid": "310ac53d-8932-47bc-bbb4-b2b94f25a83e",
+          "public": "false"
+        },
+        {
+          "input": "up-to-date\n",
+          "expected": "false",
+          "uuid": "0d0b8644-0a1e-4a31-a432-2b3ee270d847",
+          "public": "false"
+        }
+      ],
+      "verificationTests": [
+        {
+          "input": "\n",
+          "expected": "true",
+          "uuid": "a0e97d2d-669e-47c7-8134-518a1e2c4555",
+          "public": "true"
+        },
+        {
+          "input": "isogram\n",
+          "expected": "true",
+          "uuid": "9a001b50-f194-4143-bc29-2af5ec1ef652",
+          "public": "true"
+        },
+        {
+          "input": "eleven\n",
+          "expected": "false",
+          "uuid": "8ddb0ca3-276e-4f8b-89da-d95d5bae78a4",
+          "public": "false"
+        },
+        {
+          "input": "zzyzx\n",
+          "expected": "false",
+          "uuid": "6450b333-cbc2-4b24-a723-0b459b34fe18",
+          "public": "false"
+        },
+        {
+          "input": "subdermatoglyphic\n",
+          "expected": "true",
+          "uuid": "a15ff557-dd04-4764-99e7-02cc1a385863",
+          "public": "false"
+        },
+        {
+          "input": "Alphabet\n",
+          "expected": "false",
+          "uuid": "f1a7f6c7-a42f-4915-91d7-35b2ea11c92e",
+          "public": "false"
+        },
+        {
+          "input": "alphAbet\n",
+          "expected": "false",
+          "uuid": "14a4f3c1-3b47-4695-b645-53d328298942",
+          "public": "false"
+        },
+        {
+          "input": "thumbscrew-japingly\n",
+          "expected": "true",
+          "uuid": "423b850c-7090-4a8a-b057-97f1cadd7c42",
+          "public": "false"
+        },
+        {
+          "input": "thumbscrew-jappingly\n",
+          "expected": "false",
+          "uuid": "93dbeaa0-3c5a-45c2-8b25-428b8eacd4f2",
+          "public": "false"
+        },
+        {
+          "input": "six-year-old\n",
+          "expected": "true",
+          "uuid": "36b30e5c-173f-49c6-a515-93a3e825553f",
+          "public": "false"
+        },
+        {
+          "input": "Emily Jung Schwartzkopf\n",
+          "expected": "true",
+          "uuid": "cdabafa0-c9f4-4c1f-b142-689c6ee17d93",
+          "public": "false"
+        },
+        {
+          "input": "accentor\n",
+          "expected": "false",
+          "uuid": "5fc61048-d74e-48fd-bc34-abfc21552d4d",
+          "public": "false"
+        },
+        {
+          "input": "angola\n",
+          "expected": "false",
+          "uuid": "310ac53d-8932-47bc-bbb4-b2b94f25a83e",
+          "public": "false"
+        },
+        {
+          "input": "up-to-date\n",
+          "expected": "false",
+          "uuid": "0d0b8644-0a1e-4a31-a432-2b3ee270d847",
+          "public": "false"
+        }
+      ],
+      "referenceCode": "import java.io.*;import java.util.*;public class Main {public static void main(String[] args)throws Exception{BufferedReader r=new BufferedReader(new InputStreamReader(System.in,java.nio.charset.StandardCharsets.UTF_8));String s=r.readLine().toLowerCase(Locale.ROOT);Set<Character> a=new HashSet<>();boolean ok=true;for(char c:s.toCharArray())if(c>=97&&c<=122&&!a.add(c))ok=false;System.out.println(ok);}}"
+    },
+    {
+      "canonicalId": "exercism:pangram",
+      "type": "CODING",
+      "title": "判断全字母句",
+      "content": "读取一行文本，判断是否包含全部26个英文字母，忽略大小写和非字母字符。输出true或false。长度不超过1000。\n请使用 Java 17，标准输出仅包含答案。",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA",
+        "FE-WEB",
+        "FS-JAVA",
+        "FS-NODE"
+      ],
+      "topics": [
+        "编程与算法",
+        "Java核心"
+      ],
+      "tags": [
+        "字符串"
+      ],
+      "source": {
+        "repo": "exercism/problem-specifications",
+        "commit": "9943fd751b684ba1a6a8673c3700a6e79c10a808",
+        "path": "exercises/pangram/canonical-data.json",
+        "url": "https://github.com/exercism/problem-specifications/blob/9943fd751b684ba1a6a8673c3700a6e79c10a808/exercises/pangram/canonical-data.json",
+        "license": "MIT",
+        "author": "exercism",
+        "adaptation": "OfferPilot 中文改编；输入输出适配及自评要点由项目整理",
+        "reviewedAt": "2026-10-08",
+        "canonicalSha256": "75f7356fcaa3f3675810795f12a17945dacb33ad7ef612fa802d46480589d924",
+        "testAdaptation": "按题目属性选择canonical用例，异常映射为题面指定的error或-1；运行仅公开示例，正式提交最多12个代表用例。"
+      },
+      "language": "java",
+      "starter": "import java.io.*;\nimport java.util.*;\n\npublic class Main {\n    public static void main(String[] args) throws Exception {\n        // 根据题面读取标准输入，输出结果\n    }\n}\n",
+      "examples": [
+        {
+          "input": "\n",
+          "expected": "false",
+          "uuid": "64f61791-508e-4f5c-83ab-05de042b0149",
+          "public": "true"
+        },
+        {
+          "input": "abcdefghijklmnopqrstuvwxyz\n",
+          "expected": "true",
+          "uuid": "74858f80-4a4d-478b-8a5e-c6477e4e4e84",
+          "public": "true"
+        }
+      ],
+      "tests": [
+        {
+          "input": "\n",
+          "expected": "false",
+          "uuid": "64f61791-508e-4f5c-83ab-05de042b0149",
+          "public": "true"
+        },
+        {
+          "input": "abcdefghijklmnopqrstuvwxyz\n",
+          "expected": "true",
+          "uuid": "74858f80-4a4d-478b-8a5e-c6477e4e4e84",
+          "public": "true"
+        },
+        {
+          "input": "the quick brown fox jumps over the lazy dog\n",
+          "expected": "true",
+          "uuid": "61288860-35ca-4abe-ba08-f5df76ecbdcd",
+          "public": "false"
+        },
+        {
+          "input": "a quick movement of the enemy will jeopardize five gunboats\n",
+          "expected": "false",
+          "uuid": "6564267d-8ac5-4d29-baf2-e7d2e304a743",
+          "public": "false"
+        },
+        {
+          "input": "five boxing wizards jump quickly at it\n",
+          "expected": "false",
+          "uuid": "c79af1be-d715-4cdb-a5f2-b2fa3e7e0de0",
+          "public": "false"
+        },
+        {
+          "input": "the_quick_brown_fox_jumps_over_the_lazy_dog\n",
+          "expected": "true",
+          "uuid": "d835ec38-bc8f-48e4-9e36-eb232427b1df",
+          "public": "false"
+        },
+        {
+          "input": "the 1 quick brown fox jumps over the 2 lazy dogs\n",
+          "expected": "true",
+          "uuid": "8cc1e080-a178-4494-b4b3-06982c9be2a8",
+          "public": "false"
+        },
+        {
+          "input": "7h3 qu1ck brown fox jumps ov3r 7h3 lazy dog\n",
+          "expected": "false",
+          "uuid": "bed96b1c-ff95-45b8-9731-fdbdcb6ede9a",
+          "public": "false"
+        },
+        {
+          "input": "\"Five quacking Zephyrs jolt my wax bed.\"\n",
+          "expected": "true",
+          "uuid": "938bd5d8-ade5-40e2-a2d9-55a338a01030",
+          "public": "false"
+        },
+        {
+          "input": "the quick brown fox jumps over with lazy FX\n",
+          "expected": "false",
+          "uuid": "2577bf54-83c8-402d-a64b-a2c0f7bb213a",
+          "public": "false"
+        },
+        {
+          "input": "abcdefghijklm ABCDEFGHIJKLM\n",
+          "expected": "false",
+          "uuid": "7138e389-83e4-4c6e-8413-1e40a0076951",
+          "public": "false"
+        }
+      ],
+      "verificationTests": [
+        {
+          "input": "\n",
+          "expected": "false",
+          "uuid": "64f61791-508e-4f5c-83ab-05de042b0149",
+          "public": "true"
+        },
+        {
+          "input": "abcdefghijklmnopqrstuvwxyz\n",
+          "expected": "true",
+          "uuid": "74858f80-4a4d-478b-8a5e-c6477e4e4e84",
+          "public": "true"
+        },
+        {
+          "input": "the quick brown fox jumps over the lazy dog\n",
+          "expected": "true",
+          "uuid": "61288860-35ca-4abe-ba08-f5df76ecbdcd",
+          "public": "false"
+        },
+        {
+          "input": "a quick movement of the enemy will jeopardize five gunboats\n",
+          "expected": "false",
+          "uuid": "6564267d-8ac5-4d29-baf2-e7d2e304a743",
+          "public": "false"
+        },
+        {
+          "input": "five boxing wizards jump quickly at it\n",
+          "expected": "false",
+          "uuid": "c79af1be-d715-4cdb-a5f2-b2fa3e7e0de0",
+          "public": "false"
+        },
+        {
+          "input": "the_quick_brown_fox_jumps_over_the_lazy_dog\n",
+          "expected": "true",
+          "uuid": "d835ec38-bc8f-48e4-9e36-eb232427b1df",
+          "public": "false"
+        },
+        {
+          "input": "the 1 quick brown fox jumps over the 2 lazy dogs\n",
+          "expected": "true",
+          "uuid": "8cc1e080-a178-4494-b4b3-06982c9be2a8",
+          "public": "false"
+        },
+        {
+          "input": "7h3 qu1ck brown fox jumps ov3r 7h3 lazy dog\n",
+          "expected": "false",
+          "uuid": "bed96b1c-ff95-45b8-9731-fdbdcb6ede9a",
+          "public": "false"
+        },
+        {
+          "input": "\"Five quacking Zephyrs jolt my wax bed.\"\n",
+          "expected": "true",
+          "uuid": "938bd5d8-ade5-40e2-a2d9-55a338a01030",
+          "public": "false"
+        },
+        {
+          "input": "the quick brown fox jumps over with lazy FX\n",
+          "expected": "false",
+          "uuid": "2577bf54-83c8-402d-a64b-a2c0f7bb213a",
+          "public": "false"
+        },
+        {
+          "input": "abcdefghijklm ABCDEFGHIJKLM\n",
+          "expected": "false",
+          "uuid": "7138e389-83e4-4c6e-8413-1e40a0076951",
+          "public": "false"
+        }
+      ],
+      "referenceCode": "import java.io.*;import java.util.*;public class Main {public static void main(String[] args)throws Exception{BufferedReader r=new BufferedReader(new InputStreamReader(System.in,java.nio.charset.StandardCharsets.UTF_8));Set<Integer> s=new HashSet<>();r.readLine().toLowerCase(Locale.ROOT).chars().filter(c->c>=97&&c<=122).forEach(s::add);System.out.println(s.size()==26);}}"
+    },
+    {
+      "canonicalId": "exercism:reverse-string",
+      "type": "CODING",
+      "title": "按字符反转文本",
+      "content": "读取一行UTF-8文本（可为空，不超过1000个Unicode码点），按Unicode码点逆序输出。本题不要求将组合字符或字素簇作为整体。\n请使用 Java 17，标准输出仅包含答案。",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA",
+        "FE-WEB",
+        "FS-JAVA",
+        "FS-NODE"
+      ],
+      "topics": [
+        "编程与算法",
+        "Java核心"
+      ],
+      "tags": [
+        "字符串"
+      ],
+      "source": {
+        "repo": "exercism/problem-specifications",
+        "commit": "9943fd751b684ba1a6a8673c3700a6e79c10a808",
+        "path": "exercises/reverse-string/canonical-data.json",
+        "url": "https://github.com/exercism/problem-specifications/blob/9943fd751b684ba1a6a8673c3700a6e79c10a808/exercises/reverse-string/canonical-data.json",
+        "license": "MIT",
+        "author": "exercism",
+        "adaptation": "OfferPilot 中文改编；输入输出适配及自评要点由项目整理",
+        "reviewedAt": "2026-10-08",
+        "canonicalSha256": "7127d2b0ba43fb375b4e840e7d564ba3fec36ba67f0a07709e580f1510fcbba0",
+        "testAdaptation": "按题目属性选择canonical用例，异常映射为题面指定的error或-1；运行仅公开示例，正式提交最多12个代表用例。本题采用Unicode码点反转，排除上游两个可选字素簇用例。"
+      },
+      "language": "java",
+      "starter": "import java.io.*;\nimport java.util.*;\n\npublic class Main {\n    public static void main(String[] args) throws Exception {\n        // 根据题面读取标准输入，输出结果\n    }\n}\n",
+      "examples": [
+        {
+          "input": "\n",
+          "expected": "",
+          "uuid": "c3b7d806-dced-49ee-8543-933fd1719b1c",
+          "public": "true"
+        },
+        {
+          "input": "robot\n",
+          "expected": "tobor",
+          "uuid": "01ebf55b-bebb-414e-9dec-06f7bb0bee3c",
+          "public": "true"
+        }
+      ],
+      "tests": [
+        {
+          "input": "\n",
+          "expected": "",
+          "uuid": "c3b7d806-dced-49ee-8543-933fd1719b1c",
+          "public": "true"
+        },
+        {
+          "input": "robot\n",
+          "expected": "tobor",
+          "uuid": "01ebf55b-bebb-414e-9dec-06f7bb0bee3c",
+          "public": "true"
+        },
+        {
+          "input": "Ramen\n",
+          "expected": "nemaR",
+          "uuid": "0f7c07e4-efd1-4aaa-a07a-90b49ce0b746",
+          "public": "false"
+        },
+        {
+          "input": "I'm hungry!\n",
+          "expected": "!yrgnuh m'I",
+          "uuid": "71854b9c-f200-4469-9f5c-1e8e5eff5614",
+          "public": "false"
+        },
+        {
+          "input": "racecar\n",
+          "expected": "racecar",
+          "uuid": "1f8ed2f3-56f3-459b-8f3e-6d8d654a1f6c",
+          "public": "false"
+        },
+        {
+          "input": "drawer\n",
+          "expected": "reward",
+          "uuid": "b9e7dec1-c6df-40bd-9fa3-cd7ded010c4c",
+          "public": "false"
+        },
+        {
+          "input": "子猫\n",
+          "expected": "猫子",
+          "uuid": "1bed0f8a-13b0-4bd3-9d59-3d0593326fa2",
+          "public": "false"
+        }
+      ],
+      "verificationTests": [
+        {
+          "input": "\n",
+          "expected": "",
+          "uuid": "c3b7d806-dced-49ee-8543-933fd1719b1c",
+          "public": "true"
+        },
+        {
+          "input": "robot\n",
+          "expected": "tobor",
+          "uuid": "01ebf55b-bebb-414e-9dec-06f7bb0bee3c",
+          "public": "true"
+        },
+        {
+          "input": "Ramen\n",
+          "expected": "nemaR",
+          "uuid": "0f7c07e4-efd1-4aaa-a07a-90b49ce0b746",
+          "public": "false"
+        },
+        {
+          "input": "I'm hungry!\n",
+          "expected": "!yrgnuh m'I",
+          "uuid": "71854b9c-f200-4469-9f5c-1e8e5eff5614",
+          "public": "false"
+        },
+        {
+          "input": "racecar\n",
+          "expected": "racecar",
+          "uuid": "1f8ed2f3-56f3-459b-8f3e-6d8d654a1f6c",
+          "public": "false"
+        },
+        {
+          "input": "drawer\n",
+          "expected": "reward",
+          "uuid": "b9e7dec1-c6df-40bd-9fa3-cd7ded010c4c",
+          "public": "false"
+        },
+        {
+          "input": "子猫\n",
+          "expected": "猫子",
+          "uuid": "1bed0f8a-13b0-4bd3-9d59-3d0593326fa2",
+          "public": "false"
+        }
+      ],
+      "referenceCode": "import java.io.*;import java.util.*;public class Main {public static void main(String[] args)throws Exception{BufferedReader r=new BufferedReader(new InputStreamReader(System.in,java.nio.charset.StandardCharsets.UTF_8));int[] a=r.readLine().codePoints().toArray();StringBuilder s=new StringBuilder();for(int i=a.length-1;i>=0;i--)s.appendCodePoint(a[i]);System.out.println(s);}}"
+    },
+    {
+      "canonicalId": "exercism:binary-search",
+      "type": "CODING",
+      "title": "二分查找",
+      "content": "第一行读取目标整数，第二行读取空格分隔的严格递增整数数组（可为空，最多1000项）。输出0起始下标，未找到输出-1。\n请使用 Java 17，标准输出仅包含答案。",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA",
+        "FE-WEB",
+        "FS-JAVA",
+        "FS-NODE"
+      ],
+      "topics": [
+        "编程与算法",
+        "Java核心"
+      ],
+      "tags": [
+        "查找"
+      ],
+      "source": {
+        "repo": "exercism/problem-specifications",
+        "commit": "9943fd751b684ba1a6a8673c3700a6e79c10a808",
+        "path": "exercises/binary-search/canonical-data.json",
+        "url": "https://github.com/exercism/problem-specifications/blob/9943fd751b684ba1a6a8673c3700a6e79c10a808/exercises/binary-search/canonical-data.json",
+        "license": "MIT",
+        "author": "exercism",
+        "adaptation": "OfferPilot 中文改编；输入输出适配及自评要点由项目整理",
+        "reviewedAt": "2026-10-08",
+        "canonicalSha256": "d224e68b43512d8d394bb5f9e2f209ef6008e9a0abc59ee61a329c4ab2a7f73d",
+        "testAdaptation": "按题目属性选择canonical用例，异常映射为题面指定的error或-1；运行仅公开示例，正式提交最多12个代表用例。"
+      },
+      "language": "java",
+      "starter": "import java.io.*;\nimport java.util.*;\n\npublic class Main {\n    public static void main(String[] args) throws Exception {\n        // 根据题面读取标准输入，输出结果\n    }\n}\n",
+      "examples": [
+        {
+          "input": "6\n6\n",
+          "expected": "0",
+          "uuid": "b55c24a9-a98d-4379-a08c-2adcf8ebeee8",
+          "public": "true"
+        },
+        {
+          "input": "6\n1 3 4 6 8 9 11\n",
+          "expected": "3",
+          "uuid": "73469346-b0a0-4011-89bf-989e443d503d",
+          "public": "true"
+        }
+      ],
+      "tests": [
+        {
+          "input": "6\n6\n",
+          "expected": "0",
+          "uuid": "b55c24a9-a98d-4379-a08c-2adcf8ebeee8",
+          "public": "true"
+        },
+        {
+          "input": "6\n1 3 4 6 8 9 11\n",
+          "expected": "3",
+          "uuid": "73469346-b0a0-4011-89bf-989e443d503d",
+          "public": "true"
+        },
+        {
+          "input": "1\n1 3 4 6 8 9 11\n",
+          "expected": "0",
+          "uuid": "327bc482-ab85-424e-a724-fb4658e66ddb",
+          "public": "false"
+        },
+        {
+          "input": "11\n1 3 4 6 8 9 11\n",
+          "expected": "6",
+          "uuid": "f9f94b16-fe5e-472c-85ea-c513804c7d59",
+          "public": "false"
+        },
+        {
+          "input": "144\n1 3 5 8 13 21 34 55 89 144 233 377 634\n",
+          "expected": "9",
+          "uuid": "f0068905-26e3-4342-856d-ad153cadb338",
+          "public": "false"
+        },
+        {
+          "input": "21\n1 3 5 8 13 21 34 55 89 144 233 377\n",
+          "expected": "5",
+          "uuid": "fc316b12-c8b3-4f5e-9e89-532b3389de8c",
+          "public": "false"
+        },
+        {
+          "input": "7\n1 3 4 6 8 9 11\n",
+          "expected": "-1",
+          "uuid": "da7db20a-354f-49f7-a6a1-650a54998aa6",
+          "public": "false"
+        },
+        {
+          "input": "0\n1 3 4 6 8 9 11\n",
+          "expected": "-1",
+          "uuid": "95d869ff-3daf-4c79-b622-6e805c675f97",
+          "public": "false"
+        },
+        {
+          "input": "13\n1 3 4 6 8 9 11\n",
+          "expected": "-1",
+          "uuid": "8b24ef45-6e51-4a94-9eac-c2bf38fdb0ba",
+          "public": "false"
+        },
+        {
+          "input": "1\n\n",
+          "expected": "-1",
+          "uuid": "f439a0fa-cf42-4262-8ad1-64bf41ce566a",
+          "public": "false"
+        },
+        {
+          "input": "0\n1 2\n",
+          "expected": "-1",
+          "uuid": "2c353967-b56d-40b8-acff-ce43115eed64",
+          "public": "false"
+        }
+      ],
+      "verificationTests": [
+        {
+          "input": "6\n6\n",
+          "expected": "0",
+          "uuid": "b55c24a9-a98d-4379-a08c-2adcf8ebeee8",
+          "public": "true"
+        },
+        {
+          "input": "6\n1 3 4 6 8 9 11\n",
+          "expected": "3",
+          "uuid": "73469346-b0a0-4011-89bf-989e443d503d",
+          "public": "true"
+        },
+        {
+          "input": "1\n1 3 4 6 8 9 11\n",
+          "expected": "0",
+          "uuid": "327bc482-ab85-424e-a724-fb4658e66ddb",
+          "public": "false"
+        },
+        {
+          "input": "11\n1 3 4 6 8 9 11\n",
+          "expected": "6",
+          "uuid": "f9f94b16-fe5e-472c-85ea-c513804c7d59",
+          "public": "false"
+        },
+        {
+          "input": "144\n1 3 5 8 13 21 34 55 89 144 233 377 634\n",
+          "expected": "9",
+          "uuid": "f0068905-26e3-4342-856d-ad153cadb338",
+          "public": "false"
+        },
+        {
+          "input": "21\n1 3 5 8 13 21 34 55 89 144 233 377\n",
+          "expected": "5",
+          "uuid": "fc316b12-c8b3-4f5e-9e89-532b3389de8c",
+          "public": "false"
+        },
+        {
+          "input": "7\n1 3 4 6 8 9 11\n",
+          "expected": "-1",
+          "uuid": "da7db20a-354f-49f7-a6a1-650a54998aa6",
+          "public": "false"
+        },
+        {
+          "input": "0\n1 3 4 6 8 9 11\n",
+          "expected": "-1",
+          "uuid": "95d869ff-3daf-4c79-b622-6e805c675f97",
+          "public": "false"
+        },
+        {
+          "input": "13\n1 3 4 6 8 9 11\n",
+          "expected": "-1",
+          "uuid": "8b24ef45-6e51-4a94-9eac-c2bf38fdb0ba",
+          "public": "false"
+        },
+        {
+          "input": "1\n\n",
+          "expected": "-1",
+          "uuid": "f439a0fa-cf42-4262-8ad1-64bf41ce566a",
+          "public": "false"
+        },
+        {
+          "input": "0\n1 2\n",
+          "expected": "-1",
+          "uuid": "2c353967-b56d-40b8-acff-ce43115eed64",
+          "public": "false"
+        }
+      ],
+      "referenceCode": "import java.io.*;import java.util.*;public class Main {public static void main(String[] args)throws Exception{BufferedReader r=new BufferedReader(new InputStreamReader(System.in,java.nio.charset.StandardCharsets.UTF_8));int t=Integer.parseInt(r.readLine());String s=r.readLine().trim();int[] a=s.isEmpty()?new int[0]:Arrays.stream(s.split(\"\\\\s+\")).mapToInt(Integer::parseInt).toArray();int i=Arrays.binarySearch(a,t);System.out.println(i<0?-1:i);}}"
+    },
+    {
+      "canonicalId": "exercism:gigasecond",
+      "type": "CODING",
+      "title": "十亿秒之后",
+      "content": "读取ISO本地日期或日期时间，如2011-04-25或2015-01-24T22:00:00。日期按00:00:00处理，增加1000000000秒，输出yyyy-MM-ddTHH:mm:ss。不涉及时区。\n请使用 Java 17，标准输出仅包含答案。",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA",
+        "FE-WEB",
+        "FS-JAVA",
+        "FS-NODE"
+      ],
+      "topics": [
+        "编程与算法",
+        "Java核心"
+      ],
+      "tags": [
+        "日期"
+      ],
+      "source": {
+        "repo": "exercism/problem-specifications",
+        "commit": "9943fd751b684ba1a6a8673c3700a6e79c10a808",
+        "path": "exercises/gigasecond/canonical-data.json",
+        "url": "https://github.com/exercism/problem-specifications/blob/9943fd751b684ba1a6a8673c3700a6e79c10a808/exercises/gigasecond/canonical-data.json",
+        "license": "MIT",
+        "author": "exercism",
+        "adaptation": "OfferPilot 中文改编；输入输出适配及自评要点由项目整理",
+        "reviewedAt": "2026-10-08",
+        "canonicalSha256": "7ebb939391527537162803154757aa676ed9062d68a011cef5f08a3e7f88076d",
+        "testAdaptation": "按题目属性选择canonical用例，异常映射为题面指定的error或-1；运行仅公开示例，正式提交最多12个代表用例。"
+      },
+      "language": "java",
+      "starter": "import java.io.*;\nimport java.util.*;\n\npublic class Main {\n    public static void main(String[] args) throws Exception {\n        // 根据题面读取标准输入，输出结果\n    }\n}\n",
+      "examples": [
+        {
+          "input": "2011-04-25\n",
+          "expected": "2043-01-01T01:46:40",
+          "uuid": "92fbe71c-ea52-4fac-bd77-be38023cacf7",
+          "public": "true"
+        },
+        {
+          "input": "1977-06-13\n",
+          "expected": "2009-02-19T01:46:40",
+          "uuid": "6d86dd16-6f7a-47be-9e58-bb9fb2ae1433",
+          "public": "true"
+        }
+      ],
+      "tests": [
+        {
+          "input": "2011-04-25\n",
+          "expected": "2043-01-01T01:46:40",
+          "uuid": "92fbe71c-ea52-4fac-bd77-be38023cacf7",
+          "public": "true"
+        },
+        {
+          "input": "1977-06-13\n",
+          "expected": "2009-02-19T01:46:40",
+          "uuid": "6d86dd16-6f7a-47be-9e58-bb9fb2ae1433",
+          "public": "true"
+        },
+        {
+          "input": "1959-07-19\n",
+          "expected": "1991-03-27T01:46:40",
+          "uuid": "77eb8502-2bca-4d92-89d9-7b39ace28dd5",
+          "public": "false"
+        },
+        {
+          "input": "2015-01-24T22:00:00\n",
+          "expected": "2046-10-02T23:46:40",
+          "uuid": "c9d89a7d-06f8-4e28-a305-64f1b2abc693",
+          "public": "false"
+        },
+        {
+          "input": "2015-01-24T23:59:59\n",
+          "expected": "2046-10-03T01:46:39",
+          "uuid": "09d4e30e-728a-4b52-9005-be44a58d9eba",
+          "public": "false"
+        }
+      ],
+      "verificationTests": [
+        {
+          "input": "2011-04-25\n",
+          "expected": "2043-01-01T01:46:40",
+          "uuid": "92fbe71c-ea52-4fac-bd77-be38023cacf7",
+          "public": "true"
+        },
+        {
+          "input": "1977-06-13\n",
+          "expected": "2009-02-19T01:46:40",
+          "uuid": "6d86dd16-6f7a-47be-9e58-bb9fb2ae1433",
+          "public": "true"
+        },
+        {
+          "input": "1959-07-19\n",
+          "expected": "1991-03-27T01:46:40",
+          "uuid": "77eb8502-2bca-4d92-89d9-7b39ace28dd5",
+          "public": "false"
+        },
+        {
+          "input": "2015-01-24T22:00:00\n",
+          "expected": "2046-10-02T23:46:40",
+          "uuid": "c9d89a7d-06f8-4e28-a305-64f1b2abc693",
+          "public": "false"
+        },
+        {
+          "input": "2015-01-24T23:59:59\n",
+          "expected": "2046-10-03T01:46:39",
+          "uuid": "09d4e30e-728a-4b52-9005-be44a58d9eba",
+          "public": "false"
+        }
+      ],
+      "referenceCode": "import java.io.*;import java.util.*;public class Main {public static void main(String[] args)throws Exception{BufferedReader r=new BufferedReader(new InputStreamReader(System.in,java.nio.charset.StandardCharsets.UTF_8));String s=r.readLine();var t=s.length()==10?java.time.LocalDate.parse(s).atStartOfDay():java.time.LocalDateTime.parse(s);System.out.println(t.plusSeconds(1000000000L).format(java.time.format.DateTimeFormatter.ofPattern(\"yyyy-MM-dd'T'HH:mm:ss\")));}}"
+    },
+    {
+      "canonicalId": "exercism:roman-numerals",
+      "type": "CODING",
+      "title": "整数转罗马数字",
+      "content": "读取整数1–3999，输出标准罗马数字。使用I/V/X/L/C/D/M和减法表示，如4为IV、9为IX。\n请使用 Java 17，标准输出仅包含答案。",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA",
+        "FE-WEB",
+        "FS-JAVA",
+        "FS-NODE"
+      ],
+      "topics": [
+        "编程与算法",
+        "Java核心"
+      ],
+      "tags": [
+        "字符串"
+      ],
+      "source": {
+        "repo": "exercism/problem-specifications",
+        "commit": "9943fd751b684ba1a6a8673c3700a6e79c10a808",
+        "path": "exercises/roman-numerals/canonical-data.json",
+        "url": "https://github.com/exercism/problem-specifications/blob/9943fd751b684ba1a6a8673c3700a6e79c10a808/exercises/roman-numerals/canonical-data.json",
+        "license": "MIT",
+        "author": "exercism",
+        "adaptation": "OfferPilot 中文改编；输入输出适配及自评要点由项目整理",
+        "reviewedAt": "2026-10-08",
+        "canonicalSha256": "c375f7c41c7ba353fcbeb8fa1f68e90cfce0d4cf4a444df5f74ceeff6bc22ef8",
+        "testAdaptation": "按题目属性选择canonical用例，异常映射为题面指定的error或-1；运行仅公开示例，正式提交最多12个代表用例。"
+      },
+      "language": "java",
+      "starter": "import java.io.*;\nimport java.util.*;\n\npublic class Main {\n    public static void main(String[] args) throws Exception {\n        // 根据题面读取标准输入，输出结果\n    }\n}\n",
+      "examples": [
+        {
+          "input": "1\n",
+          "expected": "I",
+          "uuid": "19828a3a-fbf7-4661-8ddd-cbaeee0e2178",
+          "public": "true"
+        },
+        {
+          "input": "2\n",
+          "expected": "II",
+          "uuid": "f088f064-2d35-4476-9a41-f576da3f7b03",
+          "public": "true"
+        }
+      ],
+      "tests": [
+        {
+          "input": "1\n",
+          "expected": "I",
+          "uuid": "19828a3a-fbf7-4661-8ddd-cbaeee0e2178",
+          "public": "true"
+        },
+        {
+          "input": "2\n",
+          "expected": "II",
+          "uuid": "f088f064-2d35-4476-9a41-f576da3f7b03",
+          "public": "true"
+        },
+        {
+          "input": "3\n",
+          "expected": "III",
+          "uuid": "b374a79c-3bea-43e6-8db8-1286f79c7106",
+          "public": "false"
+        },
+        {
+          "input": "6\n",
+          "expected": "VI",
+          "uuid": "20a2b47f-e57f-4797-a541-0b3825d7f249",
+          "public": "false"
+        },
+        {
+          "input": "16\n",
+          "expected": "XVI",
+          "uuid": "6d1d82d5-bf3e-48af-9139-87d7165ed509",
+          "public": "false"
+        },
+        {
+          "input": "49\n",
+          "expected": "XLIX",
+          "uuid": "607ead62-23d6-4c11-a396-ef821e2e5f75",
+          "public": "false"
+        },
+        {
+          "input": "93\n",
+          "expected": "XCIII",
+          "uuid": "46b46e5b-24da-4180-bfe2-2ef30b39d0d0",
+          "public": "false"
+        },
+        {
+          "input": "163\n",
+          "expected": "CLXIII",
+          "uuid": "267f0207-3c55-459a-b81d-67cec7a46ed9",
+          "public": "false"
+        },
+        {
+          "input": "575\n",
+          "expected": "DLXXV",
+          "uuid": "6b71841d-13b2-46b4-ba97-dec28133ea80",
+          "public": "false"
+        },
+        {
+          "input": "1024\n",
+          "expected": "MXXIV",
+          "uuid": "e6de6d24-f668-41c0-88d7-889c0254d173",
+          "public": "false"
+        },
+        {
+          "input": "3000\n",
+          "expected": "MMM",
+          "uuid": "bb550038-d4eb-4be2-a9ce-f21961ac3bc6",
+          "public": "false"
+        },
+        {
+          "input": "3999\n",
+          "expected": "MMMCMXCIX",
+          "uuid": "4e18e96b-5fbb-43df-a91b-9cb511fe0856",
+          "public": "false"
+        }
+      ],
+      "verificationTests": [
+        {
+          "input": "1\n",
+          "expected": "I",
+          "uuid": "19828a3a-fbf7-4661-8ddd-cbaeee0e2178",
+          "public": "true"
+        },
+        {
+          "input": "2\n",
+          "expected": "II",
+          "uuid": "f088f064-2d35-4476-9a41-f576da3f7b03",
+          "public": "true"
+        },
+        {
+          "input": "3\n",
+          "expected": "III",
+          "uuid": "b374a79c-3bea-43e6-8db8-1286f79c7106",
+          "public": "false"
+        },
+        {
+          "input": "4\n",
+          "expected": "IV",
+          "uuid": "05a0a1d4-a140-4db1-82e8-fcc21fdb49bb",
+          "public": "false"
+        },
+        {
+          "input": "5\n",
+          "expected": "V",
+          "uuid": "57c0f9ad-5024-46ab-975d-de18c430b290",
+          "public": "false"
+        },
+        {
+          "input": "6\n",
+          "expected": "VI",
+          "uuid": "20a2b47f-e57f-4797-a541-0b3825d7f249",
+          "public": "false"
+        },
+        {
+          "input": "9\n",
+          "expected": "IX",
+          "uuid": "ff3fb08c-4917-4aab-9f4e-d663491d083d",
+          "public": "false"
+        },
+        {
+          "input": "16\n",
+          "expected": "XVI",
+          "uuid": "6d1d82d5-bf3e-48af-9139-87d7165ed509",
+          "public": "false"
+        },
+        {
+          "input": "27\n",
+          "expected": "XXVII",
+          "uuid": "2bda64ca-7d28-4c56-b08d-16ce65716cf6",
+          "public": "false"
+        },
+        {
+          "input": "48\n",
+          "expected": "XLVIII",
+          "uuid": "a1f812ef-84da-4e02-b4f0-89c907d0962c",
+          "public": "false"
+        },
+        {
+          "input": "49\n",
+          "expected": "XLIX",
+          "uuid": "607ead62-23d6-4c11-a396-ef821e2e5f75",
+          "public": "false"
+        },
+        {
+          "input": "59\n",
+          "expected": "LIX",
+          "uuid": "d5b283d4-455d-4e68-aacf-add6c4b51915",
+          "public": "false"
+        },
+        {
+          "input": "66\n",
+          "expected": "LXVI",
+          "uuid": "4465ffd5-34dc-44f3-ada5-56f5007b6dad",
+          "public": "false"
+        },
+        {
+          "input": "93\n",
+          "expected": "XCIII",
+          "uuid": "46b46e5b-24da-4180-bfe2-2ef30b39d0d0",
+          "public": "false"
+        },
+        {
+          "input": "141\n",
+          "expected": "CXLI",
+          "uuid": "30494be1-9afb-4f84-9d71-db9df18b55e3",
+          "public": "false"
+        },
+        {
+          "input": "163\n",
+          "expected": "CLXIII",
+          "uuid": "267f0207-3c55-459a-b81d-67cec7a46ed9",
+          "public": "false"
+        },
+        {
+          "input": "166\n",
+          "expected": "CLXVI",
+          "uuid": "902ad132-0b4d-40e3-8597-ba5ed611dd8d",
+          "public": "false"
+        },
+        {
+          "input": "402\n",
+          "expected": "CDII",
+          "uuid": "cdb06885-4485-4d71-8bfb-c9d0f496b404",
+          "public": "false"
+        },
+        {
+          "input": "575\n",
+          "expected": "DLXXV",
+          "uuid": "6b71841d-13b2-46b4-ba97-dec28133ea80",
+          "public": "false"
+        },
+        {
+          "input": "666\n",
+          "expected": "DCLXVI",
+          "uuid": "dacb84b9-ea1c-4a61-acbb-ce6b36674906",
+          "public": "false"
+        },
+        {
+          "input": "911\n",
+          "expected": "CMXI",
+          "uuid": "432de891-7fd6-4748-a7f6-156082eeca2f",
+          "public": "false"
+        },
+        {
+          "input": "1024\n",
+          "expected": "MXXIV",
+          "uuid": "e6de6d24-f668-41c0-88d7-889c0254d173",
+          "public": "false"
+        },
+        {
+          "input": "1666\n",
+          "expected": "MDCLXVI",
+          "uuid": "efbe1d6a-9f98-4eb5-82bc-72753e3ac328",
+          "public": "false"
+        },
+        {
+          "input": "3000\n",
+          "expected": "MMM",
+          "uuid": "bb550038-d4eb-4be2-a9ce-f21961ac3bc6",
+          "public": "false"
+        },
+        {
+          "input": "3001\n",
+          "expected": "MMMI",
+          "uuid": "3bc4b41c-c2e6-49d9-9142-420691504336",
+          "public": "false"
+        },
+        {
+          "input": "3888\n",
+          "expected": "MMMDCCCLXXXVIII",
+          "uuid": "2f89cad7-73f6-4d1b-857b-0ef531f68b7e",
+          "public": "false"
+        },
+        {
+          "input": "3999\n",
+          "expected": "MMMCMXCIX",
+          "uuid": "4e18e96b-5fbb-43df-a91b-9cb511fe0856",
+          "public": "false"
+        }
+      ],
+      "referenceCode": "import java.io.*;import java.util.*;public class Main {public static void main(String[] args)throws Exception{BufferedReader r=new BufferedReader(new InputStreamReader(System.in,java.nio.charset.StandardCharsets.UTF_8));int n=Integer.parseInt(r.readLine());int[] v={1000,900,500,400,100,90,50,40,10,9,5,4,1};String[] z={\"M\",\"CM\",\"D\",\"CD\",\"C\",\"XC\",\"L\",\"XL\",\"X\",\"IX\",\"V\",\"IV\",\"I\"};StringBuilder s=new StringBuilder();for(int i=0;i<v.length;i++)while(n>=v[i]){s.append(z[i]);n-=v[i];}System.out.println(s);}}"
+    },
+    {
+      "canonicalId": "exercism:rna-transcription",
+      "type": "CODING",
+      "title": "DNA 转录",
+      "content": "读取一行DNA序列（可为空，长度不超过1000）。按G→C、C→G、T→A、A→U转换为RNA并输出；只接受A/C/G/T。\n请使用 Java 17，标准输出仅包含答案。",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA",
+        "FE-WEB",
+        "FS-JAVA",
+        "FS-NODE"
+      ],
+      "topics": [
+        "编程与算法",
+        "Java核心"
+      ],
+      "tags": [
+        "字符串"
+      ],
+      "source": {
+        "repo": "exercism/problem-specifications",
+        "commit": "9943fd751b684ba1a6a8673c3700a6e79c10a808",
+        "path": "exercises/rna-transcription/canonical-data.json",
+        "url": "https://github.com/exercism/problem-specifications/blob/9943fd751b684ba1a6a8673c3700a6e79c10a808/exercises/rna-transcription/canonical-data.json",
+        "license": "MIT",
+        "author": "exercism",
+        "adaptation": "OfferPilot 中文改编；输入输出适配及自评要点由项目整理",
+        "reviewedAt": "2026-10-08",
+        "canonicalSha256": "d1f8eee5a92a44ab3bb79d6aaa05cbafe8737f1628f2aa5197c49e2b88a15bda",
+        "testAdaptation": "按题目属性选择canonical用例，异常映射为题面指定的error或-1；运行仅公开示例，正式提交最多12个代表用例。"
+      },
+      "language": "java",
+      "starter": "import java.io.*;\nimport java.util.*;\n\npublic class Main {\n    public static void main(String[] args) throws Exception {\n        // 根据题面读取标准输入，输出结果\n    }\n}\n",
+      "examples": [
+        {
+          "input": "\n",
+          "expected": "",
+          "uuid": "b4631f82-c98c-4a2f-90b3-c5c2b6c6f661",
+          "public": "true"
+        },
+        {
+          "input": "C\n",
+          "expected": "G",
+          "uuid": "a9558a3c-318c-4240-9256-5d5ed47005a6",
+          "public": "true"
+        }
+      ],
+      "tests": [
+        {
+          "input": "\n",
+          "expected": "",
+          "uuid": "b4631f82-c98c-4a2f-90b3-c5c2b6c6f661",
+          "public": "true"
+        },
+        {
+          "input": "C\n",
+          "expected": "G",
+          "uuid": "a9558a3c-318c-4240-9256-5d5ed47005a6",
+          "public": "true"
+        },
+        {
+          "input": "G\n",
+          "expected": "C",
+          "uuid": "6eedbb5c-12cb-4c8b-9f51-f8320b4dc2e7",
+          "public": "false"
+        },
+        {
+          "input": "T\n",
+          "expected": "A",
+          "uuid": "870bd3ec-8487-471d-8d9a-a25046488d3e",
+          "public": "false"
+        },
+        {
+          "input": "A\n",
+          "expected": "U",
+          "uuid": "aade8964-02e1-4073-872f-42d3ffd74c5f",
+          "public": "false"
+        },
+        {
+          "input": "ACGTGGTCTTAA\n",
+          "expected": "UGCACCAGAAUU",
+          "uuid": "79ed2757-f018-4f47-a1d7-34a559392dbf",
+          "public": "false"
+        }
+      ],
+      "verificationTests": [
+        {
+          "input": "\n",
+          "expected": "",
+          "uuid": "b4631f82-c98c-4a2f-90b3-c5c2b6c6f661",
+          "public": "true"
+        },
+        {
+          "input": "C\n",
+          "expected": "G",
+          "uuid": "a9558a3c-318c-4240-9256-5d5ed47005a6",
+          "public": "true"
+        },
+        {
+          "input": "G\n",
+          "expected": "C",
+          "uuid": "6eedbb5c-12cb-4c8b-9f51-f8320b4dc2e7",
+          "public": "false"
+        },
+        {
+          "input": "T\n",
+          "expected": "A",
+          "uuid": "870bd3ec-8487-471d-8d9a-a25046488d3e",
+          "public": "false"
+        },
+        {
+          "input": "A\n",
+          "expected": "U",
+          "uuid": "aade8964-02e1-4073-872f-42d3ffd74c5f",
+          "public": "false"
+        },
+        {
+          "input": "ACGTGGTCTTAA\n",
+          "expected": "UGCACCAGAAUU",
+          "uuid": "79ed2757-f018-4f47-a1d7-34a559392dbf",
+          "public": "false"
+        }
+      ],
+      "referenceCode": "import java.io.*;import java.util.*;public class Main {public static void main(String[] args)throws Exception{BufferedReader r=new BufferedReader(new InputStreamReader(System.in,java.nio.charset.StandardCharsets.UTF_8));String s=r.readLine();StringBuilder b=new StringBuilder();for(char c:s.toCharArray())b.append(switch(c){case 'G'->'C';case 'C'->'G';case 'T'->'A';case 'A'->'U';default->throw new IllegalArgumentException();});System.out.println(b);}}"
+    },
+    {
+      "canonicalId": "exercism:acronym",
+      "type": "CODING",
+      "title": "生成英文缩略词",
+      "content": "读取一行英文短语，以空格、连字符及下划线划分单词，忽略其他非字母字符，输出各单词首字母的大写拼接。长度不超过1000。\n请使用 Java 17，标准输出仅包含答案。",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA",
+        "FE-WEB",
+        "FS-JAVA",
+        "FS-NODE"
+      ],
+      "topics": [
+        "编程与算法",
+        "Java核心"
+      ],
+      "tags": [
+        "字符串"
+      ],
+      "source": {
+        "repo": "exercism/problem-specifications",
+        "commit": "9943fd751b684ba1a6a8673c3700a6e79c10a808",
+        "path": "exercises/acronym/canonical-data.json",
+        "url": "https://github.com/exercism/problem-specifications/blob/9943fd751b684ba1a6a8673c3700a6e79c10a808/exercises/acronym/canonical-data.json",
+        "license": "MIT",
+        "author": "exercism",
+        "adaptation": "OfferPilot 中文改编；输入输出适配及自评要点由项目整理",
+        "reviewedAt": "2026-10-08",
+        "canonicalSha256": "009b8ae28b2224ea3fd4aac7aa3c4ba37c5a303221cf38df4cfb235afc4d3df6",
+        "testAdaptation": "按题目属性选择canonical用例，异常映射为题面指定的error或-1；运行仅公开示例，正式提交最多12个代表用例。"
+      },
+      "language": "java",
+      "starter": "import java.io.*;\nimport java.util.*;\n\npublic class Main {\n    public static void main(String[] args) throws Exception {\n        // 根据题面读取标准输入，输出结果\n    }\n}\n",
+      "examples": [
+        {
+          "input": "Portable Network Graphics\n",
+          "expected": "PNG",
+          "uuid": "1e22cceb-c5e4-4562-9afe-aef07ad1eaf4",
+          "public": "true"
+        },
+        {
+          "input": "Ruby on Rails\n",
+          "expected": "ROR",
+          "uuid": "79ae3889-a5c0-4b01-baf0-232d31180c08",
+          "public": "true"
+        }
+      ],
+      "tests": [
+        {
+          "input": "Portable Network Graphics\n",
+          "expected": "PNG",
+          "uuid": "1e22cceb-c5e4-4562-9afe-aef07ad1eaf4",
+          "public": "true"
+        },
+        {
+          "input": "Ruby on Rails\n",
+          "expected": "ROR",
+          "uuid": "79ae3889-a5c0-4b01-baf0-232d31180c08",
+          "public": "true"
+        },
+        {
+          "input": "First In, First Out\n",
+          "expected": "FIFO",
+          "uuid": "ec7000a7-3931-4a17-890e-33ca2073a548",
+          "public": "false"
+        },
+        {
+          "input": "GNU Image Manipulation Program\n",
+          "expected": "GIMP",
+          "uuid": "32dd261c-0c92-469a-9c5c-b192e94a63b0",
+          "public": "false"
+        },
+        {
+          "input": "Complementary metal-oxide semiconductor\n",
+          "expected": "CMOS",
+          "uuid": "ae2ac9fa-a606-4d05-8244-3bcc4659c1d4",
+          "public": "false"
+        },
+        {
+          "input": "Rolling On The Floor Laughing So Hard That My Dogs Came Over And Licked Me\n",
+          "expected": "ROTFLSHTMDCOALM",
+          "uuid": "0e4b1e7c-1a6d-48fb-81a7-bf65eb9e69f9",
+          "public": "false"
+        },
+        {
+          "input": "Something - I made up from thin air\n",
+          "expected": "SIMUFTA",
+          "uuid": "6a078f49-c68d-4b7b-89af-33a1a98c28cc",
+          "public": "false"
+        },
+        {
+          "input": "Halley's Comet\n",
+          "expected": "HC",
+          "uuid": "5118b4b1-4572-434c-8d57-5b762e57973e",
+          "public": "false"
+        },
+        {
+          "input": "The Road _Not_ Taken\n",
+          "expected": "TRNT",
+          "uuid": "adc12eab-ec2d-414f-b48c-66a4fc06cdef",
+          "public": "false"
+        }
+      ],
+      "verificationTests": [
+        {
+          "input": "Portable Network Graphics\n",
+          "expected": "PNG",
+          "uuid": "1e22cceb-c5e4-4562-9afe-aef07ad1eaf4",
+          "public": "true"
+        },
+        {
+          "input": "Ruby on Rails\n",
+          "expected": "ROR",
+          "uuid": "79ae3889-a5c0-4b01-baf0-232d31180c08",
+          "public": "true"
+        },
+        {
+          "input": "First In, First Out\n",
+          "expected": "FIFO",
+          "uuid": "ec7000a7-3931-4a17-890e-33ca2073a548",
+          "public": "false"
+        },
+        {
+          "input": "GNU Image Manipulation Program\n",
+          "expected": "GIMP",
+          "uuid": "32dd261c-0c92-469a-9c5c-b192e94a63b0",
+          "public": "false"
+        },
+        {
+          "input": "Complementary metal-oxide semiconductor\n",
+          "expected": "CMOS",
+          "uuid": "ae2ac9fa-a606-4d05-8244-3bcc4659c1d4",
+          "public": "false"
+        },
+        {
+          "input": "Rolling On The Floor Laughing So Hard That My Dogs Came Over And Licked Me\n",
+          "expected": "ROTFLSHTMDCOALM",
+          "uuid": "0e4b1e7c-1a6d-48fb-81a7-bf65eb9e69f9",
+          "public": "false"
+        },
+        {
+          "input": "Something - I made up from thin air\n",
+          "expected": "SIMUFTA",
+          "uuid": "6a078f49-c68d-4b7b-89af-33a1a98c28cc",
+          "public": "false"
+        },
+        {
+          "input": "Halley's Comet\n",
+          "expected": "HC",
+          "uuid": "5118b4b1-4572-434c-8d57-5b762e57973e",
+          "public": "false"
+        },
+        {
+          "input": "The Road _Not_ Taken\n",
+          "expected": "TRNT",
+          "uuid": "adc12eab-ec2d-414f-b48c-66a4fc06cdef",
+          "public": "false"
+        }
+      ],
+      "referenceCode": "import java.io.*;import java.util.*;public class Main {public static void main(String[] args)throws Exception{BufferedReader r=new BufferedReader(new InputStreamReader(System.in,java.nio.charset.StandardCharsets.UTF_8));StringBuilder b=new StringBuilder();for(String w:r.readLine().split(\"[\\\\s_\\\\-]+\")){String s=w.replaceAll(\"[^A-Za-z]\",\"\");if(!s.isEmpty())b.append(Character.toUpperCase(s.charAt(0)));}System.out.println(b);}}"
+    },
+    {
+      "canonicalId": "exercism:collatz-conjecture",
+      "type": "CODING",
+      "title": "考拉兹步数",
+      "content": "读取整数n。正数时按偶数除2、奇数乘3加1，直到1，输出步骤数；n≤0输出error。正数不超过1000000，使用long计算中间值。\n请使用 Java 17，标准输出仅包含答案。",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA",
+        "FE-WEB",
+        "FS-JAVA",
+        "FS-NODE"
+      ],
+      "topics": [
+        "编程与算法",
+        "Java核心"
+      ],
+      "tags": [
+        "数学"
+      ],
+      "source": {
+        "repo": "exercism/problem-specifications",
+        "commit": "9943fd751b684ba1a6a8673c3700a6e79c10a808",
+        "path": "exercises/collatz-conjecture/canonical-data.json",
+        "url": "https://github.com/exercism/problem-specifications/blob/9943fd751b684ba1a6a8673c3700a6e79c10a808/exercises/collatz-conjecture/canonical-data.json",
+        "license": "MIT",
+        "author": "exercism",
+        "adaptation": "OfferPilot 中文改编；输入输出适配及自评要点由项目整理",
+        "reviewedAt": "2026-10-08",
+        "canonicalSha256": "eeeb1924bd07e698cf43912ae468e243aa3aed41b47bf05f4aa8357def138661",
+        "testAdaptation": "按题目属性选择canonical用例，异常映射为题面指定的error或-1；运行仅公开示例，正式提交最多12个代表用例。"
+      },
+      "language": "java",
+      "starter": "import java.io.*;\nimport java.util.*;\n\npublic class Main {\n    public static void main(String[] args) throws Exception {\n        // 根据题面读取标准输入，输出结果\n    }\n}\n",
+      "examples": [
+        {
+          "input": "1\n",
+          "expected": "0",
+          "uuid": "540a3d51-e7a6-47a5-92a3-4ad1838f0bfd",
+          "public": "true"
+        },
+        {
+          "input": "16\n",
+          "expected": "4",
+          "uuid": "3d76a0a6-ea84-444a-821a-f7857c2c1859",
+          "public": "true"
+        }
+      ],
+      "tests": [
+        {
+          "input": "1\n",
+          "expected": "0",
+          "uuid": "540a3d51-e7a6-47a5-92a3-4ad1838f0bfd",
+          "public": "true"
+        },
+        {
+          "input": "16\n",
+          "expected": "4",
+          "uuid": "3d76a0a6-ea84-444a-821a-f7857c2c1859",
+          "public": "true"
+        },
+        {
+          "input": "12\n",
+          "expected": "9",
+          "uuid": "754dea81-123c-429e-b8bc-db20b05a87b9",
+          "public": "false"
+        },
+        {
+          "input": "1000000\n",
+          "expected": "152",
+          "uuid": "ecfd0210-6f85-44f6-8280-f65534892ff6",
+          "public": "false"
+        },
+        {
+          "input": "0\n",
+          "expected": "error",
+          "uuid": "7d4750e6-def9-4b86-aec7-9f7eb44f95a3",
+          "public": "false"
+        },
+        {
+          "input": "0\n",
+          "expected": "error",
+          "uuid": "2187673d-77d6-4543-975e-66df6c50e2da",
+          "public": "false"
+        },
+        {
+          "input": "-15\n",
+          "expected": "error",
+          "uuid": "c6c795bf-a288-45e9-86a1-841359ad426d",
+          "public": "false"
+        },
+        {
+          "input": "-15\n",
+          "expected": "error",
+          "uuid": "ec11f479-56bc-47fd-a434-bcd7a31a7a2e",
+          "public": "false"
+        }
+      ],
+      "verificationTests": [
+        {
+          "input": "1\n",
+          "expected": "0",
+          "uuid": "540a3d51-e7a6-47a5-92a3-4ad1838f0bfd",
+          "public": "true"
+        },
+        {
+          "input": "16\n",
+          "expected": "4",
+          "uuid": "3d76a0a6-ea84-444a-821a-f7857c2c1859",
+          "public": "true"
+        },
+        {
+          "input": "12\n",
+          "expected": "9",
+          "uuid": "754dea81-123c-429e-b8bc-db20b05a87b9",
+          "public": "false"
+        },
+        {
+          "input": "1000000\n",
+          "expected": "152",
+          "uuid": "ecfd0210-6f85-44f6-8280-f65534892ff6",
+          "public": "false"
+        },
+        {
+          "input": "0\n",
+          "expected": "error",
+          "uuid": "7d4750e6-def9-4b86-aec7-9f7eb44f95a3",
+          "public": "false"
+        },
+        {
+          "input": "0\n",
+          "expected": "error",
+          "uuid": "2187673d-77d6-4543-975e-66df6c50e2da",
+          "public": "false"
+        },
+        {
+          "input": "-15\n",
+          "expected": "error",
+          "uuid": "c6c795bf-a288-45e9-86a1-841359ad426d",
+          "public": "false"
+        },
+        {
+          "input": "-15\n",
+          "expected": "error",
+          "uuid": "ec11f479-56bc-47fd-a434-bcd7a31a7a2e",
+          "public": "false"
+        }
+      ],
+      "referenceCode": "import java.io.*;import java.util.*;public class Main {public static void main(String[] args)throws Exception{BufferedReader r=new BufferedReader(new InputStreamReader(System.in,java.nio.charset.StandardCharsets.UTF_8));long n=Long.parseLong(r.readLine());if(n<=0){System.out.println(\"error\");return;}int k=0;while(n!=1){n=n%2==0?n/2:3*n+1;k++;}System.out.println(k);}}"
+    },
+    {
+      "canonicalId": "exercism:sum-of-multiples",
+      "type": "CODING",
+      "title": "倍数之和",
+      "content": "第一行读取上界limit（0–100000），第二行读取非负因子列表（可为空，最多20项，每项不超过1000）。输出所有小于limit的正整数中、至少是一个非零因子倍数的数的总和，重复值只计一次。\n请使用 Java 17，标准输出仅包含答案。",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA",
+        "FE-WEB",
+        "FS-JAVA",
+        "FS-NODE"
+      ],
+      "topics": [
+        "编程与算法",
+        "Java核心"
+      ],
+      "tags": [
+        "数组"
+      ],
+      "source": {
+        "repo": "exercism/problem-specifications",
+        "commit": "9943fd751b684ba1a6a8673c3700a6e79c10a808",
+        "path": "exercises/sum-of-multiples/canonical-data.json",
+        "url": "https://github.com/exercism/problem-specifications/blob/9943fd751b684ba1a6a8673c3700a6e79c10a808/exercises/sum-of-multiples/canonical-data.json",
+        "license": "MIT",
+        "author": "exercism",
+        "adaptation": "OfferPilot 中文改编；输入输出适配及自评要点由项目整理",
+        "reviewedAt": "2026-10-08",
+        "canonicalSha256": "937d208704d20a6caee9c6151ce14d8f7b7e0d10b594f863fcb72adbdbb61347",
+        "testAdaptation": "按题目属性选择canonical用例，异常映射为题面指定的error或-1；运行仅公开示例，正式提交最多12个代表用例。"
+      },
+      "language": "java",
+      "starter": "import java.io.*;\nimport java.util.*;\n\npublic class Main {\n    public static void main(String[] args) throws Exception {\n        // 根据题面读取标准输入，输出结果\n    }\n}\n",
+      "examples": [
+        {
+          "input": "1\n3 5\n",
+          "expected": "0",
+          "uuid": "54aaab5a-ce86-4edc-8b40-d3ab2400a279",
+          "public": "true"
+        },
+        {
+          "input": "4\n3 5\n",
+          "expected": "3",
+          "uuid": "361e4e50-c89b-4f60-95ef-5bc5c595490a",
+          "public": "true"
+        }
+      ],
+      "tests": [
+        {
+          "input": "1\n3 5\n",
+          "expected": "0",
+          "uuid": "54aaab5a-ce86-4edc-8b40-d3ab2400a279",
+          "public": "true"
+        },
+        {
+          "input": "4\n3 5\n",
+          "expected": "3",
+          "uuid": "361e4e50-c89b-4f60-95ef-5bc5c595490a",
+          "public": "true"
+        },
+        {
+          "input": "7\n3\n",
+          "expected": "9",
+          "uuid": "e644e070-040e-4ae0-9910-93c69fc3f7ce",
+          "public": "false"
+        },
+        {
+          "input": "10\n3 5\n",
+          "expected": "23",
+          "uuid": "607d6eb9-535c-41ce-91b5-3a61da3fa57f",
+          "public": "false"
+        },
+        {
+          "input": "1000\n3 5\n",
+          "expected": "233168",
+          "uuid": "28c4b267-c980-4054-93e9-07723db615ac",
+          "public": "false"
+        },
+        {
+          "input": "20\n7 13 17\n",
+          "expected": "51",
+          "uuid": "09c4494d-ff2d-4e0f-8421-f5532821ee12",
+          "public": "false"
+        },
+        {
+          "input": "150\n5 6 8\n",
+          "expected": "4419",
+          "uuid": "ece8f2e8-96aa-4166-bbb7-6ce71261e354",
+          "public": "false"
+        },
+        {
+          "input": "51\n5 25\n",
+          "expected": "275",
+          "uuid": "624fdade-6ffb-400e-8472-456a38c171c0",
+          "public": "false"
+        },
+        {
+          "input": "100\n1\n",
+          "expected": "4950",
+          "uuid": "41093673-acbd-482c-ab80-d00a0cbedecd",
+          "public": "false"
+        },
+        {
+          "input": "10000\n\n",
+          "expected": "0",
+          "uuid": "1730453b-baaa-438e-a9c2-d754497b2a76",
+          "public": "false"
+        },
+        {
+          "input": "4\n3 0\n",
+          "expected": "3",
+          "uuid": "c423ae21-a0cb-4ec7-aeb1-32971af5b510",
+          "public": "false"
+        },
+        {
+          "input": "10000\n2 3 5 7 11\n",
+          "expected": "39614537",
+          "uuid": "17053ba9-112f-4ac0-aadb-0519dd836342",
+          "public": "false"
+        }
+      ],
+      "verificationTests": [
+        {
+          "input": "1\n3 5\n",
+          "expected": "0",
+          "uuid": "54aaab5a-ce86-4edc-8b40-d3ab2400a279",
+          "public": "true"
+        },
+        {
+          "input": "4\n3 5\n",
+          "expected": "3",
+          "uuid": "361e4e50-c89b-4f60-95ef-5bc5c595490a",
+          "public": "true"
+        },
+        {
+          "input": "7\n3\n",
+          "expected": "9",
+          "uuid": "e644e070-040e-4ae0-9910-93c69fc3f7ce",
+          "public": "false"
+        },
+        {
+          "input": "10\n3 5\n",
+          "expected": "23",
+          "uuid": "607d6eb9-535c-41ce-91b5-3a61da3fa57f",
+          "public": "false"
+        },
+        {
+          "input": "100\n3 5\n",
+          "expected": "2318",
+          "uuid": "f47e8209-c0c5-4786-b07b-dc273bf86b9b",
+          "public": "false"
+        },
+        {
+          "input": "1000\n3 5\n",
+          "expected": "233168",
+          "uuid": "28c4b267-c980-4054-93e9-07723db615ac",
+          "public": "false"
+        },
+        {
+          "input": "20\n7 13 17\n",
+          "expected": "51",
+          "uuid": "09c4494d-ff2d-4e0f-8421-f5532821ee12",
+          "public": "false"
+        },
+        {
+          "input": "15\n4 6\n",
+          "expected": "30",
+          "uuid": "2d0d5faa-f177-4ad6-bde9-ebb865083751",
+          "public": "false"
+        },
+        {
+          "input": "150\n5 6 8\n",
+          "expected": "4419",
+          "uuid": "ece8f2e8-96aa-4166-bbb7-6ce71261e354",
+          "public": "false"
+        },
+        {
+          "input": "51\n5 25\n",
+          "expected": "275",
+          "uuid": "624fdade-6ffb-400e-8472-456a38c171c0",
+          "public": "false"
+        },
+        {
+          "input": "10000\n43 47\n",
+          "expected": "2203160",
+          "uuid": "949ee7eb-db51-479c-b5cb-4a22b40ac057",
+          "public": "false"
+        },
+        {
+          "input": "100\n1\n",
+          "expected": "4950",
+          "uuid": "41093673-acbd-482c-ab80-d00a0cbedecd",
+          "public": "false"
+        },
+        {
+          "input": "10000\n\n",
+          "expected": "0",
+          "uuid": "1730453b-baaa-438e-a9c2-d754497b2a76",
+          "public": "false"
+        },
+        {
+          "input": "1\n0\n",
+          "expected": "0",
+          "uuid": "214a01e9-f4bf-45bb-80f1-1dce9fbb0310",
+          "public": "false"
+        },
+        {
+          "input": "4\n3 0\n",
+          "expected": "3",
+          "uuid": "c423ae21-a0cb-4ec7-aeb1-32971af5b510",
+          "public": "false"
+        },
+        {
+          "input": "10000\n2 3 5 7 11\n",
+          "expected": "39614537",
+          "uuid": "17053ba9-112f-4ac0-aadb-0519dd836342",
+          "public": "false"
+        }
+      ],
+      "referenceCode": "import java.io.*;import java.util.*;public class Main {public static void main(String[] args)throws Exception{BufferedReader r=new BufferedReader(new InputStreamReader(System.in,java.nio.charset.StandardCharsets.UTF_8));int n=Integer.parseInt(r.readLine());String s=r.readLine().trim();int[] a=s.isEmpty()?new int[0]:Arrays.stream(s.split(\"\\\\s+\")).mapToInt(Integer::parseInt).toArray();long sum=0;for(int i=1;i<n;i++)for(int v:a)if(v!=0&&i%v==0){sum+=i;break;}System.out.println(sum);}}"
+    },
+    {
+      "canonicalId": "exercism:allergies",
+      "type": "CODING",
+      "title": "过敏位标记",
+      "content": "读取整数score（0–1000）及待查询英文项目，共两行。eggs/peanuts/shellfish/strawberries/tomatoes/chocolate/pollen/cats依次对应1/2/4/8/16/32/64/128；对应位存在则输出true，否则false，高位忽略。\n请使用 Java 17，标准输出仅包含答案。",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA",
+        "FE-WEB",
+        "FS-JAVA",
+        "FS-NODE"
+      ],
+      "topics": [
+        "编程与算法",
+        "Java核心"
+      ],
+      "tags": [
+        "位运算"
+      ],
+      "source": {
+        "repo": "exercism/problem-specifications",
+        "commit": "9943fd751b684ba1a6a8673c3700a6e79c10a808",
+        "path": "exercises/allergies/canonical-data.json",
+        "url": "https://github.com/exercism/problem-specifications/blob/9943fd751b684ba1a6a8673c3700a6e79c10a808/exercises/allergies/canonical-data.json",
+        "license": "MIT",
+        "author": "exercism",
+        "adaptation": "OfferPilot 中文改编；输入输出适配及自评要点由项目整理",
+        "reviewedAt": "2026-10-08",
+        "canonicalSha256": "3d75ba360afde61bb4f46dbee0def899f0527f1f0e6ce9704c3126af2bcf066b",
+        "testAdaptation": "按题目属性选择canonical用例，异常映射为题面指定的error或-1；运行仅公开示例，正式提交最多12个代表用例。"
+      },
+      "language": "java",
+      "starter": "import java.io.*;\nimport java.util.*;\n\npublic class Main {\n    public static void main(String[] args) throws Exception {\n        // 根据题面读取标准输入，输出结果\n    }\n}\n",
+      "examples": [
+        {
+          "input": "0\neggs\n",
+          "expected": "false",
+          "uuid": "17fc7296-2440-4ac4-ad7b-d07c321bc5a0",
+          "public": "true"
+        },
+        {
+          "input": "1\neggs\n",
+          "expected": "true",
+          "uuid": "07ced27b-1da5-4c2e-8ae2-cb2791437546",
+          "public": "true"
+        }
+      ],
+      "tests": [
+        {
+          "input": "0\neggs\n",
+          "expected": "false",
+          "uuid": "17fc7296-2440-4ac4-ad7b-d07c321bc5a0",
+          "public": "true"
+        },
+        {
+          "input": "1\neggs\n",
+          "expected": "true",
+          "uuid": "07ced27b-1da5-4c2e-8ae2-cb2791437546",
+          "public": "true"
+        },
+        {
+          "input": "3\neggs\n",
+          "expected": "true",
+          "uuid": "5035b954-b6fa-4b9b-a487-dae69d8c5f96",
+          "public": "false"
+        },
+        {
+          "input": "2\npeanuts\n",
+          "expected": "true",
+          "uuid": "ea210a98-860d-46b2-a5bf-50d8995b3f2a",
+          "public": "false"
+        },
+        {
+          "input": "0\nshellfish\n",
+          "expected": "false",
+          "uuid": "b948b0a1-cbf7-4b28-a244-73ff56687c80",
+          "public": "false"
+        },
+        {
+          "input": "255\nshellfish\n",
+          "expected": "true",
+          "uuid": "cc789c19-2b5e-4c67-b146-625dc8cfa34e",
+          "public": "false"
+        },
+        {
+          "input": "20\nstrawberries\n",
+          "expected": "false",
+          "uuid": "23dd6952-88c9-48d7-a7d5-5d0343deb18d",
+          "public": "false"
+        },
+        {
+          "input": "40\ntomatoes\n",
+          "expected": "false",
+          "uuid": "e9846baa-456b-4eff-8025-034b9f77bd8e",
+          "public": "false"
+        },
+        {
+          "input": "112\nchocolate\n",
+          "expected": "true",
+          "uuid": "b0a7c07b-2db7-4f73-a180-565e07040ef1",
+          "public": "false"
+        },
+        {
+          "input": "64\npollen\n",
+          "expected": "true",
+          "uuid": "7696eba7-1837-4488-882a-14b7b4e3e399",
+          "public": "false"
+        },
+        {
+          "input": "0\ncats\n",
+          "expected": "false",
+          "uuid": "d3f523d6-3d50-419b-a222-d4dfd62ce314",
+          "public": "false"
+        },
+        {
+          "input": "255\ncats\n",
+          "expected": "true",
+          "uuid": "1faabb05-2b98-4995-9046-d83e4a48a7c1",
+          "public": "false"
+        }
+      ],
+      "verificationTests": [
+        {
+          "input": "0\neggs\n",
+          "expected": "false",
+          "uuid": "17fc7296-2440-4ac4-ad7b-d07c321bc5a0",
+          "public": "true"
+        },
+        {
+          "input": "1\neggs\n",
+          "expected": "true",
+          "uuid": "07ced27b-1da5-4c2e-8ae2-cb2791437546",
+          "public": "true"
+        },
+        {
+          "input": "3\neggs\n",
+          "expected": "true",
+          "uuid": "5035b954-b6fa-4b9b-a487-dae69d8c5f96",
+          "public": "false"
+        },
+        {
+          "input": "2\neggs\n",
+          "expected": "false",
+          "uuid": "64a6a83a-5723-4b5b-a896-663307403310",
+          "public": "false"
+        },
+        {
+          "input": "255\neggs\n",
+          "expected": "true",
+          "uuid": "90c8f484-456b-41c4-82ba-2d08d93231c6",
+          "public": "false"
+        },
+        {
+          "input": "0\npeanuts\n",
+          "expected": "false",
+          "uuid": "d266a59a-fccc-413b-ac53-d57cb1f0db9d",
+          "public": "false"
+        },
+        {
+          "input": "2\npeanuts\n",
+          "expected": "true",
+          "uuid": "ea210a98-860d-46b2-a5bf-50d8995b3f2a",
+          "public": "false"
+        },
+        {
+          "input": "7\npeanuts\n",
+          "expected": "true",
+          "uuid": "eac69ae9-8d14-4291-ac4b-7fd2c73d3a5b",
+          "public": "false"
+        },
+        {
+          "input": "5\npeanuts\n",
+          "expected": "false",
+          "uuid": "9152058c-ce39-4b16-9b1d-283ec6d25085",
+          "public": "false"
+        },
+        {
+          "input": "255\npeanuts\n",
+          "expected": "true",
+          "uuid": "d2d71fd8-63d5-40f9-a627-fbdaf88caeab",
+          "public": "false"
+        },
+        {
+          "input": "0\nshellfish\n",
+          "expected": "false",
+          "uuid": "b948b0a1-cbf7-4b28-a244-73ff56687c80",
+          "public": "false"
+        },
+        {
+          "input": "4\nshellfish\n",
+          "expected": "true",
+          "uuid": "9ce9a6f3-53e9-4923-85e0-73019047c567",
+          "public": "false"
+        },
+        {
+          "input": "14\nshellfish\n",
+          "expected": "true",
+          "uuid": "b272fca5-57ba-4b00-bd0c-43a737ab2131",
+          "public": "false"
+        },
+        {
+          "input": "10\nshellfish\n",
+          "expected": "false",
+          "uuid": "21ef8e17-c227-494e-8e78-470a1c59c3d8",
+          "public": "false"
+        },
+        {
+          "input": "255\nshellfish\n",
+          "expected": "true",
+          "uuid": "cc789c19-2b5e-4c67-b146-625dc8cfa34e",
+          "public": "false"
+        },
+        {
+          "input": "0\nstrawberries\n",
+          "expected": "false",
+          "uuid": "651bde0a-2a74-46c4-ab55-02a0906ca2f5",
+          "public": "false"
+        },
+        {
+          "input": "8\nstrawberries\n",
+          "expected": "true",
+          "uuid": "b649a750-9703-4f5f-b7f7-91da2c160ece",
+          "public": "false"
+        },
+        {
+          "input": "28\nstrawberries\n",
+          "expected": "true",
+          "uuid": "50f5f8f3-3bac-47e6-8dba-2d94470a4bc6",
+          "public": "false"
+        },
+        {
+          "input": "20\nstrawberries\n",
+          "expected": "false",
+          "uuid": "23dd6952-88c9-48d7-a7d5-5d0343deb18d",
+          "public": "false"
+        },
+        {
+          "input": "255\nstrawberries\n",
+          "expected": "true",
+          "uuid": "74afaae2-13b6-43a2-837a-286cd42e7d7e",
+          "public": "false"
+        },
+        {
+          "input": "0\ntomatoes\n",
+          "expected": "false",
+          "uuid": "c49a91ef-6252-415e-907e-a9d26ef61723",
+          "public": "false"
+        },
+        {
+          "input": "16\ntomatoes\n",
+          "expected": "true",
+          "uuid": "b69c5131-b7d0-41ad-a32c-e1b2cc632df8",
+          "public": "false"
+        },
+        {
+          "input": "56\ntomatoes\n",
+          "expected": "true",
+          "uuid": "1ca50eb1-f042-4ccf-9050-341521b929ec",
+          "public": "false"
+        },
+        {
+          "input": "40\ntomatoes\n",
+          "expected": "false",
+          "uuid": "e9846baa-456b-4eff-8025-034b9f77bd8e",
+          "public": "false"
+        },
+        {
+          "input": "255\ntomatoes\n",
+          "expected": "true",
+          "uuid": "b2414f01-f3ad-4965-8391-e65f54dad35f",
+          "public": "false"
+        },
+        {
+          "input": "0\nchocolate\n",
+          "expected": "false",
+          "uuid": "978467ab-bda4-49f7-b004-1d011ead947c",
+          "public": "false"
+        },
+        {
+          "input": "32\nchocolate\n",
+          "expected": "true",
+          "uuid": "59cf4e49-06ea-4139-a2c1-d7aad28f8cbc",
+          "public": "false"
+        },
+        {
+          "input": "112\nchocolate\n",
+          "expected": "true",
+          "uuid": "b0a7c07b-2db7-4f73-a180-565e07040ef1",
+          "public": "false"
+        },
+        {
+          "input": "80\nchocolate\n",
+          "expected": "false",
+          "uuid": "f5506893-f1ae-482a-b516-7532ba5ca9d2",
+          "public": "false"
+        },
+        {
+          "input": "255\nchocolate\n",
+          "expected": "true",
+          "uuid": "02debb3d-d7e2-4376-a26b-3c974b6595c6",
+          "public": "false"
+        },
+        {
+          "input": "0\npollen\n",
+          "expected": "false",
+          "uuid": "17f4a42b-c91e-41b8-8a76-4797886c2d96",
+          "public": "false"
+        },
+        {
+          "input": "64\npollen\n",
+          "expected": "true",
+          "uuid": "7696eba7-1837-4488-882a-14b7b4e3e399",
+          "public": "false"
+        },
+        {
+          "input": "224\npollen\n",
+          "expected": "true",
+          "uuid": "9a49aec5-fa1f-405d-889e-4dfc420db2b6",
+          "public": "false"
+        },
+        {
+          "input": "160\npollen\n",
+          "expected": "false",
+          "uuid": "3cb8e79f-d108-4712-b620-aa146b1954a9",
+          "public": "false"
+        },
+        {
+          "input": "255\npollen\n",
+          "expected": "true",
+          "uuid": "1dc3fe57-7c68-4043-9d51-5457128744b2",
+          "public": "false"
+        },
+        {
+          "input": "0\ncats\n",
+          "expected": "false",
+          "uuid": "d3f523d6-3d50-419b-a222-d4dfd62ce314",
+          "public": "false"
+        },
+        {
+          "input": "128\ncats\n",
+          "expected": "true",
+          "uuid": "eba541c3-c886-42d3-baef-c048cb7fcd8f",
+          "public": "false"
+        },
+        {
+          "input": "192\ncats\n",
+          "expected": "true",
+          "uuid": "ba718376-26e0-40b7-bbbe-060287637ea5",
+          "public": "false"
+        },
+        {
+          "input": "64\ncats\n",
+          "expected": "false",
+          "uuid": "3c6dbf4a-5277-436f-8b88-15a206f2d6c4",
+          "public": "false"
+        },
+        {
+          "input": "255\ncats\n",
+          "expected": "true",
+          "uuid": "1faabb05-2b98-4995-9046-d83e4a48a7c1",
+          "public": "false"
+        }
+      ],
+      "referenceCode": "import java.io.*;import java.util.*;public class Main {public static void main(String[] args)throws Exception{BufferedReader r=new BufferedReader(new InputStreamReader(System.in,java.nio.charset.StandardCharsets.UTF_8));int n=Integer.parseInt(r.readLine());String t=r.readLine();List<String> a=List.of(\"eggs\",\"peanuts\",\"shellfish\",\"strawberries\",\"tomatoes\",\"chocolate\",\"pollen\",\"cats\");int i=a.indexOf(t);System.out.println(i>=0&&(n&(1<<i))!=0);}}"
+    },
+    {
+      "canonicalId": "exercism:darts",
+      "type": "CODING",
+      "title": "飞镖计分",
+      "content": "一行读取坐标x y（绝对值不超过100）。到原点距离≤1得10分，≤5得5分，≤10得1分，否则0分，边界包含在内。\n请使用 Java 17，标准输出仅包含答案。",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA",
+        "FE-WEB",
+        "FS-JAVA",
+        "FS-NODE"
+      ],
+      "topics": [
+        "编程与算法",
+        "Java核心"
+      ],
+      "tags": [
+        "数学"
+      ],
+      "source": {
+        "repo": "exercism/problem-specifications",
+        "commit": "9943fd751b684ba1a6a8673c3700a6e79c10a808",
+        "path": "exercises/darts/canonical-data.json",
+        "url": "https://github.com/exercism/problem-specifications/blob/9943fd751b684ba1a6a8673c3700a6e79c10a808/exercises/darts/canonical-data.json",
+        "license": "MIT",
+        "author": "exercism",
+        "adaptation": "OfferPilot 中文改编；输入输出适配及自评要点由项目整理",
+        "reviewedAt": "2026-10-08",
+        "canonicalSha256": "bc815b29fafe311db9de8bc752ec42045bb10c081b6082ded22744ccfbb031c9",
+        "testAdaptation": "按题目属性选择canonical用例，异常映射为题面指定的error或-1；运行仅公开示例，正式提交最多12个代表用例。"
+      },
+      "language": "java",
+      "starter": "import java.io.*;\nimport java.util.*;\n\npublic class Main {\n    public static void main(String[] args) throws Exception {\n        // 根据题面读取标准输入，输出结果\n    }\n}\n",
+      "examples": [
+        {
+          "input": "-9 9\n",
+          "expected": "0",
+          "uuid": "9033f731-0a3a-4d9c-b1c0-34a1c8362afb",
+          "public": "true"
+        },
+        {
+          "input": "0 10\n",
+          "expected": "1",
+          "uuid": "4c9f6ff4-c489-45fd-be8a-1fcb08b4d0ba",
+          "public": "true"
+        }
+      ],
+      "tests": [
+        {
+          "input": "-9 9\n",
+          "expected": "0",
+          "uuid": "9033f731-0a3a-4d9c-b1c0-34a1c8362afb",
+          "public": "true"
+        },
+        {
+          "input": "0 10\n",
+          "expected": "1",
+          "uuid": "4c9f6ff4-c489-45fd-be8a-1fcb08b4d0ba",
+          "public": "true"
+        },
+        {
+          "input": "-5 0\n",
+          "expected": "5",
+          "uuid": "14378687-ee58-4c9b-a323-b089d5274be8",
+          "public": "false"
+        },
+        {
+          "input": "0 -1\n",
+          "expected": "10",
+          "uuid": "849e2e63-85bd-4fed-bc3b-781ae962e2c9",
+          "public": "false"
+        },
+        {
+          "input": "0 0\n",
+          "expected": "10",
+          "uuid": "1c5ffd9f-ea66-462f-9f06-a1303de5a226",
+          "public": "false"
+        },
+        {
+          "input": "-0.1 -0.1\n",
+          "expected": "10",
+          "uuid": "b65abce3-a679-4550-8115-4b74bda06088",
+          "public": "false"
+        },
+        {
+          "input": "0.7 0.7\n",
+          "expected": "10",
+          "uuid": "66c29c1d-44f5-40cf-9927-e09a1305b399",
+          "public": "false"
+        },
+        {
+          "input": "-3.5 3.5\n",
+          "expected": "5",
+          "uuid": "ab2b5666-b0b4-49c3-9b27-205e790ed945",
+          "public": "false"
+        },
+        {
+          "input": "-3.6 -3.6\n",
+          "expected": "1",
+          "uuid": "70f1424e-d690-4860-8caf-9740a52c0161",
+          "public": "false"
+        },
+        {
+          "input": "-7.0 7.0\n",
+          "expected": "1",
+          "uuid": "a7dbf8db-419c-4712-8a7f-67602b69b293",
+          "public": "false"
+        },
+        {
+          "input": "7.1 -7.1\n",
+          "expected": "0",
+          "uuid": "e0f39315-9f9a-4546-96e4-a9475b885aa7",
+          "public": "false"
+        },
+        {
+          "input": "0.5 -4\n",
+          "expected": "5",
+          "uuid": "045d7d18-d863-4229-818e-b50828c75d19",
+          "public": "false"
+        }
+      ],
+      "verificationTests": [
+        {
+          "input": "-9 9\n",
+          "expected": "0",
+          "uuid": "9033f731-0a3a-4d9c-b1c0-34a1c8362afb",
+          "public": "true"
+        },
+        {
+          "input": "0 10\n",
+          "expected": "1",
+          "uuid": "4c9f6ff4-c489-45fd-be8a-1fcb08b4d0ba",
+          "public": "true"
+        },
+        {
+          "input": "-5 0\n",
+          "expected": "5",
+          "uuid": "14378687-ee58-4c9b-a323-b089d5274be8",
+          "public": "false"
+        },
+        {
+          "input": "0 -1\n",
+          "expected": "10",
+          "uuid": "849e2e63-85bd-4fed-bc3b-781ae962e2c9",
+          "public": "false"
+        },
+        {
+          "input": "0 0\n",
+          "expected": "10",
+          "uuid": "1c5ffd9f-ea66-462f-9f06-a1303de5a226",
+          "public": "false"
+        },
+        {
+          "input": "-0.1 -0.1\n",
+          "expected": "10",
+          "uuid": "b65abce3-a679-4550-8115-4b74bda06088",
+          "public": "false"
+        },
+        {
+          "input": "0.7 0.7\n",
+          "expected": "10",
+          "uuid": "66c29c1d-44f5-40cf-9927-e09a1305b399",
+          "public": "false"
+        },
+        {
+          "input": "0.8 -0.8\n",
+          "expected": "5",
+          "uuid": "d1012f63-c97c-4394-b944-7beb3d0b141a",
+          "public": "false"
+        },
+        {
+          "input": "-3.5 3.5\n",
+          "expected": "5",
+          "uuid": "ab2b5666-b0b4-49c3-9b27-205e790ed945",
+          "public": "false"
+        },
+        {
+          "input": "-3.6 -3.6\n",
+          "expected": "1",
+          "uuid": "70f1424e-d690-4860-8caf-9740a52c0161",
+          "public": "false"
+        },
+        {
+          "input": "-7.0 7.0\n",
+          "expected": "1",
+          "uuid": "a7dbf8db-419c-4712-8a7f-67602b69b293",
+          "public": "false"
+        },
+        {
+          "input": "7.1 -7.1\n",
+          "expected": "0",
+          "uuid": "e0f39315-9f9a-4546-96e4-a9475b885aa7",
+          "public": "false"
+        },
+        {
+          "input": "0.5 -4\n",
+          "expected": "5",
+          "uuid": "045d7d18-d863-4229-818e-b50828c75d19",
+          "public": "false"
+        }
+      ],
+      "referenceCode": "import java.io.*;import java.util.*;public class Main {public static void main(String[] args)throws Exception{BufferedReader r=new BufferedReader(new InputStreamReader(System.in,java.nio.charset.StandardCharsets.UTF_8));String[] s=r.readLine().trim().split(\"\\\\s+\");double x=Double.parseDouble(s[0]),y=Double.parseDouble(s[1]),d=x*x+y*y;System.out.println(d<=1?10:d<=25?5:d<=100?1:0);}}"
+    },
+    {
+      "canonicalId": "exercism:resistor-color-duo",
+      "type": "CODING",
+      "title": "电阻色环值",
+      "content": "读取空格分隔的颜色，取前两个作为十位和个位，其余忽略。black/brown/red/orange/yellow/green/blue/violet/grey/white依次为0–9。至少两个有效颜色，输出两位组合的整数值。\n请使用 Java 17，标准输出仅包含答案。",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA",
+        "FE-WEB",
+        "FS-JAVA",
+        "FS-NODE"
+      ],
+      "topics": [
+        "编程与算法",
+        "Java核心"
+      ],
+      "tags": [
+        "数组"
+      ],
+      "source": {
+        "repo": "exercism/problem-specifications",
+        "commit": "9943fd751b684ba1a6a8673c3700a6e79c10a808",
+        "path": "exercises/resistor-color-duo/canonical-data.json",
+        "url": "https://github.com/exercism/problem-specifications/blob/9943fd751b684ba1a6a8673c3700a6e79c10a808/exercises/resistor-color-duo/canonical-data.json",
+        "license": "MIT",
+        "author": "exercism",
+        "adaptation": "OfferPilot 中文改编；输入输出适配及自评要点由项目整理",
+        "reviewedAt": "2026-10-08",
+        "canonicalSha256": "73e8de096ef2cf2bdc15b8c2fe7c2fc77cb6695980ca415b8fe34286d6436220",
+        "testAdaptation": "按题目属性选择canonical用例，异常映射为题面指定的error或-1；运行仅公开示例，正式提交最多12个代表用例。"
+      },
+      "language": "java",
+      "starter": "import java.io.*;\nimport java.util.*;\n\npublic class Main {\n    public static void main(String[] args) throws Exception {\n        // 根据题面读取标准输入，输出结果\n    }\n}\n",
+      "examples": [
+        {
+          "input": "brown black\n",
+          "expected": "10",
+          "uuid": "ce11995a-5b93-4950-a5e9-93423693b2fc",
+          "public": "true"
+        },
+        {
+          "input": "blue grey\n",
+          "expected": "68",
+          "uuid": "7bf82f7a-af23-48ba-a97d-38d59406a920",
+          "public": "true"
+        }
+      ],
+      "tests": [
+        {
+          "input": "brown black\n",
+          "expected": "10",
+          "uuid": "ce11995a-5b93-4950-a5e9-93423693b2fc",
+          "public": "true"
+        },
+        {
+          "input": "blue grey\n",
+          "expected": "68",
+          "uuid": "7bf82f7a-af23-48ba-a97d-38d59406a920",
+          "public": "true"
+        },
+        {
+          "input": "yellow violet\n",
+          "expected": "47",
+          "uuid": "f1886361-fdfd-4693-acf8-46726fe24e0c",
+          "public": "false"
+        },
+        {
+          "input": "white red\n",
+          "expected": "92",
+          "uuid": "b7a6cbd2-ae3c-470a-93eb-56670b305640",
+          "public": "false"
+        },
+        {
+          "input": "orange orange\n",
+          "expected": "33",
+          "uuid": "77a8293d-2a83-4016-b1af-991acc12b9fe",
+          "public": "false"
+        },
+        {
+          "input": "green brown orange\n",
+          "expected": "51",
+          "uuid": "0c4fb44f-db7c-4d03-afa8-054350f156a8",
+          "public": "false"
+        },
+        {
+          "input": "black brown\n",
+          "expected": "1",
+          "uuid": "4a8ceec5-0ab4-4904-88a4-daf953a5e818",
+          "public": "false"
+        }
+      ],
+      "verificationTests": [
+        {
+          "input": "brown black\n",
+          "expected": "10",
+          "uuid": "ce11995a-5b93-4950-a5e9-93423693b2fc",
+          "public": "true"
+        },
+        {
+          "input": "blue grey\n",
+          "expected": "68",
+          "uuid": "7bf82f7a-af23-48ba-a97d-38d59406a920",
+          "public": "true"
+        },
+        {
+          "input": "yellow violet\n",
+          "expected": "47",
+          "uuid": "f1886361-fdfd-4693-acf8-46726fe24e0c",
+          "public": "false"
+        },
+        {
+          "input": "white red\n",
+          "expected": "92",
+          "uuid": "b7a6cbd2-ae3c-470a-93eb-56670b305640",
+          "public": "false"
+        },
+        {
+          "input": "orange orange\n",
+          "expected": "33",
+          "uuid": "77a8293d-2a83-4016-b1af-991acc12b9fe",
+          "public": "false"
+        },
+        {
+          "input": "green brown orange\n",
+          "expected": "51",
+          "uuid": "0c4fb44f-db7c-4d03-afa8-054350f156a8",
+          "public": "false"
+        },
+        {
+          "input": "black brown\n",
+          "expected": "1",
+          "uuid": "4a8ceec5-0ab4-4904-88a4-daf953a5e818",
+          "public": "false"
+        }
+      ],
+      "referenceCode": "import java.io.*;import java.util.*;public class Main {public static void main(String[] args)throws Exception{BufferedReader r=new BufferedReader(new InputStreamReader(System.in,java.nio.charset.StandardCharsets.UTF_8));String[] s=r.readLine().split(\"\\\\s+\");List<String> a=List.of(\"black\",\"brown\",\"red\",\"orange\",\"yellow\",\"green\",\"blue\",\"violet\",\"grey\",\"white\");System.out.println(a.indexOf(s[0])*10+a.indexOf(s[1]));}}"
+    },
+    {
+      "canonicalId": "offerpilot:culture:bytedance:BE-JAVA:1",
+      "type": "CULTURE",
+      "companyCode": "bytedance",
+      "title": "指标口径不一致 · Java后端",
+      "content": "两支团队对同一功能给出相反结论，发现指标定义不一致。如何核实事实、沟通分歧并决定下一步？\n请结合Java后端岗位，说明信息收集、行动步骤、沟通方式与取舍依据。",
+      "referenceAnswer": "企业资料依据：坦诚清晰与求真务实。说明如何暴露待验证的问题，用事实区分假设和结论，并让沟通准确可执行。\n岗位核查：后端关注日志、依赖、容量、数据一致性和回滚验证。\n自评要点：先识别受影响的用户、约束与待验证假设；收集可验证数据；提出至少两种可执行方案并比较风险、成本和收益；明确负责人、沟通对象与验证指标；说明回滚或后续复盘安排。\n情境允许多种合理答案，评价论证与行动，不以复述企业口号作为正确标准。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA"
+      ],
+      "topics": [
+        "企业情境",
+        "系统设计",
+        "项目场景"
+      ],
+      "tags": [
+        "决策取舍",
+        "协作沟通"
+      ],
+      "source": {
+        "url": "https://jobs.bytedance.com/experienced/m/culture",
+        "license": "OfferPilot-original",
+        "author": "OfferPilot",
+        "adaptation": "依据企业公开资料原创改编，不代表企业真实面试题",
+        "evidence": {
+          "checkedAt": "2026-10-08",
+          "scope": "企业文化公开资料；不证明招聘考点、技术栈或出题频率",
+          "items": [
+            {
+              "id": "candid",
+              "label": "坦诚清晰",
+              "summary": "问题沟通应准确直接，结论应有事实依据。",
+              "url": "https://jobs.bytedance.com/experienced/m/culture",
+              "type": "OFFICIAL_CULTURE"
+            },
+            {
+              "id": "practical",
+              "label": "求真务实",
+              "summary": "通过一手信息验证问题，关注实际效果。",
+              "url": "https://jobs.bytedance.com/experienced/m/culture",
+              "type": "OFFICIAL_CULTURE"
+            }
+          ]
+        },
+        "evidenceIds": [
+          "candid",
+          "practical"
+        ],
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:culture:bytedance:BE-JAVA:2",
+      "type": "CULTURE",
+      "companyCode": "bytedance",
+      "title": "发现错误假设 · Java后端",
+      "content": "你发现上线方案的核心假设缺少证据，但评审已通过。如何直接说明问题并提出可验证的替代方案？\n请结合Java后端岗位，说明信息收集、行动步骤、沟通方式与取舍依据。",
+      "referenceAnswer": "企业资料依据：坦诚清晰与求真务实。说明如何暴露待验证的问题，用事实区分假设和结论，并让沟通准确可执行。\n岗位核查：后端关注日志、依赖、容量、数据一致性和回滚验证。\n自评要点：先识别受影响的用户、约束与待验证假设；收集可验证数据；提出至少两种可执行方案并比较风险、成本和收益；明确负责人、沟通对象与验证指标；说明回滚或后续复盘安排。\n情境允许多种合理答案，评价论证与行动，不以复述企业口号作为正确标准。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA"
+      ],
+      "topics": [
+        "企业情境",
+        "系统设计",
+        "项目场景"
+      ],
+      "tags": [
+        "决策取舍",
+        "协作沟通"
+      ],
+      "source": {
+        "url": "https://jobs.bytedance.com/experienced/m/culture",
+        "license": "OfferPilot-original",
+        "author": "OfferPilot",
+        "adaptation": "依据企业公开资料原创改编，不代表企业真实面试题",
+        "evidence": {
+          "checkedAt": "2026-10-08",
+          "scope": "企业文化公开资料；不证明招聘考点、技术栈或出题频率",
+          "items": [
+            {
+              "id": "candid",
+              "label": "坦诚清晰",
+              "summary": "问题沟通应准确直接，结论应有事实依据。",
+              "url": "https://jobs.bytedance.com/experienced/m/culture",
+              "type": "OFFICIAL_CULTURE"
+            },
+            {
+              "id": "practical",
+              "label": "求真务实",
+              "summary": "通过一手信息验证问题，关注实际效果。",
+              "url": "https://jobs.bytedance.com/experienced/m/culture",
+              "type": "OFFICIAL_CULTURE"
+            }
+          ]
+        },
+        "evidenceIds": [
+          "candid",
+          "practical"
+        ],
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:culture:bytedance:BE-JAVA:3",
+      "type": "CULTURE",
+      "companyCode": "bytedance",
+      "title": "复盘责任与事实 · Java后端",
+      "content": "一次故障复盘中讨论开始归责个人。如何用时间线和可验证信息推进复盘？\n请结合Java后端岗位，说明信息收集、行动步骤、沟通方式与取舍依据。",
+      "referenceAnswer": "企业资料依据：坦诚清晰与求真务实。说明如何暴露待验证的问题，用事实区分假设和结论，并让沟通准确可执行。\n岗位核查：后端关注日志、依赖、容量、数据一致性和回滚验证。\n自评要点：先识别受影响的用户、约束与待验证假设；收集可验证数据；提出至少两种可执行方案并比较风险、成本和收益；明确负责人、沟通对象与验证指标；说明回滚或后续复盘安排。\n情境允许多种合理答案，评价论证与行动，不以复述企业口号作为正确标准。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA"
+      ],
+      "topics": [
+        "企业情境",
+        "系统设计",
+        "项目场景"
+      ],
+      "tags": [
+        "决策取舍",
+        "协作沟通"
+      ],
+      "source": {
+        "url": "https://jobs.bytedance.com/experienced/m/culture",
+        "license": "OfferPilot-original",
+        "author": "OfferPilot",
+        "adaptation": "依据企业公开资料原创改编，不代表企业真实面试题",
+        "evidence": {
+          "checkedAt": "2026-10-08",
+          "scope": "企业文化公开资料；不证明招聘考点、技术栈或出题频率",
+          "items": [
+            {
+              "id": "candid",
+              "label": "坦诚清晰",
+              "summary": "问题沟通应准确直接，结论应有事实依据。",
+              "url": "https://jobs.bytedance.com/experienced/m/culture",
+              "type": "OFFICIAL_CULTURE"
+            },
+            {
+              "id": "practical",
+              "label": "求真务实",
+              "summary": "通过一手信息验证问题，关注实际效果。",
+              "url": "https://jobs.bytedance.com/experienced/m/culture",
+              "type": "OFFICIAL_CULTURE"
+            }
+          ]
+        },
+        "evidenceIds": [
+          "candid",
+          "practical"
+        ],
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:culture:bytedance:FE-WEB:1",
+      "type": "CULTURE",
+      "companyCode": "bytedance",
+      "title": "指标口径不一致 · Web前端",
+      "content": "两支团队对同一功能给出相反结论，发现指标定义不一致。如何核实事实、沟通分歧并决定下一步？\n请结合Web前端岗位，说明信息收集、行动步骤、沟通方式与取舍依据。",
+      "referenceAnswer": "企业资料依据：坦诚清晰与求真务实。说明如何暴露待验证的问题，用事实区分假设和结论，并让沟通准确可执行。\n岗位核查：前端关注真实交互、兼容性、性能记录、可访问性和发布回退。\n自评要点：先识别受影响的用户、约束与待验证假设；收集可验证数据；提出至少两种可执行方案并比较风险、成本和收益；明确负责人、沟通对象与验证指标；说明回滚或后续复盘安排。\n情境允许多种合理答案，评价论证与行动，不以复述企业口号作为正确标准。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "FE-WEB"
+      ],
+      "topics": [
+        "企业情境",
+        "项目场景",
+        "性能优化"
+      ],
+      "tags": [
+        "决策取舍",
+        "协作沟通"
+      ],
+      "source": {
+        "url": "https://jobs.bytedance.com/experienced/m/culture",
+        "license": "OfferPilot-original",
+        "author": "OfferPilot",
+        "adaptation": "依据企业公开资料原创改编，不代表企业真实面试题",
+        "evidence": {
+          "checkedAt": "2026-10-08",
+          "scope": "企业文化公开资料；不证明招聘考点、技术栈或出题频率",
+          "items": [
+            {
+              "id": "candid",
+              "label": "坦诚清晰",
+              "summary": "问题沟通应准确直接，结论应有事实依据。",
+              "url": "https://jobs.bytedance.com/experienced/m/culture",
+              "type": "OFFICIAL_CULTURE"
+            },
+            {
+              "id": "practical",
+              "label": "求真务实",
+              "summary": "通过一手信息验证问题，关注实际效果。",
+              "url": "https://jobs.bytedance.com/experienced/m/culture",
+              "type": "OFFICIAL_CULTURE"
+            }
+          ]
+        },
+        "evidenceIds": [
+          "candid",
+          "practical"
+        ],
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:culture:bytedance:FE-WEB:2",
+      "type": "CULTURE",
+      "companyCode": "bytedance",
+      "title": "发现错误假设 · Web前端",
+      "content": "你发现上线方案的核心假设缺少证据，但评审已通过。如何直接说明问题并提出可验证的替代方案？\n请结合Web前端岗位，说明信息收集、行动步骤、沟通方式与取舍依据。",
+      "referenceAnswer": "企业资料依据：坦诚清晰与求真务实。说明如何暴露待验证的问题，用事实区分假设和结论，并让沟通准确可执行。\n岗位核查：前端关注真实交互、兼容性、性能记录、可访问性和发布回退。\n自评要点：先识别受影响的用户、约束与待验证假设；收集可验证数据；提出至少两种可执行方案并比较风险、成本和收益；明确负责人、沟通对象与验证指标；说明回滚或后续复盘安排。\n情境允许多种合理答案，评价论证与行动，不以复述企业口号作为正确标准。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "FE-WEB"
+      ],
+      "topics": [
+        "企业情境",
+        "项目场景",
+        "性能优化"
+      ],
+      "tags": [
+        "决策取舍",
+        "协作沟通"
+      ],
+      "source": {
+        "url": "https://jobs.bytedance.com/experienced/m/culture",
+        "license": "OfferPilot-original",
+        "author": "OfferPilot",
+        "adaptation": "依据企业公开资料原创改编，不代表企业真实面试题",
+        "evidence": {
+          "checkedAt": "2026-10-08",
+          "scope": "企业文化公开资料；不证明招聘考点、技术栈或出题频率",
+          "items": [
+            {
+              "id": "candid",
+              "label": "坦诚清晰",
+              "summary": "问题沟通应准确直接，结论应有事实依据。",
+              "url": "https://jobs.bytedance.com/experienced/m/culture",
+              "type": "OFFICIAL_CULTURE"
+            },
+            {
+              "id": "practical",
+              "label": "求真务实",
+              "summary": "通过一手信息验证问题，关注实际效果。",
+              "url": "https://jobs.bytedance.com/experienced/m/culture",
+              "type": "OFFICIAL_CULTURE"
+            }
+          ]
+        },
+        "evidenceIds": [
+          "candid",
+          "practical"
+        ],
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:culture:bytedance:FE-WEB:3",
+      "type": "CULTURE",
+      "companyCode": "bytedance",
+      "title": "复盘责任与事实 · Web前端",
+      "content": "一次故障复盘中讨论开始归责个人。如何用时间线和可验证信息推进复盘？\n请结合Web前端岗位，说明信息收集、行动步骤、沟通方式与取舍依据。",
+      "referenceAnswer": "企业资料依据：坦诚清晰与求真务实。说明如何暴露待验证的问题，用事实区分假设和结论，并让沟通准确可执行。\n岗位核查：前端关注真实交互、兼容性、性能记录、可访问性和发布回退。\n自评要点：先识别受影响的用户、约束与待验证假设；收集可验证数据；提出至少两种可执行方案并比较风险、成本和收益；明确负责人、沟通对象与验证指标；说明回滚或后续复盘安排。\n情境允许多种合理答案，评价论证与行动，不以复述企业口号作为正确标准。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "FE-WEB"
+      ],
+      "topics": [
+        "企业情境",
+        "项目场景",
+        "性能优化"
+      ],
+      "tags": [
+        "决策取舍",
+        "协作沟通"
+      ],
+      "source": {
+        "url": "https://jobs.bytedance.com/experienced/m/culture",
+        "license": "OfferPilot-original",
+        "author": "OfferPilot",
+        "adaptation": "依据企业公开资料原创改编，不代表企业真实面试题",
+        "evidence": {
+          "checkedAt": "2026-10-08",
+          "scope": "企业文化公开资料；不证明招聘考点、技术栈或出题频率",
+          "items": [
+            {
+              "id": "candid",
+              "label": "坦诚清晰",
+              "summary": "问题沟通应准确直接，结论应有事实依据。",
+              "url": "https://jobs.bytedance.com/experienced/m/culture",
+              "type": "OFFICIAL_CULTURE"
+            },
+            {
+              "id": "practical",
+              "label": "求真务实",
+              "summary": "通过一手信息验证问题，关注实际效果。",
+              "url": "https://jobs.bytedance.com/experienced/m/culture",
+              "type": "OFFICIAL_CULTURE"
+            }
+          ]
+        },
+        "evidenceIds": [
+          "candid",
+          "practical"
+        ],
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:culture:alibaba:BE-JAVA:1",
+      "type": "CULTURE",
+      "companyCode": "alibaba",
+      "title": "客户需求与可靠性 · Java后端",
+      "content": "重要客户要求立即上线功能，但方案存在稳定性风险。如何确认真实需求、制定替代交付并说明取舍？\n请结合Java后端岗位，说明信息收集、行动步骤、沟通方式与取舍依据。",
+      "referenceAnswer": "企业资料依据：客户第一。说明真实客户需求与短期要求是否一致，比较短期交付和持续客户价值，避免无条件承诺。\n岗位核查：后端关注日志、依赖、容量、数据一致性和回滚验证。\n自评要点：先识别受影响的用户、约束与待验证假设；收集可验证数据；提出至少两种可执行方案并比较风险、成本和收益；明确负责人、沟通对象与验证指标；说明回滚或后续复盘安排。\n情境允许多种合理答案，评价论证与行动，不以复述企业口号作为正确标准。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA"
+      ],
+      "topics": [
+        "企业情境",
+        "系统设计",
+        "项目场景"
+      ],
+      "tags": [
+        "决策取舍",
+        "协作沟通"
+      ],
+      "source": {
+        "url": "https://www.alibabagroup.com/en-US/about-alibaba",
+        "license": "OfferPilot-original",
+        "author": "OfferPilot",
+        "adaptation": "依据企业公开资料原创改编，不代表企业真实面试题",
+        "evidence": {
+          "checkedAt": "2026-10-08",
+          "scope": "企业文化公开资料；不证明招聘考点、技术栈或出题频率",
+          "items": [
+            {
+              "id": "customer",
+              "label": "客户第一",
+              "summary": "决策关注持续的客户价值。",
+              "url": "https://www.alibabagroup.com/en-US/about-alibaba",
+              "type": "OFFICIAL_CULTURE"
+            }
+          ]
+        },
+        "evidenceIds": [
+          "customer"
+        ],
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:culture:alibaba:BE-JAVA:2",
+      "type": "CULTURE",
+      "companyCode": "alibaba",
+      "title": "短期指标与长期体验 · Java后端",
+      "content": "一项改动能提高短期转化，却可能增加客户操作负担。如何收集反馈并决定是否推进？\n请结合Java后端岗位，说明信息收集、行动步骤、沟通方式与取舍依据。",
+      "referenceAnswer": "企业资料依据：客户第一。说明真实客户需求与短期要求是否一致，比较短期交付和持续客户价值，避免无条件承诺。\n岗位核查：后端关注日志、依赖、容量、数据一致性和回滚验证。\n自评要点：先识别受影响的用户、约束与待验证假设；收集可验证数据；提出至少两种可执行方案并比较风险、成本和收益；明确负责人、沟通对象与验证指标；说明回滚或后续复盘安排。\n情境允许多种合理答案，评价论证与行动，不以复述企业口号作为正确标准。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA"
+      ],
+      "topics": [
+        "企业情境",
+        "系统设计",
+        "项目场景"
+      ],
+      "tags": [
+        "决策取舍",
+        "协作沟通"
+      ],
+      "source": {
+        "url": "https://www.alibabagroup.com/en-US/about-alibaba",
+        "license": "OfferPilot-original",
+        "author": "OfferPilot",
+        "adaptation": "依据企业公开资料原创改编，不代表企业真实面试题",
+        "evidence": {
+          "checkedAt": "2026-10-08",
+          "scope": "企业文化公开资料；不证明招聘考点、技术栈或出题频率",
+          "items": [
+            {
+              "id": "customer",
+              "label": "客户第一",
+              "summary": "决策关注持续的客户价值。",
+              "url": "https://www.alibabagroup.com/en-US/about-alibaba",
+              "type": "OFFICIAL_CULTURE"
+            }
+          ]
+        },
+        "evidenceIds": [
+          "customer"
+        ],
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:culture:alibaba:BE-JAVA:3",
+      "type": "CULTURE",
+      "companyCode": "alibaba",
+      "title": "承诺与交付范围 · Java后端",
+      "content": "客户希望扩大已承诺的交付范围，现有时间无法满足。如何明确优先级、协商范围并维护信任？\n请结合Java后端岗位，说明信息收集、行动步骤、沟通方式与取舍依据。",
+      "referenceAnswer": "企业资料依据：客户第一。说明真实客户需求与短期要求是否一致，比较短期交付和持续客户价值，避免无条件承诺。\n岗位核查：后端关注日志、依赖、容量、数据一致性和回滚验证。\n自评要点：先识别受影响的用户、约束与待验证假设；收集可验证数据；提出至少两种可执行方案并比较风险、成本和收益；明确负责人、沟通对象与验证指标；说明回滚或后续复盘安排。\n情境允许多种合理答案，评价论证与行动，不以复述企业口号作为正确标准。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA"
+      ],
+      "topics": [
+        "企业情境",
+        "系统设计",
+        "项目场景"
+      ],
+      "tags": [
+        "决策取舍",
+        "协作沟通"
+      ],
+      "source": {
+        "url": "https://www.alibabagroup.com/en-US/about-alibaba",
+        "license": "OfferPilot-original",
+        "author": "OfferPilot",
+        "adaptation": "依据企业公开资料原创改编，不代表企业真实面试题",
+        "evidence": {
+          "checkedAt": "2026-10-08",
+          "scope": "企业文化公开资料；不证明招聘考点、技术栈或出题频率",
+          "items": [
+            {
+              "id": "customer",
+              "label": "客户第一",
+              "summary": "决策关注持续的客户价值。",
+              "url": "https://www.alibabagroup.com/en-US/about-alibaba",
+              "type": "OFFICIAL_CULTURE"
+            }
+          ]
+        },
+        "evidenceIds": [
+          "customer"
+        ],
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:culture:alibaba:FE-WEB:1",
+      "type": "CULTURE",
+      "companyCode": "alibaba",
+      "title": "客户需求与可靠性 · Web前端",
+      "content": "重要客户要求立即上线功能，但方案存在稳定性风险。如何确认真实需求、制定替代交付并说明取舍？\n请结合Web前端岗位，说明信息收集、行动步骤、沟通方式与取舍依据。",
+      "referenceAnswer": "企业资料依据：客户第一。说明真实客户需求与短期要求是否一致，比较短期交付和持续客户价值，避免无条件承诺。\n岗位核查：前端关注真实交互、兼容性、性能记录、可访问性和发布回退。\n自评要点：先识别受影响的用户、约束与待验证假设；收集可验证数据；提出至少两种可执行方案并比较风险、成本和收益；明确负责人、沟通对象与验证指标；说明回滚或后续复盘安排。\n情境允许多种合理答案，评价论证与行动，不以复述企业口号作为正确标准。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "FE-WEB"
+      ],
+      "topics": [
+        "企业情境",
+        "项目场景",
+        "性能优化"
+      ],
+      "tags": [
+        "决策取舍",
+        "协作沟通"
+      ],
+      "source": {
+        "url": "https://www.alibabagroup.com/en-US/about-alibaba",
+        "license": "OfferPilot-original",
+        "author": "OfferPilot",
+        "adaptation": "依据企业公开资料原创改编，不代表企业真实面试题",
+        "evidence": {
+          "checkedAt": "2026-10-08",
+          "scope": "企业文化公开资料；不证明招聘考点、技术栈或出题频率",
+          "items": [
+            {
+              "id": "customer",
+              "label": "客户第一",
+              "summary": "决策关注持续的客户价值。",
+              "url": "https://www.alibabagroup.com/en-US/about-alibaba",
+              "type": "OFFICIAL_CULTURE"
+            }
+          ]
+        },
+        "evidenceIds": [
+          "customer"
+        ],
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:culture:alibaba:FE-WEB:2",
+      "type": "CULTURE",
+      "companyCode": "alibaba",
+      "title": "短期指标与长期体验 · Web前端",
+      "content": "一项改动能提高短期转化，却可能增加客户操作负担。如何收集反馈并决定是否推进？\n请结合Web前端岗位，说明信息收集、行动步骤、沟通方式与取舍依据。",
+      "referenceAnswer": "企业资料依据：客户第一。说明真实客户需求与短期要求是否一致，比较短期交付和持续客户价值，避免无条件承诺。\n岗位核查：前端关注真实交互、兼容性、性能记录、可访问性和发布回退。\n自评要点：先识别受影响的用户、约束与待验证假设；收集可验证数据；提出至少两种可执行方案并比较风险、成本和收益；明确负责人、沟通对象与验证指标；说明回滚或后续复盘安排。\n情境允许多种合理答案，评价论证与行动，不以复述企业口号作为正确标准。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "FE-WEB"
+      ],
+      "topics": [
+        "企业情境",
+        "项目场景",
+        "性能优化"
+      ],
+      "tags": [
+        "决策取舍",
+        "协作沟通"
+      ],
+      "source": {
+        "url": "https://www.alibabagroup.com/en-US/about-alibaba",
+        "license": "OfferPilot-original",
+        "author": "OfferPilot",
+        "adaptation": "依据企业公开资料原创改编，不代表企业真实面试题",
+        "evidence": {
+          "checkedAt": "2026-10-08",
+          "scope": "企业文化公开资料；不证明招聘考点、技术栈或出题频率",
+          "items": [
+            {
+              "id": "customer",
+              "label": "客户第一",
+              "summary": "决策关注持续的客户价值。",
+              "url": "https://www.alibabagroup.com/en-US/about-alibaba",
+              "type": "OFFICIAL_CULTURE"
+            }
+          ]
+        },
+        "evidenceIds": [
+          "customer"
+        ],
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:culture:alibaba:FE-WEB:3",
+      "type": "CULTURE",
+      "companyCode": "alibaba",
+      "title": "承诺与交付范围 · Web前端",
+      "content": "客户希望扩大已承诺的交付范围，现有时间无法满足。如何明确优先级、协商范围并维护信任？\n请结合Web前端岗位，说明信息收集、行动步骤、沟通方式与取舍依据。",
+      "referenceAnswer": "企业资料依据：客户第一。说明真实客户需求与短期要求是否一致，比较短期交付和持续客户价值，避免无条件承诺。\n岗位核查：前端关注真实交互、兼容性、性能记录、可访问性和发布回退。\n自评要点：先识别受影响的用户、约束与待验证假设；收集可验证数据；提出至少两种可执行方案并比较风险、成本和收益；明确负责人、沟通对象与验证指标；说明回滚或后续复盘安排。\n情境允许多种合理答案，评价论证与行动，不以复述企业口号作为正确标准。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "FE-WEB"
+      ],
+      "topics": [
+        "企业情境",
+        "项目场景",
+        "性能优化"
+      ],
+      "tags": [
+        "决策取舍",
+        "协作沟通"
+      ],
+      "source": {
+        "url": "https://www.alibabagroup.com/en-US/about-alibaba",
+        "license": "OfferPilot-original",
+        "author": "OfferPilot",
+        "adaptation": "依据企业公开资料原创改编，不代表企业真实面试题",
+        "evidence": {
+          "checkedAt": "2026-10-08",
+          "scope": "企业文化公开资料；不证明招聘考点、技术栈或出题频率",
+          "items": [
+            {
+              "id": "customer",
+              "label": "客户第一",
+              "summary": "决策关注持续的客户价值。",
+              "url": "https://www.alibabagroup.com/en-US/about-alibaba",
+              "type": "OFFICIAL_CULTURE"
+            }
+          ]
+        },
+        "evidenceIds": [
+          "customer"
+        ],
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:culture:tencent:BE-JAVA:1",
+      "type": "CULTURE",
+      "companyCode": "tencent",
+      "title": "跨团队协作受阻 · Java后端",
+      "content": "用户问题横跨两个团队，双方都认为不属于自己的职责。如何协调行动并让用户问题得到解决？\n请结合Java后端岗位，说明信息收集、行动步骤、沟通方式与取舍依据。",
+      "referenceAnswer": "企业资料依据：用户价值与协作。说明用户影响、跨团队依赖与共同目标，明确责任交接和协作机制。\n岗位核查：后端关注日志、依赖、容量、数据一致性和回滚验证。\n自评要点：先识别受影响的用户、约束与待验证假设；收集可验证数据；提出至少两种可执行方案并比较风险、成本和收益；明确负责人、沟通对象与验证指标；说明回滚或后续复盘安排。\n情境允许多种合理答案，评价论证与行动，不以复述企业口号作为正确标准。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA"
+      ],
+      "topics": [
+        "企业情境",
+        "系统设计",
+        "项目场景"
+      ],
+      "tags": [
+        "决策取舍",
+        "协作沟通"
+      ],
+      "source": {
+        "url": "https://www.tencent.com/who-we-are/",
+        "license": "OfferPilot-original",
+        "author": "OfferPilot",
+        "adaptation": "依据企业公开资料原创改编，不代表企业真实面试题",
+        "evidence": {
+          "checkedAt": "2026-10-08",
+          "scope": "企业文化公开资料；不证明招聘考点、技术栈或出题频率",
+          "items": [
+            {
+              "id": "user",
+              "label": "用户价值",
+              "summary": "产品与服务以用户价值为指引。",
+              "url": "https://www.tencent.com/who-we-are/",
+              "type": "OFFICIAL_CULTURE"
+            },
+            {
+              "id": "collaboration",
+              "label": "协作",
+              "summary": "倡导协作并关注共同贡献。",
+              "url": "https://www.tencent.com/who-we-are/",
+              "type": "OFFICIAL_CULTURE"
+            }
+          ]
+        },
+        "evidenceIds": [
+          "user",
+          "collaboration"
+        ],
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:culture:tencent:BE-JAVA:2",
+      "type": "CULTURE",
+      "companyCode": "tencent",
+      "title": "用户体验与发布节奏 · Java后端",
+      "content": "团队希望按时发布，但部分用户遇到明显体验退化。如何判断影响、协作修复并安排发布？\n请结合Java后端岗位，说明信息收集、行动步骤、沟通方式与取舍依据。",
+      "referenceAnswer": "企业资料依据：用户价值与协作。说明用户影响、跨团队依赖与共同目标，明确责任交接和协作机制。\n岗位核查：后端关注日志、依赖、容量、数据一致性和回滚验证。\n自评要点：先识别受影响的用户、约束与待验证假设；收集可验证数据；提出至少两种可执行方案并比较风险、成本和收益；明确负责人、沟通对象与验证指标；说明回滚或后续复盘安排。\n情境允许多种合理答案，评价论证与行动，不以复述企业口号作为正确标准。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA"
+      ],
+      "topics": [
+        "企业情境",
+        "系统设计",
+        "项目场景"
+      ],
+      "tags": [
+        "决策取舍",
+        "协作沟通"
+      ],
+      "source": {
+        "url": "https://www.tencent.com/who-we-are/",
+        "license": "OfferPilot-original",
+        "author": "OfferPilot",
+        "adaptation": "依据企业公开资料原创改编，不代表企业真实面试题",
+        "evidence": {
+          "checkedAt": "2026-10-08",
+          "scope": "企业文化公开资料；不证明招聘考点、技术栈或出题频率",
+          "items": [
+            {
+              "id": "user",
+              "label": "用户价值",
+              "summary": "产品与服务以用户价值为指引。",
+              "url": "https://www.tencent.com/who-we-are/",
+              "type": "OFFICIAL_CULTURE"
+            },
+            {
+              "id": "collaboration",
+              "label": "协作",
+              "summary": "倡导协作并关注共同贡献。",
+              "url": "https://www.tencent.com/who-we-are/",
+              "type": "OFFICIAL_CULTURE"
+            }
+          ]
+        },
+        "evidenceIds": [
+          "user",
+          "collaboration"
+        ],
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:culture:tencent:BE-JAVA:3",
+      "type": "CULTURE",
+      "companyCode": "tencent",
+      "title": "可访问性需求 · Java后端",
+      "content": "少量用户反馈关键操作难以使用，团队担心修复影响既定计划。如何评估用户价值并推动协作？\n请结合Java后端岗位，说明信息收集、行动步骤、沟通方式与取舍依据。",
+      "referenceAnswer": "企业资料依据：用户价值与协作。说明用户影响、跨团队依赖与共同目标，明确责任交接和协作机制。\n岗位核查：后端关注日志、依赖、容量、数据一致性和回滚验证。\n自评要点：先识别受影响的用户、约束与待验证假设；收集可验证数据；提出至少两种可执行方案并比较风险、成本和收益；明确负责人、沟通对象与验证指标；说明回滚或后续复盘安排。\n情境允许多种合理答案，评价论证与行动，不以复述企业口号作为正确标准。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "BE-JAVA"
+      ],
+      "topics": [
+        "企业情境",
+        "系统设计",
+        "项目场景"
+      ],
+      "tags": [
+        "决策取舍",
+        "协作沟通"
+      ],
+      "source": {
+        "url": "https://www.tencent.com/who-we-are/",
+        "license": "OfferPilot-original",
+        "author": "OfferPilot",
+        "adaptation": "依据企业公开资料原创改编，不代表企业真实面试题",
+        "evidence": {
+          "checkedAt": "2026-10-08",
+          "scope": "企业文化公开资料；不证明招聘考点、技术栈或出题频率",
+          "items": [
+            {
+              "id": "user",
+              "label": "用户价值",
+              "summary": "产品与服务以用户价值为指引。",
+              "url": "https://www.tencent.com/who-we-are/",
+              "type": "OFFICIAL_CULTURE"
+            },
+            {
+              "id": "collaboration",
+              "label": "协作",
+              "summary": "倡导协作并关注共同贡献。",
+              "url": "https://www.tencent.com/who-we-are/",
+              "type": "OFFICIAL_CULTURE"
+            }
+          ]
+        },
+        "evidenceIds": [
+          "user",
+          "collaboration"
+        ],
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:culture:tencent:FE-WEB:1",
+      "type": "CULTURE",
+      "companyCode": "tencent",
+      "title": "跨团队协作受阻 · Web前端",
+      "content": "用户问题横跨两个团队，双方都认为不属于自己的职责。如何协调行动并让用户问题得到解决？\n请结合Web前端岗位，说明信息收集、行动步骤、沟通方式与取舍依据。",
+      "referenceAnswer": "企业资料依据：用户价值与协作。说明用户影响、跨团队依赖与共同目标，明确责任交接和协作机制。\n岗位核查：前端关注真实交互、兼容性、性能记录、可访问性和发布回退。\n自评要点：先识别受影响的用户、约束与待验证假设；收集可验证数据；提出至少两种可执行方案并比较风险、成本和收益；明确负责人、沟通对象与验证指标；说明回滚或后续复盘安排。\n情境允许多种合理答案，评价论证与行动，不以复述企业口号作为正确标准。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "FE-WEB"
+      ],
+      "topics": [
+        "企业情境",
+        "项目场景",
+        "性能优化"
+      ],
+      "tags": [
+        "决策取舍",
+        "协作沟通"
+      ],
+      "source": {
+        "url": "https://www.tencent.com/who-we-are/",
+        "license": "OfferPilot-original",
+        "author": "OfferPilot",
+        "adaptation": "依据企业公开资料原创改编，不代表企业真实面试题",
+        "evidence": {
+          "checkedAt": "2026-10-08",
+          "scope": "企业文化公开资料；不证明招聘考点、技术栈或出题频率",
+          "items": [
+            {
+              "id": "user",
+              "label": "用户价值",
+              "summary": "产品与服务以用户价值为指引。",
+              "url": "https://www.tencent.com/who-we-are/",
+              "type": "OFFICIAL_CULTURE"
+            },
+            {
+              "id": "collaboration",
+              "label": "协作",
+              "summary": "倡导协作并关注共同贡献。",
+              "url": "https://www.tencent.com/who-we-are/",
+              "type": "OFFICIAL_CULTURE"
+            }
+          ]
+        },
+        "evidenceIds": [
+          "user",
+          "collaboration"
+        ],
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:culture:tencent:FE-WEB:2",
+      "type": "CULTURE",
+      "companyCode": "tencent",
+      "title": "用户体验与发布节奏 · Web前端",
+      "content": "团队希望按时发布，但部分用户遇到明显体验退化。如何判断影响、协作修复并安排发布？\n请结合Web前端岗位，说明信息收集、行动步骤、沟通方式与取舍依据。",
+      "referenceAnswer": "企业资料依据：用户价值与协作。说明用户影响、跨团队依赖与共同目标，明确责任交接和协作机制。\n岗位核查：前端关注真实交互、兼容性、性能记录、可访问性和发布回退。\n自评要点：先识别受影响的用户、约束与待验证假设；收集可验证数据；提出至少两种可执行方案并比较风险、成本和收益；明确负责人、沟通对象与验证指标；说明回滚或后续复盘安排。\n情境允许多种合理答案，评价论证与行动，不以复述企业口号作为正确标准。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "FE-WEB"
+      ],
+      "topics": [
+        "企业情境",
+        "项目场景",
+        "性能优化"
+      ],
+      "tags": [
+        "决策取舍",
+        "协作沟通"
+      ],
+      "source": {
+        "url": "https://www.tencent.com/who-we-are/",
+        "license": "OfferPilot-original",
+        "author": "OfferPilot",
+        "adaptation": "依据企业公开资料原创改编，不代表企业真实面试题",
+        "evidence": {
+          "checkedAt": "2026-10-08",
+          "scope": "企业文化公开资料；不证明招聘考点、技术栈或出题频率",
+          "items": [
+            {
+              "id": "user",
+              "label": "用户价值",
+              "summary": "产品与服务以用户价值为指引。",
+              "url": "https://www.tencent.com/who-we-are/",
+              "type": "OFFICIAL_CULTURE"
+            },
+            {
+              "id": "collaboration",
+              "label": "协作",
+              "summary": "倡导协作并关注共同贡献。",
+              "url": "https://www.tencent.com/who-we-are/",
+              "type": "OFFICIAL_CULTURE"
+            }
+          ]
+        },
+        "evidenceIds": [
+          "user",
+          "collaboration"
+        ],
+        "reviewedAt": "2026-10-08"
+      }
+    },
+    {
+      "canonicalId": "offerpilot:culture:tencent:FE-WEB:3",
+      "type": "CULTURE",
+      "companyCode": "tencent",
+      "title": "可访问性需求 · Web前端",
+      "content": "少量用户反馈关键操作难以使用，团队担心修复影响既定计划。如何评估用户价值并推动协作？\n请结合Web前端岗位，说明信息收集、行动步骤、沟通方式与取舍依据。",
+      "referenceAnswer": "企业资料依据：用户价值与协作。说明用户影响、跨团队依赖与共同目标，明确责任交接和协作机制。\n岗位核查：前端关注真实交互、兼容性、性能记录、可访问性和发布回退。\n自评要点：先识别受影响的用户、约束与待验证假设；收集可验证数据；提出至少两种可执行方案并比较风险、成本和收益；明确负责人、沟通对象与验证指标；说明回滚或后续复盘安排。\n情境允许多种合理答案，评价论证与行动，不以复述企业口号作为正确标准。",
+      "keywords": "",
+      "difficulty": 1,
+      "jobCodes": [
+        "FE-WEB"
+      ],
+      "topics": [
+        "企业情境",
+        "项目场景",
+        "性能优化"
+      ],
+      "tags": [
+        "决策取舍",
+        "协作沟通"
+      ],
+      "source": {
+        "url": "https://www.tencent.com/who-we-are/",
+        "license": "OfferPilot-original",
+        "author": "OfferPilot",
+        "adaptation": "依据企业公开资料原创改编，不代表企业真实面试题",
+        "evidence": {
+          "checkedAt": "2026-10-08",
+          "scope": "企业文化公开资料；不证明招聘考点、技术栈或出题频率",
+          "items": [
+            {
+              "id": "user",
+              "label": "用户价值",
+              "summary": "产品与服务以用户价值为指引。",
+              "url": "https://www.tencent.com/who-we-are/",
+              "type": "OFFICIAL_CULTURE"
+            },
+            {
+              "id": "collaboration",
+              "label": "协作",
+              "summary": "倡导协作并关注共同贡献。",
+              "url": "https://www.tencent.com/who-we-are/",
+              "type": "OFFICIAL_CULTURE"
+            }
+          ]
+        },
+        "evidenceIds": [
+          "user",
+          "collaboration"
+        ],
+        "reviewedAt": "2026-10-08"
+      }
+    }
+  ]
+}

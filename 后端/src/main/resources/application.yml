@@ -36,13 +36,13 @@ jwt:
   # token 有效期（毫秒），默认 7 天
   expiration: 604800000
 
-# AI 大模型配置（智谱，OpenAI 兼容接口）
+# AI 大模型配置（DeepSeek，OpenAI 兼容接口）
 ai:
-  provider: zhipu
-  base-url: ${ZHIPU_LLM_BASE_URL:https://open.bigmodel.cn/api/paas/v4}
-  # 大模型与 ASR 共用智谱密钥，只从环境变量读取。
-  api-key: ${ZHIPU_API_KEY:}
-  model: ${ZHIPU_LLM_MODEL:glm-4.7-flash}
+  provider: deepseek
+  base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
+  # 密钥通过环境变量或被 Git 忽略的后端本地配置注入。
+  api-key: ${DEEPSEEK_API_KEY:}
+  model: ${DEEPSEEK_MODEL:deepseek-flash}
   # 是否启用真实 AI 调用；false 时使用内置规则/模拟（无 key 也能演示）
   enabled: true
   # 调用超时（毫秒），同时作为连接与读取超时
@@ -72,7 +72,7 @@ judge:
   auth-token: ${JUDGE_AUTH_TOKEN:}
   timeout-ms: ${JUDGE_TIMEOUT_MS:15000}
   language-ids:
-    java: ${JUDGE_LANGUAGE_JAVA:62}
+    java: ${JUDGE_LANGUAGE_JAVA:0}
 
 # 本地数字人服务。开发环境启动 Spring Boot 时自动检查并拉起。
 digital-human:

@@ -21,6 +21,9 @@ export const getMeetingDetail = (id) => request.get(`/meeting/${id}`)
 /** 结束会议（发起人或 ADMIN）→ 房间成员会被服务端移出 */
 export const endMeeting = (id) => request.post(`/meeting/${id}/end`)
 
+/** 删除已结束会议及参会记录、建议（发起人或 ADMIN） */
+export const deleteMeeting = (id) => request.delete(`/meeting/${id}`)
+
 /** 建议列表（学生只会看到面向全体的和自己的） */
 export const getMeetingAdvice = (id) => request.get(`/meeting/${id}/advice`)
 

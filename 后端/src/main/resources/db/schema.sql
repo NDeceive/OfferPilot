@@ -241,7 +241,8 @@ CREATE TABLE interview_followup_record (
 INSERT INTO sys_user (username, password, nickname, role) VALUES
 ('admin',   '$2a$10$ZK6vA7aDfR0wYwEgu1Iv.ezL1U97zMKw/WqDjNq3.ux.0n7nUq4om', '系统管理员', 'ADMIN'),
 ('teacher', '$2a$10$ZK6vA7aDfR0wYwEgu1Iv.ezL1U97zMKw/WqDjNq3.ux.0n7nUq4om', '就业指导老师', 'TEACHER'),
-('student', '$2a$10$ZK6vA7aDfR0wYwEgu1Iv.ezL1U97zMKw/WqDjNq3.ux.0n7nUq4om', '测试学生', 'STUDENT');
+('student', '$2a$10$ZK6vA7aDfR0wYwEgu1Iv.ezL1U97zMKw/WqDjNq3.ux.0n7nUq4om', '测试学生', 'STUDENT'),
+('enterprise', '$2a$10$2t4JFwo6fBuD9vLYQq1Tue.3ipjRJG1Eph8LlSuHCmz6dQSwWXK4u', '测试企业', 'ENTERPRISE');
 
 INSERT INTO job_position (name, category, family, code, description, abilities, keywords) VALUES
 ('Java后端开发工程师', '后端开发', '后端开发', 'BE-JAVA', '负责 Java 后端服务开发。', '["Java核心","JVM","并发","Spring","MySQL","Redis","微服务"]', '["Java","Spring","MySQL","Redis","微服务","Docker"]'),

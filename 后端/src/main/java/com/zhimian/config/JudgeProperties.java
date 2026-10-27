@@ -16,8 +16,9 @@ public class JudgeProperties {
     private String baseUrl = "";
     private String authToken = "";
     private int timeoutMs = 15000;
+    private String javaVersion = "17";
     /** Judge0 的 language_id 由部署版本决定，安装后可通过 /languages 校验。 */
-    private Map<String, Integer> languageIds = new LinkedHashMap<>(Map.of("java", 62));
+    private Map<String, Integer> languageIds = new LinkedHashMap<>();
 
     public boolean isUsable() {
         return enabled && baseUrl != null && !baseUrl.isBlank();

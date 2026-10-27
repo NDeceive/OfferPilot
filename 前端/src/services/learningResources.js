@@ -1,5 +1,7 @@
 import { getDashboardOverview, getJobList, getCareerProfile } from '../api'
-import request from '../utils/request'
+// PRACTICE_DEMO: restore request from '../utils/request' and remove the early return below.
+import { practiceDemoRequest as request, practiceDemoResources } from './practiceDemo'
+export { practiceDemoSelfAssessment as setPracticeSelfAssessment } from './practiceDemo' // PRACTICE_DEMO
 
 const roleSeed = [
   ['BE-JAVA', 'Java后端开发工程师', '后端开发', 'Java / JVM / Spring / 数据库 / 分布式'],
@@ -51,8 +53,8 @@ export const companies = [
 ]
 
 const topicOverrides = {
-  'BE-JAVA': ['综合高频', 'Java核心', 'JVM', '并发编程', 'Spring', 'MySQL', 'Redis', '分布式', '系统设计', '项目场景', '编程与算法'],
-  'FE-WEB': ['综合高频', 'JavaScript', 'TypeScript', 'Vue / React', '浏览器原理', '工程化', '性能优化', '网络', '编程与算法'],
+  'BE-JAVA': ['综合高频', 'Java核心', 'JVM', '并发编程', 'Spring', 'MySQL', 'Redis', '分布式', '系统设计', '项目场景', '企业情境', '编程与算法'],
+  'FE-WEB': ['综合高频', 'JavaScript', 'TypeScript', 'Vue / React', '浏览器原理', '工程化', '性能优化', '网络', '企业情境', '编程与算法'],
 }
 
 const demoQuestion = {
@@ -94,6 +96,8 @@ function fallbackRoles() {
 }
 
 export async function loadLearningResources() {
+  return practiceDemoResources(fallbackRoles(), roleFamilies, companies) // PRACTICE_DEMO
+  /* eslint-disable no-unreachable */
   let roles
   let overview = null
   try {
@@ -105,41 +109,67 @@ export async function loadLearningResources() {
   try { overview = await getDashboardOverview() } catch { /* Optional context. */ }
   const profile = await getCareerProfile().catch(() => null)
   const practice = await request.get('/practice/overview').catch(() => null)
+  const catalog = await getPracticeCatalog().catch(() => ({ ready: false, companies: [], notice: '练习配置暂时无法加载，请重试。' }))
   return {
     roles,
     families: roleFamilies.map(family => ({ ...family, count: roles.filter(role => role.code?.startsWith(`${family.code}-`)).length })),
     companies,
+    catalog,
+    overviewAvailable: practice !== null,
     recentSession: practice?.recentSession || null,
     currentRole: roles.find(role => role.name === overview?.latestInsight?.jobName || role.name === overview?.recentInterviews?.[0]?.jobName) || null,
     currentFocus: overview?.latestInsight?.weakestDimension || '',
     preferredRole: roles.find(role => role.id === profile?.targetJobId) || null,
     preferredCompany: profile?.targetCompany || '',
-    libraryCounts: practice?.libraryCounts || { mistakes: 0, favorites: 0, recent: 0 },
+    libraryCounts: practice?.libraryCounts || { mistakes: null, favorites: null, recent: null },
   }
 }
 
-export function getTopics(role) {
+export function getTopics(role, catalog) {
   if (!role) return []
-  if (topicOverrides[role.code]) return topicOverrides[role.code]
   const derived = String(role.summary || '').split('/').map(item => item.trim()).filter(Boolean)
-  return ['综合高频', ...new Set(derived), '项目场景', '编程与算法'].slice(0, 11)
+  const topics = topicOverrides[role.code] || ['综合高频', ...new Set(derived), '项目场景', '编程与算法'].slice(0, 11)
+  if (!catalog?.ready) return topics
+  const supportsCoding = catalog.codingCoverage?.some(item => item.jobCodes?.includes(role.code))
+  return topics.filter(topic => topic !== '编程与算法' || supportsCoding)
 }
 
-export function topicQuestionTypes(topic) {
+export function topicQuestionTypes(topic, role, catalog) {
+  if (topic === '企业情境') return ['knowledge']
   if (topic === '编程与算法') return ['coding']
-  return ['all', 'knowledge']
+  const broad = ['综合高频', '项目场景'].includes(topic)
+  const objectiveTypes = ['choice','multiple_choice','true_false'].filter(type => catalog?.objectiveCoverage?.some(item => item.type?.toLowerCase() === type && item.jobCodes?.includes(role?.code) && (broad || item.topics?.includes(topic))))
+  if (role && catalog?.ready) {
+    const supported = catalog.codingCoverage?.some(item => item.jobCodes?.includes(role.code) && (broad || item.topics?.includes(topic)))
+    if (!supported) return ['knowledge', ...objectiveTypes]
+  }
+  return ['all', 'knowledge', ...objectiveTypes, 'coding']
 }
 
 export function createTrainingSession(config) {
   return request.post('/practice/sessions', {
     jobId: Number(config.role.id), company: config.company, topic: config.topic,
-    trainingMode: config.trainingMode, questionType: config.questionType,
+    trainingMode: 'normal', questionType: config.questionType,
     questionCount: config.questionCount, difficulty: config.difficulty,
   })
 }
 
 export const getTrainingSession = (id) => request.get(`/practice/sessions/${id}`)
+export const getJudgeCapability = () => request.get('/practice/judge/capability')
+export const createJudgeTask = (sessionId,questionId,data) => request.post(`/practice/sessions/${sessionId}/questions/${questionId}/tasks`,data)
+export const getJudgeTask = (id) => request.get(`/practice/tasks/${id}`)
+export const getSessionTasks = (id) => request.get(`/practice/sessions/${id}/tasks`)
+export const getPracticeReport = (id) => request.get(`/practice/sessions/${id}/report`)
+export const getQuestionSubmissions = (sessionId,questionId,page=1) => request.get(`/practice/sessions/${sessionId}/questions/${questionId}/submissions`,{params:{page}})
+export const retryPractice = (id,failedOnly=false) => request.post(`/practice/sessions/${id}/retry`,null,{params:{failedOnly}})
+export const setPracticeReview = (id,state) => request.put(`/practice/questions/${id}/review`,{state})
+export const getPracticeOverview = () => request.get('/practice/overview')
+export const getPracticeCatalog = () => request.get('/practice/catalog')
+export const getPracticeSessions = (params) => request.get('/practice/sessions', { params })
+export const getPracticeLibrary = (kind, params) => request.get(`/practice/library/${kind}`, { params })
 export const answerPracticeQuestion = (sessionId, questionId, answer) => request.post(`/practice/sessions/${sessionId}/questions/${questionId}/answers`, { answer })
-export const runJudgeCode = (sessionId, questionId, sourceCode, language = 'java') => request.post(`/practice/sessions/${sessionId}/questions/${questionId}/run`, { sourceCode, language })
+export const runJudgeCode = (sessionId, questionId, sourceCode, language = 'java') => request.post(`/practice/sessions/${sessionId}/questions/${questionId}/run`, { sourceCode, language }, { timeout: 180000 })
+export const submitPracticeCode = (sessionId, questionId, sourceCode, language = 'java') => request.post(`/practice/sessions/${sessionId}/questions/${questionId}/submit`, { sourceCode, language }, { timeout: 180000 })
 export const finishTrainingSession = (sessionId) => request.post(`/practice/sessions/${sessionId}/finish`)
 export const togglePracticeFavorite = (questionId) => request.post(`/practice/questions/${questionId}/favorite`)
+export const removePracticeFavorite = (questionId) => request.delete(`/practice/questions/${questionId}/favorite`)

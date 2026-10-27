@@ -13,6 +13,7 @@ import { getApiBase } from './apiBase'
 import { MOCK_AI_PREP, MOCK_AI_PREP_FOCUS, MOCK_JOBS } from './demoData'
 import { JOB_FAMILIES, parseJsonField, READY_JOBS } from './jobs'
 import { demoState } from './offlineDemo'
+import { isExplicitPrepChoice } from './aiPrepConversation'
 
 /** 解析一帧（已经按空行切好）并派发给同名回调 */
 function dispatch(frame, handlers) {
@@ -68,7 +69,7 @@ export async function postSse(path, payload, handlers = {}, options = {}) {
   })
 
   if (!res.ok || !res.body) {
-    throw new Error(`SSE 连接失败（HTTP ${res.status}）`)
+    throw Object.assign(new Error(`SSE 连接失败（HTTP ${res.status}）`), { code: res.status })
   }
 
   // 后端把参数校验失败等异常交给 GlobalExceptionHandler，返回的是 JSON 而非事件流。
@@ -76,13 +77,15 @@ export async function postSse(path, payload, handlers = {}, options = {}) {
   // 结果是一句都读不到、静默降级）。这里把真实原因抛出去，调用方至少能记进控制台。
   const ctype = res.headers.get('content-type') || ''
   if (!ctype.includes('text/event-stream')) {
-    let detail = ''
+    let detail = '', code = res.status
     try {
-      detail = (await res.json())?.message || ''
+      const body = await res.json()
+      detail = body?.message || ''
+      code = body?.code || code
     } catch {
       /* 不是 JSON 就算了 */
     }
-    throw new Error(detail || `SSE 响应类型异常（${ctype || '未知'}）`)
+    throw Object.assign(new Error(detail || `SSE 响应类型异常（${ctype || '未知'}）`), { code })
   }
 
   const reader = res.body.getReader()
@@ -213,17 +216,17 @@ function buildMockReply(payload) {
 
   if (!message) return { text: script.text, act: script.act }
 
-  if (stage === 'GREET' || stage === 'PICK_JOB') {
+  if (isExplicitPrepChoice(message)) {
     const guess = guessJob(message)
     if (guess) {
       const focus = MOCK_AI_PREP_FOCUS[guess.job.code] || ''
       return {
-        text: `${focus}确定的话我就按「${guess.job.name}」给你出题了。`,
+        text: `${focus}如果确定用「${guess.job.name}」作为目标岗位，可以点确认；也可以继续讨论。`,
         act: {
           intent: 'PICK_JOB',
           jobCode: guess.job.code,
           jobName: guess.job.name,
-          // 只有说清了岗位名才敢自动跳；只说了个技术词就走确认栏，让人来拍板
+          // 命中只提供待确认建议，不自动改变用户的岗位。
           confidence: guess.confident ? 'HIGH' : 'LOW',
         },
       }
@@ -231,22 +234,44 @@ function buildMockReply(payload) {
     const family = guessFamily(message)
     if (family) {
       return {
-        text: `${family}方向可以，岗位我列在下面了，你挑一个更具体的。`,
+        text: `${family}方向可以先了解。你可以浏览相关岗位，也可以接着聊日常工作和能力要求。`,
         act: { intent: 'PICK_JOB', family, confidence: 'LOW' },
       }
     }
   }
 
-  if (stage === 'UPLOAD' && /没有|没写|没带|在线|填一份|现写/.test(message)) {
+  if (stage === 'UPLOAD' && /(?:没有|没写|没带|没准备).{0,6}简历|(?:在线|填一份|现写).{0,6}简历|简历.{0,6}(?:没有|没写|在线)/.test(message)) {
     return {
       text: '没有文件也没关系，在线填一份就行——岗位、技能、项目经历三栏，填完效果一样。',
       act: { intent: 'NO_RESUME', confidence: 'LOW' },
     }
   }
 
-  return {
-    text: '收到。这一步按上面说的来就行，有问题随时打断我。',
+  if (/前端/.test(message) && /后端/.test(message)) {
+    return { text: '前端更关注用户看到的页面、交互与浏览器体验，后端更关注业务逻辑、接口、数据库和服务稳定性。两边都需要编程和调试，不能简单按难易选。你做项目时，更喜欢打磨界面，还是实现数据和业务逻辑？' }
   }
+  if (/java/i.test(message) && /python/i.test(message)) {
+    return { text: 'Java 后端通常围绕业务服务、数据库和工程协作，Python 后端也要掌握接口、数据库与部署，语言只是入口。可以先比较你已有的项目经验和愿意深入的技术栈。你用哪种语言完整做过一个项目？' }
+  }
+  if (/不会|不懂|没学|零基础|基础差/.test(message)) {
+    return { text: '暂时不会某项技术，不等于不适合这个方向。更有用的是看看你现有的基础，以及是否愿意通过一个小项目试试日常工作。你目前最熟悉什么技能？' }
+  }
+  if (/工资|薪资|就业|前景|好找工作/.test(message)) {
+    return { text: '就业机会和薪资会随城市、企业、经验和招聘时间变化，这里的离线演示不能查询实时招聘数据。选方向时可以先比较工作内容、已有能力和补足成本。你更在意哪一个？' }
+  }
+  if (/没方向|不知道|没想好|迷茫|纠结|先聊|不想|不要|不选/.test(message)) {
+    return { text: '可以，先不用选。我们从具体经历聊起，比直接看岗位名更容易判断。最近一次课程作业、项目或实习里，你最愿意花时间做的部分是什么？' }
+  }
+  const guess = guessJob(message)
+  if (guess && /怎么样|做什么|要求|了解|准备|适合|推荐|建议/.test(message)) {
+    const focus = MOCK_AI_PREP_FOCUS[guess.job.code] || ''
+    return { text: `${focus}这只是了解方向，还没有替你选定。你想先聊工作内容，还是结合自己的项目看看匹配程度？` }
+  }
+  const previous = (payload.history || []).filter(m => m.role === 'user').map(m => m.content).join(' ')
+  if (/项目|课程|实习|学过|会|专业/.test(message + previous)) {
+    return { text: '这些经历可以作为探索方向的线索，但还不足以直接定岗。你可以挑一个刚提到的经历，说说自己负责的部分和最有成就感的环节，我们再对照岗位看。' }
+  }
+  return { text: '可以继续聊，不用现在做选择。这里是离线演示，复杂问题需要连接 AI 后才能结合上下文深入分析；你可以先说说最想了解的工作内容或自己的经历。' }
 }
 
 async function playMockSse(path, payload, handlers, options) {
@@ -258,7 +283,7 @@ async function playMockSse(path, payload, handlers, options) {
 
   // 这个顺序跟真后端一致：mode 和意图先到，正文再逐字出来。
   // 前端的打字机靠 delta 驱动，意图先落进 pendingAct 等正文说完才执行。
-  dispatch(mockFrame('meta', { mode: 'AI' }), handlers)
+  dispatch(mockFrame('meta', { mode: 'RULE' }), handlers)
   if (act) dispatch(mockFrame('act', act), handlers)
 
   await mockWait(120, signal)

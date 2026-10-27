@@ -277,6 +277,14 @@ public class ReportService {
         return resp;
     }
 
+    /** Export uses the same owner/teacher authorization as the report detail. */
+    public List<InterviewMessage> getExportMessages(Long reportId) {
+        var report = getDetail(reportId);
+        return messageMapper.selectList(new LambdaQueryWrapper<InterviewMessage>()
+                .eq(InterviewMessage::getSessionId, report.getSessionId())
+                .orderByAsc(InterviewMessage::getCreateTime, InterviewMessage::getId));
+    }
+
     // ============================ 指标采集 ============================
 
     /** 一次会话聚合后的可量化信号，所有打分都基于它 —— 保证确定性、可解释。 */

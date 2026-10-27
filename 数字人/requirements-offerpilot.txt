@@ -12,6 +12,6 @@ flask-sockets
 aiohttp
 aiohttp-cors
 aiortc
-edge-tts
+edge-tts>=7.3.1,<8
 requests
 openai

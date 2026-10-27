@@ -77,13 +77,15 @@ public class FollowUpService {
                     log.info("[AI-FollowUp] generated, reason={}", reason);
                     return FollowUpResponse.of(cleanup(aiQuestion), SOURCE_AI, reason);
                 }
+                log.warn("DeepSeek returned no follow-up question, shouldFollowUp={}, reason={}",
+                        aiResult.path("shouldFollowUp").asText(), reason);
             } catch (Exception e) {
                 log.warn("Failed to parse DeepSeek follow-up JSON, fallback to rule: {}", e.getMessage());
             }
         }
 
         // AI failed / timed out / returned empty: rule-based fallback
-        log.debug("DeepSeek did not return valid JSON, using rule-based fallback");
+        log.debug("DeepSeek did not return a usable follow-up question, using rule-based fallback");
         return ruleGenerator.defaultResponse();
     }
 

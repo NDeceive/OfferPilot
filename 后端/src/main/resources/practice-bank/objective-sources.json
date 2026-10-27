@@ -1,0 +1,56 @@
+{
+  "checkedAt": "2026-10-09",
+  "github": {
+    "repo": "lydiahallie/javascript-questions",
+    "commit": "a8b427b9f7f94f1a2965144ba544b475c5f65829",
+    "license": "MIT",
+    "translationSha256": "3f43b03f639624530f715f24de284a7e7df0feb945379a2c6cb7287cb40ab683",
+    "selectedQuestions": [
+      1,
+      2,
+      4,
+      5,
+      6,
+      7,
+      8,
+      10,
+      11,
+      13,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      23,
+      24,
+      25,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      34,
+      35,
+      36,
+      38,
+      40
+    ]
+  },
+  "originalReferences": {
+    "java": "https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/package-summary.html",
+    "web": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide",
+    "sql": "https://www.postgresql.org/docs/current/tutorial.html",
+    "ml": "https://scikit-learn.org/stable/modules/model_evaluation.html",
+    "qa": "https://playwright.dev/docs/best-practices",
+    "pm": "https://scrumguides.org/scrum-guide.html",
+    "common": "https://developer.mozilla.org/en-US/docs/Web/HTTP/Overview"
+  },
+  "counts": {
+    "CHOICE": 101,
+    "TRUE_FALSE": 70,
+    "MULTIPLE_CHOICE": 70
+  }
+}
