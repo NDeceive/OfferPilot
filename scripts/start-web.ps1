@@ -5,7 +5,16 @@ $root = Split-Path $PSScriptRoot -Parent
 $frontend = Join-Path $root '前端'
 $backend = Join-Path $root '后端'
 $logDir = Join-Path $root '后端\logs'
-$url = 'http://localhost:5173'
+$frontendPort = if ($env:FRONTEND_PORT) { [int]$env:FRONTEND_PORT } else { 5173 }
+$backendPort = if ($env:SERVER_PORT) { [int]$env:SERVER_PORT } else { 8080 }
+$dbPort = if ($env:DB_PORT) { [int]$env:DB_PORT } else { 3306 }
+$dbHost = if ($env:DB_HOST) { $env:DB_HOST } else { 'localhost' }
+$url = "http://localhost:$frontendPort"
+$backendUrl = "http://localhost:$backendPort"
+if (-not $env:BACKEND_PROXY_TARGET) { $env:BACKEND_PROXY_TARGET = $backendUrl }
+$digitalHumanEnabled = $env:DIGITAL_HUMAN_ENABLED -ne 'false'
+$digitalHumanUrl = if ($env:DIGITAL_HUMAN_BASE_URL) { $env:DIGITAL_HUMAN_BASE_URL } else { 'http://127.0.0.1:8010' }
+$digitalHumanPort = ([uri]$digitalHumanUrl).Port
 $started = @()
 Add-Type -AssemblyName System.Net.Http
 $handler = New-Object System.Net.Http.HttpClientHandler
@@ -26,18 +35,19 @@ function Test-WebReady([string]$Address, [switch]$Backend) {
     } catch { return $false }
 }
 
-function Test-Port([int]$Port) {
+function Test-Port([int]$Port, [string]$Address = 'localhost') {
     $client = New-Object System.Net.Sockets.TcpClient
     try {
-        $task = $client.ConnectAsync('localhost', $Port)
+        $task = $client.ConnectAsync($Address, $Port)
         return ($task.Wait(1000) -and $client.Connected)
     } catch { return $false }
     finally { $client.Dispose() }
 }
 
 function Test-DigitalHumanReady {
+    if (-not $digitalHumanEnabled) { return $true }
     try {
-        $response = $http.GetAsync('http://127.0.0.1:8010/offerpilot-embed.html').GetAwaiter().GetResult()
+        $response = $http.GetAsync("$digitalHumanUrl/offerpilot-embed.html").GetAwaiter().GetResult()
         try {
             return $response.IsSuccessStatusCode -and ($response.Content.ReadAsStringAsync().GetAwaiter().GetResult() -match 'OfferPilot')
         } finally { $response.Dispose() }
@@ -69,7 +79,7 @@ function Initialize-ZhipuKey([bool]$BackendAlreadyRunning) {
         return
     }
 
-    Write-Host '语音识别和智能追问需要你自己的智谱 API Key；不配置也可启动，但语音识别不可用。'
+    Write-Host '语音识别需要你自己的智谱 API Key；智能追问单独使用后端的 DeepSeek 配置。不配置智谱也可启动，但语音识别不可用。'
     $choice = Read-Host '现在配置智谱 API Key，并仅保存到当前 Windows 用户环境变量供下次启动使用？(Y/n)'
     if ($choice -match '^[nN]') {
         Write-Warning '已跳过智谱 API Key 配置；语音识别将不可用。配置方法见 README「配置智谱 API Key」。'
@@ -103,12 +113,12 @@ function Initialize-ZhipuKey([bool]$BackendAlreadyRunning) {
 try {
     Write-Host 'OfferPilot 一键启动' -ForegroundColor Cyan
     Write-Host '首次启动可能需要几分钟，请稍候。'
-    $backendReady = Test-WebReady 'http://localhost:8080/api/dashboard/overview' -Backend
+    $backendReady = Test-WebReady "$backendUrl/api/dashboard/overview" -Backend
     $frontendReady = Test-WebReady $url
     $digitalHumanReady = Test-DigitalHumanReady
-    if (-not $backendReady -and (Test-Port 8080)) { throw '8080 端口已被占用，但后端尚未就绪。请检查已有服务后重试。' }
-    if (-not $frontendReady -and (Test-Port 5173)) { throw '5173 端口已被占用，但不是就绪的 OfferPilot 网页。请检查已有服务后重试。' }
-    if (-not $digitalHumanReady -and (Test-Port 8010)) { throw '8010 端口已被占用，但不是就绪的 OfferPilot 数字人服务。' }
+    if (-not $backendReady -and (Test-Port $backendPort)) { throw "$backendPort 端口已被占用，但后端尚未就绪。请检查已有服务后重试。" }
+    if (-not $frontendReady -and (Test-Port $frontendPort)) { throw "$frontendPort 端口已被占用，但不是就绪的 OfferPilot 网页。" }
+    if (-not $digitalHumanReady -and (Test-Port $digitalHumanPort ([uri]$digitalHumanUrl).Host)) { throw '数字人服务地址已被其他程序占用。' }
     Initialize-ZhipuKey $backendReady
     New-Item -ItemType Directory -Path $logDir -Force | Out-Null
 
@@ -129,21 +139,22 @@ try {
         if (-not (Test-Path (Join-Path $env:JAVA_HOME 'bin/javac.exe'))) { throw 'JAVA_HOME 必须指向 JDK（含 javac），不能仅安装 JRE。' }
         $compilerVersion = & (Join-Path $env:JAVA_HOME 'bin/javac.exe') -version 2>&1
         if ("$compilerVersion" -notmatch 'javac (\d+)' -or [int]$Matches[1] -lt 17) { throw '请安装 JDK 17 或更高版本，并修正 JAVA_HOME。' }
-        if (-not (Test-Port 3306)) { throw 'MySQL 未在 localhost:3306 运行。请先启动 MySQL，并按 README 初始化数据库。' }
+        if (-not (Test-Port $dbPort $dbHost)) { throw "无法连接 MySQL $dbHost`:$dbPort，请检查本地部署配置。" }
     }
 
     if (-not $digitalHumanReady) {
-        if (-not (Test-Port 3306)) { throw 'MySQL 未在 localhost:3306 运行。请先启动 MySQL，并按 README 初始化数据库。' }
+        if ($env:DIGITAL_HUMAN_LAUNCHER_ENABLED -eq 'false') { throw '数字人自动启动已关闭，指定的 DIGITAL_HUMAN_BASE_URL 尚不可用，请先启动外部服务。' }
+        if (-not (Test-Port $dbPort $dbHost)) { throw "无法连接 MySQL $dbHost`:$dbPort，请检查本地部署配置。" }
         Write-Host '正在检查数字人 Python 环境、依赖和模型资源（首次可能需要较长时间）…'
         & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $root '数字人/start_offerpilot_digital_human.ps1') -CheckOnly
         if ($LASTEXITCODE -ne 0) { throw '数字人准备失败，请查看上方错误，修复后重新运行。' }
     }
 
     if (-not $backendReady) {
-        Write-Host '正在启动后端（8080）…'
+        Write-Host "正在启动后端（$backendPort）…"
         $backendProcess = Start-Process -FilePath $env:ComSpec -ArgumentList '/d /c .\mvnw.cmd clean spring-boot:run' -WorkingDirectory $backend -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $logDir 'web-backend.log') -RedirectStandardError (Join-Path $logDir 'web-backend-error.log')
         $started += $backendProcess
-        Wait-Web 'http://localhost:8080/api/dashboard/overview' $backendProcess -Backend
+        Wait-Web "$backendUrl/api/dashboard/overview" $backendProcess -Backend
     }
 
     if (-not $digitalHumanReady) {
@@ -163,22 +174,23 @@ try {
 
     if (-not $frontendReady) {
         $node = (Get-Command node.exe -ErrorAction Stop).Source
-        if (-not (Test-Path (Join-Path $frontend 'node_modules\vite\bin\vite.js'))) {
-            Write-Host '正在安装前端依赖…'
-            Push-Location $frontend
-            try {
+        Push-Location $frontend
+        try {
+            & $env:ComSpec /d /c 'npm.cmd ls --depth=0 >nul 2>&1'
+            if ($LASTEXITCODE -ne 0) {
+                Write-Host '前端依赖缺失或版本不匹配，正在按锁文件重新安装…'
                 & npm.cmd ci
                 if ($LASTEXITCODE -ne 0) { throw '前端依赖安装失败，请检查网络和 Node.js 版本后重试。' }
-            } finally { Pop-Location }
-        }
-        Write-Host '正在启动网页（5173）…'
-        $frontendProcess = Start-Process -FilePath $node -ArgumentList 'node_modules/vite/bin/vite.js --host localhost --port 5173 --strictPort' -WorkingDirectory $frontend -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $logDir 'web-frontend.log') -RedirectStandardError (Join-Path $logDir 'web-frontend-error.log')
+            }
+        } finally { Pop-Location }
+        Write-Host "正在启动网页（$frontendPort）…"
+        $frontendProcess = Start-Process -FilePath $node -ArgumentList "node_modules/vite/bin/vite.js --host localhost --port $frontendPort --strictPort" -WorkingDirectory $frontend -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $logDir 'web-frontend.log') -RedirectStandardError (Join-Path $logDir 'web-frontend-error.log')
         $started += $frontendProcess
         Wait-Web $url $frontendProcess
     }
 
     if (-not (Test-WebReady "$url/api/dashboard/overview" -Backend)) { throw '网页已启动，但无法连接后端。请查看启动日志。' }
-    Write-Host "网页、后端和数字人均已就绪：$url" -ForegroundColor Green
+    Write-Host "网页与已启用的服务均已就绪：$url" -ForegroundColor Green
     if (-not $SmokeTest) {
         Start-Process $url
         if ($started.Count -gt 0) {

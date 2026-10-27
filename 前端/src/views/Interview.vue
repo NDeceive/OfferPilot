@@ -69,15 +69,15 @@
           <span class="mq-text">{{ latestQuestion }}</span>
         </p>
 
-        <div class="input-bar" :class="{ collapsed: !showTranscript, 'text-open': textAnswerOpen }">
+        <div class="input-bar" :class="{ collapsed: !showTranscript }">
           <div class="transcript-toolbar">
-            <span>回答记录</span>
+            <span>问答记录</span>
             <button
               type="button"
               aria-controls="interview-transcript"
               :aria-expanded="showTranscript"
               @click="showTranscript = !showTranscript"
-            >{{ showTranscript ? '收起回答记录' : '展开回答记录' }}</button>
+            >{{ showTranscript ? '收起问答记录' : '展开问答记录' }}</button>
           </div>
           <div id="interview-transcript" v-show="showTranscript" class="conversation-scroll" ref="messagesRef">
             <div
@@ -105,15 +105,13 @@
               <p>正在思考下一步问题……</p>
             </div>
           </div>
-          <div class="answer-head">
-            <button type="button" class="text-answer-toggle" @click="textAnswerOpen=!textAnswerOpen" :aria-expanded="textAnswerOpen">{{textAnswerOpen?'收起文字输入':'文字作答'}}</button>
+          <div v-if="isMobile" class="answer-head">
             <div v-if="isMobile" class="mobile-cam-chip">
               <CameraPreview ref="cameraPreviewRef" compact :session-id="sessionId" :question-id="currentQuestionId"
                 :round-no="currentQuestion" :paused="isPaused || pauseChanging || isSubmitting || expressionEnding || needsNextQuestion" :server-offset="serverOffset" :clock-ready="clockReady"
                 @expression-sample="recordExpression" @expression-state="liveExpression = $event" @retry-clock="syncExpressionClock" />
             </div>
           </div>
-          <label v-if="textAnswerOpen" class="text-answer">输入回答<textarea v-model="answer" rows="3" maxlength="10000" :disabled="isSubmitting||!sessionId" placeholder="可直接输入，或修改语音识别后的文字，再提交回答。"/></label>
           <MicrophoneControl
             ref="microphoneRef"
             :session-id="sessionId"
@@ -175,8 +173,8 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { pollInterviewReport } from '../utils/interviewCompletion'
-import { startInterview, submitAnswer, getNextQuestion, finishInterview as finishInterviewRequest, getExpressionContext, setInterviewPaused, getReportStatus, getInterviewResume } from '../api'
+import { interviewReportRoute } from '../utils/interviewCompletion'
+import { startInterview, submitAnswer, getNextQuestion, finishInterview as finishInterviewRequest, getExpressionContext, setInterviewPaused, getInterviewResume } from '../api'
 import ExpressionUploadStatus from '../components/interview/ExpressionUploadStatus.vue'
 import CameraPreview from '../components/interview/CameraPreview.vue'
 import DigitalHumanStage from '../components/interview/DigitalHumanStage.vue'
@@ -199,7 +197,7 @@ const isAiTyping = ref(false)
 const isPaused = ref(false)
 const isSubmitting = ref(false)
 const isSpeechProcessing = ref(false)
-const showTranscript = ref(!isMobile.value) // 桌面默认展开回答记录；手机默认收起，点按钮再看
+const showTranscript = ref(!isMobile.value) // 桌面默认展开问答记录；手机默认收起，点按钮再看
 const evaluationReady = ref(false)
 const messagesRef = ref(null)
 const cameraPreviewRef = ref(null)
@@ -209,7 +207,7 @@ const digitalHumanText = ref('')
 const digitalHumanSpeechKey = ref(0)
 const expressionEnding = ref(false)
 const sessionFinished=ref(false), finishError=ref('')
-let finishPromise, reportWaitPromise
+let finishPromise
 const expressionUploadRef = ref(null)
 const serverOffset = ref(0)
 const clockReady = ref(false)
@@ -264,7 +262,6 @@ const questionSkills = ref([])
 const difficultyLabels = { 1: '简单', 2: '中等', 3: '困难', 4: '困难' }
 
 const messages = ref([])
-const textAnswerOpen = ref(false)
 
 const evalItems = ref([
   { name: '表达能力', value: 0, color: '#10b981' },
@@ -276,7 +273,7 @@ const progressPercent = computed(() => totalDuration.value > 0
   ? ((totalDuration.value - timeLeft.value) / totalDuration.value) * 100
   : 0)
 
-// 手机端默认收起回答记录，用这条常驻展示当前题目，避免看不到题
+// 手机端默认收起问答记录，用这条常驻展示当前题目，避免看不到题
 const latestQuestion = computed(() => {
   for (let i = messages.value.length - 1; i >= 0; i -= 1) {
     if (messages.value[i].role === 'ai' && messages.value[i].text) return messages.value[i].text
@@ -550,8 +547,7 @@ async function skipQuestion() {
         text: '面试结束！感谢你的精彩回答。正在生成你的能力报告...',
         followup: false,
       })
-      const reportId = res || 1
-      setTimeout(() => router.push(`/history/${reportId}`), 2000)
+      await waitForReport(sessionId.value)
     }
 
   } catch (e) {
@@ -677,22 +673,13 @@ function releaseMediaDevices() {
 function completionDestination() { return route.query.assignmentId ? '/my/tasks/'+route.query.assignmentId : '/history' }
 function leaveFinishedInterview() { return router.push(completionDestination()) }
 function waitForReport(sid) {
-  if(reportWaitPromise)return reportWaitPromise
   sessionFinished.value=true
-  const origin=route.fullPath
-  reportWaitPromise=(async()=>{
-    const status=await pollInterviewReport(config=>getReportStatus(sid,config),{cancelled:()=>route.fullPath!==origin})
-    if(route.fullPath!==origin)return
-    if(status?.ready && status.reportId) { await router.push({path:'/history/'+status.reportId,query:{assignmentId:route.query.assignmentId}});return }
-    await leaveFinishedInterview()
-  })().finally(()=>{reportWaitPromise=null})
-  return reportWaitPromise
+  return router.push(interviewReportRoute(sid, null, route.query.assignmentId))
 }
 </script>
 
 <style scoped>
 .expression-note { margin:8px 0; font-size:12px; line-height:1.6; color:var(--neutral-600); }
-.text-answer-toggle{min-height:44px;border:0;background:transparent;color:var(--primary-600,#047857);font:inherit;cursor:pointer}.text-answer{display:block;font-size:13px}.text-answer textarea{display:block;width:100%;padding:10px 12px;margin:8px 0;border:1px solid var(--neutral-200,#cbd8d0);border-radius:8px;background:var(--surface-primary,#fff);color:inherit;font:inherit;resize:vertical;max-height:140px}.text-answer-toggle:focus-visible,.text-answer textarea:focus-visible{outline:2px solid #147b57;outline-offset:3px}
 .interview-page {
   height: 100dvh;
   overflow: hidden;
@@ -923,12 +910,10 @@ function waitForReport(sid) {
   .stage-caption{display:block;color:var(--neutral-500);font-size:11px;line-height:1}
   .input-bar{gap:8px;margin-top:auto}
   .answer-head{flex-direction:row;gap:8px}
-  .answer-head .text-answer-toggle{flex:1;min-height:48px;border:1.5px solid rgba(4,120,87,.32);border-radius:12px;background:#eef7f2;color:var(--primary-600,#047857);font-weight:700;font-size:13px}
-  .text-answer-toggle[aria-expanded="true"]{background:#e2f1e9;border-color:rgba(4,120,87,.5)}
   .mobile-cam-chip{flex:0 0 auto;display:flex;width:84px}
   .mobile-question{margin:0;padding:10px 12px;border-radius:12px;background:#f8faf9;color:var(--neutral-800);font-size:13px;line-height:1.5}
   .mobile-question .mq-label{display:block;margin-bottom:3px;color:var(--accent-700,#047857);font-size:11px;font-weight:600}
-  .mobile-question .mq-text{display:-webkit-box;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:4}
+  .mobile-question .mq-text{display:block;max-height:150px;overflow-y:auto;overflow-wrap:anywhere}
 }
 
 /* Pre-pull interview layout: the transcript and voice controls share a fixed lower panel. */
@@ -976,13 +961,6 @@ function waitForReport(sid) {
   .input-bar { height: auto; min-height: 280px; padding-inline: var(--space-3); }
   .input-bar.collapsed { min-height: 112px; }
 }
-/* 文字作答展开时给面板留出高度，避免把回答记录和麦克风挤没 */
-.input-bar.text-open { height: clamp(300px, 40vh, 400px); }
-/* 手机端面板高度随内容自适应，固定高度会把麦克风/文字作答裁掉 */
-@media (max-width: 767.98px) {
-  .input-bar.text-open { height: auto; min-height: clamp(300px, 40vh, 400px); }
-}
-
 .camera-module { min-width:0; flex:none; }
 .mobile-expression-status { display:none; }
 .next-question-retry { min-height:44px; padding:8px 12px; border:1px solid var(--accent-600); border-radius:8px; background:var(--surface-primary); color:var(--accent-700); font:inherit; cursor:pointer; }
@@ -1026,4 +1004,22 @@ function waitForReport(sid) {
 .camera-tools button { display:block; width:100%; border:1px solid var(--neutral-200); border-radius:8px; margin:8px 0; text-align:left; }
 @media(max-width:700px) { .camera-toggle-btn { gap:6px; padding:8px; font-size:12px; } .camera-toggle-btn .camera-label-desktop { display:none; } .camera-toggle-btn .camera-label-mobile { display:inline; } .expression-status-content { gap:6px; font-size:12px; } .camera-tools summary { padding:0 4px; font-size:12px; } .topbar .end-btn { padding:8px; font-size:12px; } .pause-label { display:none; } .topbar .ctrl-btn { width:44px; padding:8px; } }
 .finish-error { color:var(--color-error,#b91c1c); font-size:13px; } .completion-status { gap:12px; } .completion-status button { margin-left:auto; }
-.expression-status-content:has(.finish-error)>:not(.finish-error) { display:none; } .finish-error { font-size:12px; line-height:1.4; overflow-wrap:anywhere; } .expression-status-content:has(.finish-error) { flex:1; } </style>
+.expression-status-content:has(.finish-error)>:not(.finish-error) { display:none; } .finish-error { font-size:12px; line-height:1.4; overflow-wrap:anywhere; } .expression-status-content:has(.finish-error) { flex:1; } /* Keep long questions and speech transcripts inside their own scroll area. */
+.input-bar { display:flex; flex-direction:column; gap:10px; min-width:0; height:clamp(270px,34dvh,380px); }
+.input-bar.collapsed { height:auto; min-height:0; }
+.transcript-toolbar { flex-shrink:0; min-height:36px; }
+.transcript-toolbar button { min-height:36px; }
+.conversation-scroll { flex:1 1 0; min-height:0; overflow-y:auto; overflow-x:hidden; overscroll-behavior:contain; scrollbar-gutter:stable; }
+.conversation-entry { min-width:0; padding:12px 14px; border-radius:8px; }
+.conversation-entry.ai { background:var(--neutral-50,#f8faf9); }
+.conversation-entry.user { background:var(--accent-50,#ecfdf5); }
+.conversation-entry p { white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.7; }
+.input-bar :deep(.voice-answer) { flex:0 0 auto; min-width:0; }
+.answer-head { flex:0 0 auto; align-items:flex-end; }
+@media(max-width:767.98px) {
+  .input-bar { height:clamp(300px,42dvh,400px); min-height:0; padding:12px; }
+  .input-bar.collapsed { height:auto; min-height:0; }
+  .input-bar :deep(.voice-footer) { flex-wrap:wrap; gap:10px; }
+  .input-bar :deep(.voice-actions) { margin-left:auto; }
+}
+</style>

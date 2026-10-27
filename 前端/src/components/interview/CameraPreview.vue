@@ -1,6 +1,7 @@
 <template><section class="camera-preview expression-result" :class="{ready:expressionState==='active', compact}" aria-label="摄像头人像"><div class="camera-viewport" :class="{active:isActive}"><video v-show="isActive" ref="videoRef" class="camera-video" autoplay muted playsinline disablepictureinpicture disableremoteplayback></video><div v-if="!isActive" class="camera-placeholder" aria-hidden="true"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></div></div></section></template>
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { takeInterviewCamera } from '../../utils/interviewCamera'
 import { useCamera } from '../../composables/useCamera'
 import { useFaceExpressions } from '../../composables/useFaceExpressions'
 import { EXPRESSION_LABELS } from '../../utils/expressions'
@@ -8,6 +9,11 @@ const props = defineProps({ compact: Boolean, sessionId: Number, questionId: Num
 const emit = defineEmits(['expression-sample', 'expression-state', 'retry-clock'])
 const videoRef = ref(null)
 const { stream, status, errorMessage, devices, isActive, isRequesting, startCamera, stopCamera, switchCamera } = useCamera()
+onMounted(() => {
+  const prepared = takeInterviewCamera()
+  if (prepared) startCamera('', prepared)
+  else startCamera()
+})
 const { expressionState, expressionResult, updatedAt, updating, failureReason, stopExpressions, retryExpressions } = useFaceExpressions(videoRef, isActive, props, emit)
 const resultLabel = computed(() => expressionState.value === 'active' ? (EXPRESSION_LABELS[expressionResult.value?.key] || '暂不明确') : ({
   closed: '等待开启', paused: '采样已暂停', noFace: '未检测到人脸', error: '识别暂不可用',

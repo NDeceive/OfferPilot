@@ -35,7 +35,7 @@ export function useCamera() {
     }
   }
 
-  async function startCamera(deviceId = '') {
+  async function startCamera(deviceId = '', initialStream = null) {
     if (!navigator.mediaDevices?.getUserMedia) {
       status.value = 'error'
       errorMessage.value = `当前环境不支持摄像头（mediaDevices 缺失，secureContext=${window.isSecureContext}），请使用最新版 Chrome 或 Edge。`
@@ -49,12 +49,12 @@ export function useCamera() {
 
     try {
       // App（5+ 运行时）里系统「相机」权限必须先主动申请，getUserMedia 才能拿到设备
-      appPermission = await ensureAppPermissions(['android.permission.CAMERA'])
+      if (!initialStream) appPermission = await ensureAppPermissions(['android.permission.CAMERA'])
       stopTracks()
       const videoConstraints = deviceId
         ? { ...CAMERA_CONSTRAINTS, deviceId: { exact: deviceId } }
         : CAMERA_CONSTRAINTS
-      const newStream = await navigator.mediaDevices.getUserMedia({
+      const newStream = initialStream || await navigator.mediaDevices.getUserMedia({
         video: videoConstraints,
         audio: false,
       })

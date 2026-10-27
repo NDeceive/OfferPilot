@@ -1,0 +1,40 @@
+{
+  "exercism/problem-specifications": {
+    "commit": "9943fd751b684ba1a6a8673c3700a6e79c10a808",
+    "licenseSha256": "564d81b4e8fa0a816529287256d25d477106e540682003a718140eb7cf913601",
+    "files": {
+      "two-fer": "40cb4dd318315f75eb11c3a7bbd5f31dec4eafb43709f46d3626766324c20f43",
+      "leap": "7df67cd020a9113be2afe2a44aff099ca089c52137a897e17af3c2eff7aa2bca",
+      "raindrops": "4628e229cd1c6d916be07a4315e9e2da02160f35e3b28658a6bd47225d284fc5",
+      "hamming": "c932d8511912c5ca2cc5a15550a266436c637d8c2af4f3a055173808b0fb0086",
+      "difference-of-squares": "d097c48a4783565372af2a6c67c84ef86f5494d13393e6fd7f42f569f099f40a",
+      "grains": "b5c2c1a38ed4527681f0f4dcc09b91fe26f87162188146d919fb478f23d3e473",
+      "armstrong-numbers": "e8567a19cfaa0cf711fa2a1b2d4ec92b9fcdfddf42d89b969ce32f99fcc7a1fe",
+      "isogram": "fdf198907ba98f5733607807eff65a582009201027fa51934c97131c08299626",
+      "pangram": "75f7356fcaa3f3675810795f12a17945dacb33ad7ef612fa802d46480589d924",
+      "reverse-string": "7127d2b0ba43fb375b4e840e7d564ba3fec36ba67f0a07709e580f1510fcbba0",
+      "binary-search": "d224e68b43512d8d394bb5f9e2f209ef6008e9a0abc59ee61a329c4ab2a7f73d",
+      "gigasecond": "7ebb939391527537162803154757aa676ed9062d68a011cef5f08a3e7f88076d",
+      "roman-numerals": "c375f7c41c7ba353fcbeb8fa1f68e90cfce0d4cf4a444df5f74ceeff6bc22ef8",
+      "rna-transcription": "d1f8eee5a92a44ab3bb79d6aaa05cbafe8737f1628f2aa5197c49e2b88a15bda",
+      "acronym": "009b8ae28b2224ea3fd4aac7aa3c4ba37c5a303221cf38df4cfb235afc4d3df6",
+      "collatz-conjecture": "eeeb1924bd07e698cf43912ae468e243aa3aed41b47bf05f4aa8357def138661",
+      "sum-of-multiples": "937d208704d20a6caee9c6151ce14d8f7b7e0d10b594f863fcb72adbdbb61347",
+      "allergies": "3d75ba360afde61bb4f46dbee0def899f0527f1f0e6ce9704c3126af2bcf066b",
+      "darts": "bc815b29fafe311db9de8bc752ec42045bb10c081b6082ded22744ccfbb031c9",
+      "resistor-color-duo": "73e8de096ef2cf2bdc15b8c2fe7c2fc77cb6695980ca415b8fe34286d6436220"
+    }
+  },
+  "Snailclimb/JavaGuide": {
+    "commit": "9eab7aaf1a538dc139e6886cb2237b6c61e9a000",
+    "licenseSha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+  },
+  "yangshun/front-end-interview-handbook": {
+    "commit": "75ee62afc63bb9b48be160b0710bfcba6ab01a75",
+    "licenseSha256": "32fa4846f7ff3795bc51bfeb7d2a902d69a3e06f74ad472702bcff587009bc2e"
+  },
+  "lydiahallie/javascript-questions": {
+    "commit": "a8b427b9f7f94f1a2965144ba544b475c5f65829",
+    "licenseSha256": "a40ad66277b8f10d8664f3e1dfbea803c35a472c927b28afedf479c34f9bfa2e"
+  }
+}

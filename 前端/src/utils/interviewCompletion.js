@@ -9,10 +9,16 @@ export async function pollInterviewReport(getStatus, {
       if (cancelled()) return null
       if (status?.state === 'FAILED' || (status?.ready && status.reportId)) return status
     } catch (error) {
-      if (error.code === 401 || error.code === 403 || error.response?.status === 401) return null
+      if (error.code === 401 || error.code === 403 || [401, 403].includes(error.response?.status)) throw error
     }
     const remaining = deadline - now()
     if (remaining > 0 && !cancelled()) await wait(Math.min(1000, remaining))
   }
   return null
+}
+export function interviewReportRoute(sessionId, reportId, assignmentId) {
+  return {
+    path: reportId ? `/history/${reportId}` : `/history/session/${sessionId}`,
+    query: assignmentId ? { assignmentId } : {},
+  }
 }

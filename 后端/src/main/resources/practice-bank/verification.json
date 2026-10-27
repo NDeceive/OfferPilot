@@ -1,0 +1,130 @@
+{
+  "packSha256": "747fe3fe1d7fb4c339330234e426166d70f8d67e03c694d5f9cd7d772cea4772",
+  "passed": true,
+  "javaRelease": 17,
+  "realJudgeExecutor": false,
+  "comparisonMode": "LINE_ENDING",
+  "hostRuntime": "openjdk version \"21.0.12.1\" 2026-08-18 LTS",
+  "results": [
+    {
+      "canonicalId": "exercism:two-fer",
+      "cases": 3,
+      "constantSolutionRejected": true,
+      "formatErrorRejected": true
+    },
+    {
+      "canonicalId": "exercism:leap",
+      "cases": 9,
+      "constantSolutionRejected": true,
+      "formatErrorRejected": true
+    },
+    {
+      "canonicalId": "exercism:raindrops",
+      "cases": 18,
+      "constantSolutionRejected": true,
+      "formatErrorRejected": true
+    },
+    {
+      "canonicalId": "exercism:hamming",
+      "cases": 15,
+      "constantSolutionRejected": true,
+      "formatErrorRejected": true
+    },
+    {
+      "canonicalId": "exercism:difference-of-squares",
+      "cases": 3,
+      "constantSolutionRejected": true,
+      "formatErrorRejected": true
+    },
+    {
+      "canonicalId": "exercism:grains",
+      "cases": 10,
+      "constantSolutionRejected": true,
+      "formatErrorRejected": true
+    },
+    {
+      "canonicalId": "exercism:armstrong-numbers",
+      "cases": 11,
+      "constantSolutionRejected": true,
+      "formatErrorRejected": true
+    },
+    {
+      "canonicalId": "exercism:isogram",
+      "cases": 14,
+      "constantSolutionRejected": true,
+      "formatErrorRejected": true
+    },
+    {
+      "canonicalId": "exercism:pangram",
+      "cases": 11,
+      "constantSolutionRejected": true,
+      "formatErrorRejected": true
+    },
+    {
+      "canonicalId": "exercism:reverse-string",
+      "cases": 7,
+      "constantSolutionRejected": true,
+      "formatErrorRejected": true
+    },
+    {
+      "canonicalId": "exercism:binary-search",
+      "cases": 11,
+      "constantSolutionRejected": true,
+      "formatErrorRejected": true
+    },
+    {
+      "canonicalId": "exercism:gigasecond",
+      "cases": 5,
+      "constantSolutionRejected": true,
+      "formatErrorRejected": true
+    },
+    {
+      "canonicalId": "exercism:roman-numerals",
+      "cases": 27,
+      "constantSolutionRejected": true,
+      "formatErrorRejected": true
+    },
+    {
+      "canonicalId": "exercism:rna-transcription",
+      "cases": 6,
+      "constantSolutionRejected": true,
+      "formatErrorRejected": true
+    },
+    {
+      "canonicalId": "exercism:acronym",
+      "cases": 9,
+      "constantSolutionRejected": true,
+      "formatErrorRejected": true
+    },
+    {
+      "canonicalId": "exercism:collatz-conjecture",
+      "cases": 8,
+      "constantSolutionRejected": true,
+      "formatErrorRejected": true
+    },
+    {
+      "canonicalId": "exercism:sum-of-multiples",
+      "cases": 16,
+      "constantSolutionRejected": true,
+      "formatErrorRejected": true
+    },
+    {
+      "canonicalId": "exercism:allergies",
+      "cases": 40,
+      "constantSolutionRejected": true,
+      "formatErrorRejected": true
+    },
+    {
+      "canonicalId": "exercism:darts",
+      "cases": 13,
+      "constantSolutionRejected": true,
+      "formatErrorRejected": true
+    },
+    {
+      "canonicalId": "exercism:resistor-color-duo",
+      "cases": 7,
+      "constantSolutionRejected": true,
+      "formatErrorRejected": true
+    }
+  ]
+}

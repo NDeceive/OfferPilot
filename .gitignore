@@ -30,6 +30,7 @@ __pycache__/
 *.pyc
 
 # ===== 本地配置 / IDE =====
+后端/config/ai.local.properties
 output/teaching-qa-auth.local.json
 /.claude/
 .idea/
@@ -81,3 +82,7 @@ Thumbs.db
 
 /DESIGN.md
 /PRODUCT.md
+
+# Versioned practice workflow verification tools
+!/scripts/check-practice-judge.py
+!/scripts/check-practice-browser.cjs

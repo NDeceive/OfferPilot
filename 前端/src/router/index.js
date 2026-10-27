@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory, createWebHashHistory } from 'vue-router'
+import { prepareInterviewCamera, releaseInterviewCamera } from '../utils/interviewCamera'
 
 const AdaptiveStudentView = () => import('../mobile/AdaptiveStudentView.vue')
 
@@ -40,11 +41,14 @@ const routes = [
   { path: '/resume/builder', name: 'ResumeBuilder', component: () => import('../views/ResumeBuilder.vue') },
   { path: '/interview', name: 'Interview', component: () => import('../views/Interview.vue') },
   { path: '/history', name: 'History', component: AdaptiveStudentView, meta: { mobileSurface: 'records' } },
+  { path: '/history/session/:sessionId', name: 'SessionReport', component: () => import('../views/HistoryDetail.vue') },
   { path: '/history/:id', name: 'HistoryDetail', component: AdaptiveStudentView, meta: { mobileSurface: 'report' } },
   { path: '/report', name: 'Report', component: AdaptiveStudentView, meta: { mobileSurface: 'report' } },
   { path: '/followup-records', name: 'FollowupRecords', component: () => import('../views/History.vue') },
   { path: '/learning', name: 'LearningResources', component: AdaptiveStudentView, meta: { mobileSurface: 'practice' } },
   { path: '/learning/session/:sessionId', name: 'TrainingSession', component: () => import('../views/TrainingSession.vue') },
+  { path: '/learning/library/:kind', name: 'PracticeLibrary', component: () => import('../views/PracticeLibrary.vue') },
+  { path: '/learning/session/:sessionId/report', name: 'PracticeReport', component: () => import('../views/PracticeReport.vue') },
   { path: '/profile', name: 'Profile', component: AdaptiveStudentView, meta: { mobileSurface: 'profile' } },
   { path: '/settings', name: 'Settings', component: () => import('../views/Settings.vue') },
   { path: '/member', redirect: '/home' },
@@ -97,7 +101,7 @@ const router = createRouter({
   routes,
 })
 
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const token = localStorage.getItem('token')
 
   if (to.meta.public) {
@@ -137,7 +141,22 @@ router.beforeEach((to, from, next) => {
     return
   }
 
+  if (to.name === 'Interview' && from.name !== 'Interview') {
+    try {
+      await prepareInterviewCamera()
+    } catch (error) {
+      if (error.code !== 'CAMERA_CONSENT_DECLINED') window.alert(error.message)
+      next(from.matched.length ? false : { path: '/jobs', replace: true })
+      return
+    }
+  }
   next()
+})
+
+router.afterEach((to, from, failure) => {
+  if (failure || to.name !== 'Interview') {
+    releaseInterviewCamera()
+  }
 })
 
 export default router

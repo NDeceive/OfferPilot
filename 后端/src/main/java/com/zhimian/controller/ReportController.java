@@ -57,6 +57,7 @@ public class ReportController {
     @GetMapping("/{reportId}/export")
     public void export(@PathVariable Long reportId,
                        @RequestParam(defaultValue = "pdf") String format,
+                       @RequestParam(defaultValue = "false") boolean includeTranscript,
                        HttpServletResponse response) throws IOException {
 
         // 1. 校验 format
@@ -70,7 +71,7 @@ public class ReportController {
             ReportDetailResponse detail = reportService.getDetail(reportId);
 
             // 3. 生成文件
-            byte[] fileBytes = exportService.export(reportId, format);
+            byte[] fileBytes = exportService.export(reportId, format, includeTranscript);
 
             // 4. 设置响应头
             String ext = "pdf".equals(format) ? ".pdf" : ".docx";

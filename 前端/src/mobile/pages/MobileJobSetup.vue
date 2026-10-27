@@ -23,7 +23,7 @@
     <!-- 内容 -->
     <div class="wiz__body">
       <p v-if="fromAi && currentStep === 2" class="wiz__tip">
-        已从 AI 对话带入岗位和简历，直接挑训练目标就行。
+        已带入岗位和简历，先查看分析，再自主选择训练目标。
       </p>
 
       <MobileJobPicker
@@ -37,8 +37,11 @@
         @select="selectedJob = $event"
       />
 
+      <section v-else-if="currentStep === 1">
+      <label class="version-picker">选择已保存版本
+        <select :value="resumeVersionId || ''" @change="chooseVersion($event.target.value)"><option value="">上传或手动录入</option><option v-for="version in compatibleVersions" :key="version.id" :value="version.id">{{ version.title }}</option></select>
+      </label>
       <MobileResumeStep
-        v-else-if="currentStep === 1"
         :skills="extractedSkills"
         :file-name="uploadedName"
         :project-count="resumeProjectCount"
@@ -57,8 +60,10 @@
         @saved-online="onOnlineResumeSaved"
       />
 
+      </section>
+      <ResumeAnalysisPanel v-else-if="currentStep === 2" :job-id="selectedJob?.id" :version-id="resumeVersionId || undefined" :available="Boolean(uploadedName) && !resumeUploading && !resumeError" :source-key="uploadedName" @edit="editAnalysis" @recommend="applyAnalysisTargets" />
       <MobileTrainingGoals
-        v-else-if="currentStep === 2"
+        v-else-if="currentStep === 3"
         :modules="allModules"
         :loading="modulesLoading"
         :error="modulesError"
@@ -106,14 +111,17 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { prepareInterviewCamera, releaseInterviewCamera } from "../../utils/interviewCamera"
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import ResumeAnalysisPanel from '../../components/resume/ResumeAnalysisPanel.vue'
+import { recommendedTargets } from '../../utils/resumeAnalysis'
 import MobileJobPicker from '../components/MobileJobPicker.vue'
 import MobileResumeStep from '../components/MobileResumeStep.vue'
 import MobileTrainingGoals from '../components/MobileTrainingGoals.vue'
 import MobileConfirmLaunch from '../components/MobileConfirmLaunch.vue'
 import {
-  getJobList, getModules, getResumeFileProfile, getSkillTags,
+  getJobList, getModules, getResumeFileProfile, getSkillTags, getResumeVersions, getResumeVersion, getResumeAnalysisReport,
   startInterview, updateResumeTags, uploadResumeFile,
 } from '../../api'
 import { mapJobFromBackend, isReadyJob } from '../../utils/jobs'
@@ -128,6 +136,7 @@ import { mapJobFromBackend, isReadyJob } from '../../utils/jobs'
 const STEPS = [
   { title: '选择岗位', hint: '挑一个目标岗位' },
   { title: '上传简历', hint: '不传也能继续' },
+  { title: '简历分析', hint: '核对证据与改进建议' },
   { title: '训练目标', hint: '选 5 项能力' },
   { title: '确认信息', hint: '核对后开始' },
 ]
@@ -150,6 +159,10 @@ let pendingJobCode = ''
 
 /* ---- 简历 ---- */
 const uploadedFile = ref(null)
+const resumeVersionId = ref(null)
+const resumeVersions = ref([])
+const compatibleVersions = computed(() => resumeVersions.value.filter(v => v.jobId == null || v.jobId === selectedJob.value?.id))
+let uploadRequest = 0
 const savedResume = ref(null)
 const extractedSkills = ref([])
 const resumeProjectCount = ref(0)
@@ -178,13 +191,14 @@ const uploadedName = computed(() => uploadedFile.value?.name || '')
 
 const canAdvance = computed(() => {
   if (currentStep.value === 0) return Boolean(selectedJob.value)
+  if (currentStep.value === 1) return !resumeUploading.value && !resumeError.value
   // 训练目标必须是 5 项：后端按 rank 1-5 权重出题，少了会拿到不满的权重表
-  if (currentStep.value === 2) return moduleOrder.value.length === 5
+  if (currentStep.value === 3) return moduleOrder.value.length === 5
   return true
 })
 
 const primaryLabel = computed(() => {
-  if (currentStep.value === 3) return startingInterview.value ? '正在创建面试…' : '开始面试'
+  if (currentStep.value === 4) return startingInterview.value ? '正在创建面试…' : '开始面试'
   return '下一步'
 })
 
@@ -218,7 +232,7 @@ function goAiPrep() {
 
 function onPrimary() {
   if (!canAdvance.value || startingInterview.value) return
-  if (currentStep.value < 3) {
+  if (currentStep.value < 4) {
     currentStep.value += 1
     return
   }
@@ -245,8 +259,8 @@ async function fetchJobs() {
 
 /** 落实 URL 里的 job=<code>。列表是异步的，所以放在这里而不是 onMounted */
 function applyPendingJob() {
-  if (!pendingJobCode) return
-  const hit = jobs.value.find((j) => j.code === pendingJobCode)
+  if (!pendingJobCode && !route.query.jobId) return
+  const hit = jobs.value.find((j) => j.code === pendingJobCode || j.id === Number(route.query.jobId))
   pendingJobCode = ''
   if (hit && isReadyJob(hit)) selectedJob.value = hit
 }
@@ -255,6 +269,8 @@ function applyPendingJob() {
 /*  简历                                                               */
 /* ------------------------------------------------------------------ */
 function selectResumeFile(file) {
+  if (resumeUploading.value) return
+  resumeVersionId.value = null
   const extension = file.name.split('.').pop()?.toLowerCase()
   if (!['pdf', 'doc', 'docx'].includes(extension)) {
     uploadedFile.value = null
@@ -275,8 +291,10 @@ function selectResumeFile(file) {
 function simulateExtract() {
   resumeUploading.value = true
   resumeError.value = ''
+  const request = ++uploadRequest
   uploadResumeFile(uploadedFile.value)
     .then((data) => {
+      if (request !== uploadRequest) return
       const skills = []
       if (data.skills) skills.push(...data.skills)
       if (data.keywords) {
@@ -288,10 +306,10 @@ function simulateExtract() {
     })
     .catch((e) => {
       console.error('Resume upload failed:', e)
-      resumeError.value = '简历解析失败，请重试'
+      if (request === uploadRequest) resumeError.value = '简历解析失败，请重试'
     })
     .finally(() => {
-      resumeUploading.value = false
+      if (request === uploadRequest) resumeUploading.value = false
     })
 }
 
@@ -305,6 +323,7 @@ async function fetchSavedResume() {
 }
 
 function useSavedResume() {
+  resumeVersionId.value = null
   if (!savedResume.value?.filename) return
   uploadedFile.value = { name: savedResume.value.filename, size: 0, existing: true }
   extractedSkills.value = [...(savedResume.value.skills || [])]
@@ -313,6 +332,7 @@ function useSavedResume() {
 }
 
 function removeFile() {
+  ++uploadRequest; resumeUploading.value = false; resumeVersionId.value = null
   uploadedFile.value = null
   extractedSkills.value = []
   resumeProjectCount.value = 0
@@ -321,6 +341,7 @@ function removeFile() {
 
 /** 在线简历与上传文件同构：都落到同一张 resume 表 */
 function onOnlineResumeSaved(payload) {
+  resumeVersionId.value = null
   uploadedFile.value = { name: '在线简历', size: 0, existing: true }
   extractedSkills.value = [...(payload?.skills || [])]
   resumeProjectCount.value = 0
@@ -364,6 +385,35 @@ async function fetchSkillTags() {
     tagsLoading.value = false
   }
 }
+
+async function chooseVersion(id) {
+  if (!id) { removeFile(); return }
+  const request = ++uploadRequest
+  resumeUploading.value = true; resumeError.value = ''
+  try {
+    const version = await getResumeVersion(Number(id))
+    if (request !== uploadRequest) return
+    if (version.jobId != null && version.jobId !== selectedJob.value?.id) throw new Error('版本与岗位不匹配')
+    resumeVersionId.value = version.id
+    uploadedFile.value = { name: version.title, existing: true }
+    extractedSkills.value = String(version.content?.skills || '').split(/[、,，\n]/).filter(Boolean)
+    resumeProjectCount.value = version.content?.projects?.trim() ? 1 : 0
+  } catch (e) { if (request === uploadRequest) resumeError.value = e.message || '版本读取失败' }
+  finally { if (request === uploadRequest) resumeUploading.value = false }
+}
+function editAnalysis({ report, item }) {
+  router.push({ path: '/resume/builder', query: { jobId: report.snapshot.jobId, versionId: report.snapshot.versionId || undefined,
+    tab: report.snapshot.versionId ? 'editor' : 'claims', analysisId: report.id, analysisItem: item ? report.items.indexOf(item) : undefined, section: item?.field } })
+}
+function applyAnalysisTargets(report) {
+  const codes = recommendedTargets(report.suggestedModules, allModules.value, moduleOrder.value)
+  const names = list => list.map(c => allModules.value.find(m => m.code === c)?.name || c).join('、') || '无'
+  if (!window.confirm(`调整后的目标：${names(codes)}\n新增：${names(codes.filter(c => !moduleOrder.value.includes(c)))}\n移出：${names(moduleOrder.value.filter(c => !codes.includes(c)))}\n确认采用？`)) return
+  moduleOrder.value = codes; selectedModuleCodes.value = new Set(codes)
+  moduleLevels.value = Object.fromEntries(codes.map(c => [c, moduleLevels.value[c] || 2]))
+  activeModuleCode.value = codes[0] || ''; currentStep.value = 3
+}
+watch(selectedJob, () => { if (resumeVersionId.value && !compatibleVersions.value.some(v => v.id === resumeVersionId.value)) removeFile() })
 
 /* ------------------------------------------------------------------ */
 /*  训练目标                                                           */
@@ -430,8 +480,11 @@ async function handleStartInterview() {
   startingInterview.value = true
   startError.value = ''
   try {
+    await prepareInterviewCamera()
     const res = await startInterview({
       jobId: selectedJob.value.id,
+      resumeVersionId: resumeVersionId.value || undefined,
+      skipResume: !uploadedFile.value,
       durationSeconds: durationSeconds.value,
       modulePreferences: moduleOrder.value.map((code, index) => ({
         code,
@@ -440,7 +493,7 @@ async function handleStartInterview() {
       })),
     })
     // 回跳 query 与 JobSelect.vue:1168 逐字段一致，Interview.vue 读的是同一批 key
-    router.push({
+    await router.push({
       path: '/interview',
       query: {
         sessionId: String(res.sessionId),
@@ -456,7 +509,8 @@ async function handleStartInterview() {
     })
   } catch (error) {
     console.error('Failed to start interview:', error)
-    startError.value = '面试创建失败，请检查网络后重试'
+    releaseInterviewCamera()
+    startError.value = error.message || '面试创建失败，请检查网络后重试'
   } finally {
     startingInterview.value = false
   }
@@ -465,7 +519,7 @@ async function handleStartInterview() {
 /* ------------------------------------------------------------------ */
 /*  入口参数                                                           */
 /* ------------------------------------------------------------------ */
-onMounted(() => {
+onMounted(async () => {
   // AI 对话页跳过来时带的三个参数。桌面版 JobSelect.vue 至今没读它们，
   // 所以那边的「接力到训练目标」其实是回到第一步重来——这里补上。
   const code = String(route.query.job || '').trim()
@@ -476,10 +530,16 @@ onMounted(() => {
 
   fromAi.value = route.query.from === 'ai'
 
-  fetchJobs()
-  fetchModules()
-  // 从 AI 页过来时简历刚落库，这一步能把刚解析的结果直接读出来
-  if (fromAi.value) fetchSavedResume()
+  await Promise.all([fetchJobs(), fetchModules(), fetchSavedResume(), getResumeVersions().then(v => resumeVersions.value = v || []).catch(() => {})])
+  if (route.query.resumeVersionId) await chooseVersion(route.query.resumeVersionId)
+  else if (fromAi.value) useSavedResume()
+  if (route.query.applyAnalysis === '1' && route.query.analysisId) {
+    try {
+      const report = await getResumeAnalysisReport(Number(route.query.analysisId))
+      if (report.applicable && report.snapshot.jobId === selectedJob.value?.id && report.snapshot.versionId === resumeVersionId.value) applyAnalysisTargets(report)
+      else moduleFeedback.value = '报告与当前简历不一致，请重新分析'
+    } catch (e) { moduleFeedback.value = e.message || '建议读取失败' }
+  }
 })
 </script>
 
@@ -602,4 +662,8 @@ onMounted(() => {
   font-size: 14px;
   font-weight: 600;
 }
+</style>
+
+<style scoped>
+.version-picker{display:block;margin-bottom:16px;font-size:13px}.version-picker select{display:block;width:100%;min-height:42px;margin-top:8px;border:1px solid #dce6df;background:white;border-radius:8px;padding:8px;font:inherit}
 </style>

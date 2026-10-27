@@ -29,11 +29,11 @@ mybatis-plus:
 jwt:
   secret: ${JWT_SECRET}
 
-# 智谱大模型：API Key 必须通过环境变量 ZHIPU_API_KEY 注入，无默认值
+# DeepSeek 大模型：生产环境通过 DEEPSEEK_API_KEY 注入
 ai:
-  api-key: ${ZHIPU_API_KEY}
+  api-key: ${DEEPSEEK_API_KEY}
 
-# 智谱 ASR 与大模型共用同一密钥
+# 智谱 ASR 使用独立密钥
 asr:
   api-key: ${ZHIPU_API_KEY}
 

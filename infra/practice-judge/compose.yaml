@@ -1,0 +1,42 @@
+# Test-only deployment on an isolated Linux VM. Do not expose this API publicly.
+services:
+  server:
+    build: .
+    image: offerpilot-judge0:1.13.1-java17.0.20.1
+    privileged: true
+    env_file: judge0.conf
+    volumes: ["./judge0.conf:/judge0.conf:ro"]
+    ports: ["127.0.0.1:2358:2358"]
+    cpus: 1
+    mem_limit: 1g
+    restart: unless-stopped
+    depends_on: [db, redis]
+    networks: [judge]
+  workers:
+    image: offerpilot-judge0:1.13.1-java17.0.20.1
+    command: ["./scripts/workers"]
+    privileged: true
+    env_file: judge0.conf
+    volumes: ["./judge0.conf:/judge0.conf:ro"]
+    cpus: 2
+    mem_limit: 2g
+    restart: unless-stopped
+    depends_on: [db, redis]
+    networks: [judge]
+  db:
+    image: postgres:16.2
+    env_file: judge0.conf
+    volumes: ["judge-data:/var/lib/postgresql/data"]
+    restart: unless-stopped
+    networks: [judge]
+  redis:
+    image: redis:7.2.4
+    env_file: judge0.conf
+    command: ["bash", "-c", "docker-entrypoint.sh --appendonly no --requirepass \"$$REDIS_PASSWORD\""]
+    restart: unless-stopped
+    networks: [judge]
+networks:
+  judge:
+    internal: true
+volumes:
+  judge-data:

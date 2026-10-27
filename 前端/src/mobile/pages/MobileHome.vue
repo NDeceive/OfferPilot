@@ -9,13 +9,13 @@
       <div>
         <h2>准备新岗位</h2>
         <p>从岗位与简历开始，<br />创建一场新的虚拟面试</p>
-        <router-link to="/interview/ai" class="mobile-primary-button">开始准备 <span>→</span></router-link>
+        <router-link to="/jobs" class="mobile-primary-button">开始准备 <span>→</span></router-link>
       </div>
       <div class="mobile-document-art" aria-hidden="true"><i></i><i></i><i></i></div>
     </section>
 
     <section class="mobile-quick-grid" aria-label="快捷入口">
-      <router-link to="/interview/ai" class="mobile-action-card is-warm">
+      <router-link to="/jobs" class="mobile-action-card is-warm">
         <span class="mobile-card-icon">问</span><strong>面试押题</strong><small>提前准备高频问题</small><b>→</b>
       </router-link>
       <router-link to="/learning" class="mobile-action-card">
@@ -47,7 +47,7 @@
         title="还没有完成过面试"
         description="完整走完一场面试后，分数与趋势会出现在这里。"
         action="开始第一场面试"
-        @action="$router.push('/interview/ai')"
+        @action="$router.push('/jobs')"
       />
     </section>
 
@@ -64,7 +64,7 @@
         <p class="mobile-card-copy">{{ insightCopy }}</p>
         <router-link :to="reportRoute" class="mobile-soft-action">查看报告 <span>→</span></router-link>
       </article>
-      <MobileState v-else title="还没有面试记录" description="完成第一场面试后，你的训练记录会出现在这里。" action="开始第一场面试" @action="$router.push('/interview/ai')" />
+      <MobileState v-else title="还没有面试记录" description="完成第一场面试后，你的训练记录会出现在这里。" action="开始第一场面试" @action="$router.push('/jobs')" />
     </section>
 
     <section class="mobile-section">
@@ -105,7 +105,7 @@ const reportRoute = computed(() => recent.value?.reportId ? `/history/${recent.v
 const insightCopy = computed(() => overview.value.latestInsight?.suggestion || '完成报告后，这里会给出针对本次表现的改进建议。')
 const suggestionTitle = computed(() => overview.value.nextAction?.title || '开始一次岗位训练')
 const suggestionDescription = computed(() => overview.value.nextAction?.description || '选择目标岗位，用一次练习建立你的训练档案。')
-const suggestionRoute = computed(() => overview.value.nextAction?.route || '/interview/ai')
+const suggestionRoute = computed(() => overview.value.nextAction?.route || '/jobs')
 
 const summary = computed(() => overview.value.summary || {})
 

@@ -28,7 +28,7 @@
             style="--delay:0ms"
           >
             <div class="coach-portrait">
-              <span>AI 面试教练</span>
+              <span>就业指导老师</span>
               <img :src="coachPortrait" alt="身穿浅绿色西装的虚拟面试教练" width="1024" height="1536" fetchpriority="high" />
             </div>
             <div class="advice-copy">
@@ -46,7 +46,7 @@
               <p v-else class="coach-empty">完成首次面试后，这里会显示你的薄弱维度和改进建议。</p>
               <div class="action-row">
                 <router-link
-                  :to="overview.nextAction.route || '/interview/ai'"
+                  :to="overview.nextAction.route || '/jobs'"
                   class="primary-btn"
                 >
                   {{ nextActionLabel }}
@@ -91,7 +91,7 @@
             <div v-else class="review-empty">
               <strong>完成一次训练后生成复盘</strong>
               <p>报告会展示优势、薄弱维度和下一步练习建议。</p>
-              <router-link to="/interview/ai">开始训练</router-link>
+              <router-link to="/jobs">开始训练</router-link>
             </div>
           </section>
         </div>
@@ -100,31 +100,34 @@
           <section class="quick-panel panel reveal" style="--delay:100ms">
             <header class="quick-heading"><h2>快速开始</h2><p>选择一种方式进入下一次训练。</p></header>
             <div class="quick-grid">
-              <router-link to="/interview/ai" class="quick-card prediction">
-                <header><strong>面试押题</strong><span>›</span></header>
+              <router-link to="/jobs" class="quick-card prediction">
+                <header><strong>模拟面试</strong><span>›</span></header>
                 <div class="mini-ui">
-                  <p><span>目标企业</span><b>字节跳动</b></p>
-                  <p><span>岗位</span><b>{{ shortJob }}</b></p>
+                  <p><span>最近训练</span><b>{{ shortJob }}</b></p>
                   <p><span>个人简历</span><b>{{ resumeLabel }}</b></p>
+                  <p><span>练习方式</span><b>完整面试与复盘</b></p>
                 </div>
-                <div class="sorting"><i></i><span>正在整理岗位要求…</span></div>
+                <small class="quick-action">选择岗位，配置本次面试 →</small>
               </router-link>
 
-              <router-link to="/interview/ai" class="quick-card prepare">
+              <router-link to="/jobs" class="quick-card prepare">
                 <header><strong>准备新岗位</strong><span>›</span></header>
                 <div class="mini-ui">
-                  <p><span>目标岗位</span><b>{{ shortJob }}</b><i>⌄</i></p>
-                  <p><span>简历</span><b>{{ resumeLabel }}</b><i>⌄</i></p>
-                  <p><span>训练目标</span><b>{{ weaknessLabel }}</b><i>⌄</i></p>
+                  <p><span>选择方向</span><b>确定目标岗位</b></p>
+                  <p><span>准备资料</span><b>上传或复用简历</b></p>
+                  <p><span>填写方式</span><b>手动录入 / 对话引导</b></p>
                 </div>
+                <small class="quick-action">填写资料，完成面试准备 →</small>
               </router-link>
 
               <router-link to="/learning" class="quick-card drill">
-                <header><strong>刷题训练</strong><span>›</span></header>
-                <div class="question-list">
-                  <p v-for="(question, index) in practiceQuestions" :key="question"><b>Q{{ index + 1 }}</b><span>{{ question }}</span></p>
+                <header><strong>专项刷题</strong><span>›</span></header>
+                <div class="mini-ui">
+                  <p><span>目标岗位</span><b>选择练习方向</b></p>
+                  <p><span>目标公司</span><b>筛选公司高频题</b></p>
+                  <p><span>专项题型</span><b>知识问答 / 编程练习</b></p>
                 </div>
-                <em>开始 →</em>
+                <small class="quick-action">设置刷题目标，开始练习 →</small>
               </router-link>
             </div>
           </section>
@@ -186,7 +189,7 @@
               <router-link :to="recordRoute(item)">{{ recordAction(item) }} <span>→</span></router-link>
             </article>
           </div>
-          <div v-else class="recent-empty"><span>暂无训练记录</span><router-link to="/interview/ai">开始第一次训练 →</router-link></div>
+          <div v-else class="recent-empty"><span>暂无训练记录</span><router-link to="/jobs">开始第一次训练 →</router-link></div>
         </section>
 
         <section class="overview-strip reveal" style="--delay:220ms">
@@ -219,7 +222,7 @@ const resumeLibraryError = ref('')
 const resumeLibraryLoading = ref(true)
 const overview = ref({
   summary: { completedCount: 0, recentCount: 0, averageScore: 0, bestScore: 0, bestJobName: '', streakDays: 0 },
-  nextAction: { type: '', title: '', description: '', route: '/interview/ai' },
+  nextAction: { type: '', title: '', description: '', route: '/jobs' },
   trend: [],
   recentInterviews: [],
   latestInsight: null,
@@ -247,10 +250,7 @@ const recentRows = computed(() => overview.value.recentInterviews.slice(0, 3))
 const bestScoreLabel = computed(() => overview.value.summary.bestScore ? formatScore(overview.value.summary.bestScore) : '—')
 const resumeLabel = computed(() => resume.value ? '个人简历' : '尚未上传')
 const profileTags = computed(() => parseList(resume.value?.skills || resume.value?.keywords).slice(0, 4))
-const practiceQuestions = computed(() => {
-  const source = [...paperItems.value, ...profileTags.value]
-  return [...new Set(source)].slice(0, 3).map(item => `${item}专项练习`)
-})
+
 
 async function loadOverview() {
   loading.value = true
@@ -403,4 +403,5 @@ onMounted(loadOverview)
 .resume-library-actions{flex-wrap:wrap;margin-top:auto;padding-top:4px}
 .resume-library-actions .primary-btn,.resume-library-actions .secondary-btn{min-height:36px;padding-inline:12px;font-size:11px}
 @media(max-width:760px){.advice-card{grid-template-columns:1fr;padding:0;gap:0}.coach-portrait{height:230px}.coach-portrait img{height:250px;width:auto}.advice-copy{padding:22px}.advice-copy h1{font-size:23px}}
+.quick-card{height:auto;min-height:210px}.quick-action{display:block;margin-top:12px;color:var(--accent-700);font-size:12px;line-height:1.5}.quick-card:focus-visible{outline:2px solid var(--accent-700);outline-offset:3px}.mini-ui b{min-width:0;overflow-wrap:anywhere;text-align:right}
 </style>

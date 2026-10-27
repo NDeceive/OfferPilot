@@ -7,14 +7,14 @@
           <div class="chat__who">
             <span class="chat__brand">面</span>
             <span>
-              <strong class="chat__title">AI 面试教练</strong>
+              <strong class="chat__title">就业指导老师</strong>
               <span class="chat__mode" :title="modeHint">
                 <i class="chat__dot" :class="aiMode === 'AI' ? 'chat__dot--live' : 'chat__dot--demo'" />
                 {{ aiMode === 'AI' ? 'AI 实时生成' : '演示模式' }}
               </span>
             </span>
           </div>
-          <button class="ghost-btn" @click="goManual">手动录入 ⇄</button>
+          <PrepModeSwitch mode="chat" :job="selectedJob?.code || preferredJob?.code" />
         </header>
 
         <!-- 对话区 -->
@@ -31,46 +31,54 @@
 
             <!-- 交互控件贴着这条气泡出现，且只在话术吐完之后 -->
             <div v-if="controlsFor === m.id" class="ctl">
-              <!-- AI 听懂了但没把握时的确认条。不擅自改状态，让用户点一下 -->
+              <button v-if="failedTurn" type="button" class="link-btn" @click="retryReply">{{ fallbackReason === 'AUTH_REQUIRED' ? '重新登录' : '重试回复' }}</button>
+              <!-- AI 只提供选择建议，用户确认后才改变岗位 -->
               <div v-if="confirmAct" class="confirm">
-                <span class="confirm__text">你刚说的是这个意思吗？{{ confirmAct.label }}</span>
-                <button class="confirm__yes" @click="runConfirm">是的</button>
-                <button class="confirm__no" @click="confirmAct = null">不是</button>
+                <span class="confirm__text">{{ confirmAct.label }}</span>
+                <button class="confirm__yes" @click="runConfirm">确认</button>
+                <button class="confirm__no" @click="confirmAct = null">继续聊聊</button>
               </div>
 
               <!-- ① 开始 -->
-              <button v-if="stage === 'GREET'" class="primary-btn" @click="beginJobPick">
-                开始
+              <button v-if="stage === 'GREET' && !confirmAct" class="primary-btn" @click="beginJobPick">
+                浏览岗位
               </button>
 
               <!-- ② 选岗位 -->
-              <template v-else-if="stage === 'PICK_JOB'">
-                <button v-if="preferredJob && isReadyJob(preferredJob)" class="primary-btn" @click="pickJob(preferredJob)">使用默认岗位：{{ preferredJob.title }}</button>
-                <div class="chips">
-                  <button
-                    v-for="f in families"
-                    :key="f.code"
-                    class="chip"
-                    :class="{ 'chip--on': activeFamily === f.code }"
-                    @click="toggleFamily(f.code)"
-                  >
-                    {{ f.name }}
-                  </button>
-                </div>
-                <div class="jobs">
-                  <button
-                    v-for="j in visibleJobs"
-                    :key="j.id"
-                    class="job"
-                    :class="{ 'job--off': !isReadyJob(j) }"
-                    :disabled="!isReadyJob(j)"
-                    @click="pickJob(j)"
-                  >
-                    <i class="job__bar" :style="{ background: j.accentColor }" />
-                    <span class="job__name">{{ j.title }}</span>
-                    <span v-if="!isReadyJob(j)" class="job__soon">敬请期待</span>
-                  </button>
-                </div>
+              <template v-else-if="stage === 'PICK_JOB' && !confirmAct">
+                <button v-if="!showJobOptions" type="button" class="primary-btn" @click="showJobOptions = true">浏览岗位，也可以继续聊</button>
+                <template v-else>
+                  <button v-if="preferredJob && isReadyJob(preferredJob)" class="primary-btn" @click="pickJob(preferredJob)">使用默认岗位：{{ preferredJob.title }}</button>
+                  <p v-if="jobsLoading" role="status">正在加载岗位…</p>
+                  <p v-else-if="jobsError" role="alert">{{ jobsError }} <button type="button" class="link-btn" @click="fetchJobs">重新加载岗位</button></p>
+                  <div class="chips">
+                    <button
+                      v-for="f in families"
+                      :key="f.code"
+                      class="chip"
+                      :class="{ 'chip--on': activeFamily === f.code }"
+                      @click="toggleFamily(f.code)"
+                    >
+                      {{ f.name }}
+                    </button>
+                  </div>
+                  <p v-if="!jobsLoading && !jobsError && !visibleJobs.length" role="status">这个方向暂时没有可展示岗位，可以继续聊聊或看看其他方向。</p>
+                  <div class="jobs">
+                    <button
+                      v-for="j in visibleJobs"
+                      :key="j.id"
+                      class="job"
+                      :class="{ 'job--off': !isReadyJob(j) }"
+                      :disabled="!isReadyJob(j)"
+                      @click="pickJob(j)"
+                    >
+                      <i class="job__bar" :style="{ background: j.accentColor }" />
+                      <span class="job__name">{{ j.title }}</span>
+                      <span v-if="!isReadyJob(j)" class="job__soon">敬请期待</span>
+                    </button>
+                  </div>
+
+                </template>
               </template>
 
               <!-- ③ 传简历 -->
@@ -129,7 +137,7 @@
                   </p>
                   <span v-for="s in extractedSkills" :key="s" class="skill">{{ s }}</span>
                 </div>
-                <button class="primary-btn" @click="goTargets">设置训练目标 →</button>
+                <button class="primary-btn" @click="goTargets">查看简历分析 →</button>
               </template>
             </div>
           </template>
@@ -156,11 +164,14 @@
 </template>
 
 <script setup>
+import PrepModeSwitch from '../components/PrepModeSwitch.vue'
 import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import AppLayout from '../components/layout/AppLayout.vue'
 import { getJobList, getCareerProfile, getAiStatus, uploadResumeFile, getMyResume, getResumeFileProfile } from '../api'
 import { postSse } from '../utils/sse'
+import { useUserStore } from '../store/user'
+import { buildPrepHistory, prepUnavailableReply, prepFailureReason } from '../utils/aiPrepConversation'
 import { JOB_FAMILIES, mapJobFromBackend, isReadyJob } from '../utils/jobs'
 
 /* ------------------------------------------------------------------ */
@@ -168,29 +179,28 @@ import { JOB_FAMILIES, mapJobFromBackend, isReadyJob } from '../utils/jobs'
 /* ------------------------------------------------------------------ */
 // 关键设计：AI 真流式和预置文案走的是同一条管线（都只是往 queue 里塞字符串，
 // 由打字机匀速吐字），所以「降级」不需要第二套渲染代码。
-const SCRIPT = {
-  GREET: '你好，我是你的面试教练。接下来两步：先挑一个目标岗位，再传一份简历，然后就能开始模拟面试了。',
-  PICK_JOB: '先选一个你想投的方向吧，选完我再给你说说准备重点。',
-  UPLOAD: '简历拖到下面的框里就行，我只用它提取技能标签，不会外传。',
-  DONE: '简历收到。接下来设置 5 个训练目标，就能开始面试了。',
-}
 
 const FALLBACK_HINT = {
   AI_DISABLED: '未配置 AI 密钥',
   AI_ERROR: 'AI 调用失败',
   BUSY: '当前排队较多',
   TIMEOUT: 'AI 响应超时',
+  AUTH_REQUIRED: '登录已过期',
+  NETWORK_ERROR: '无法连接对话服务',
+  SERVER_ERROR: '对话服务出错',
+  INVALID_REQUEST: '对话请求校验失败',
 }
 
 const ALLOWED_EXT = ['pdf', 'doc', 'docx']
 const MAX_SIZE = 10 * 1024 * 1024
 /** 首字节看门狗：fetch 在服务端长时间不吐字节时不会自己报错 */
-const FIRST_BYTE_MS = 8000
+const FIRST_BYTE_MS = 20000
 
 /* ------------------------------------------------------------------ */
 /*  State                                                              */
 /* ------------------------------------------------------------------ */
 const router = useRouter()
+const route = useRoute()
 
 const scroller = ref(null)
 const fileInput = ref(null)
@@ -199,16 +209,20 @@ const stage = ref('GREET')
 const messages = ref([])
 const aiMode = ref('RULE')
 const fallbackReason = ref('')
+const failedTurn = ref(null)
 const typingId = ref(0)
 const busy = ref(true)
 const controlsVisible = ref(false)
 
 const draft = ref('')
-/** 低置信意图的确认条；null 表示不显示 */
+/** 用户明确表达选择后的确认入口；null 表示继续聊天。 */
 const confirmAct = ref(null)
 
 const jobs = ref([])
+const jobsLoading = ref(false)
+const jobsError = ref('')
 const activeFamily = ref('')
+const showJobOptions = ref(false)
 const preferredJob = ref(null)
 const selectedJob = ref(null)
 const extractedSkills = ref([])
@@ -232,7 +246,7 @@ let pendingAct = null
 /** 意图只执行一次，避免同样一帧 act 被 tick 和 settle 各跑一遍 */
 let actApplied = false
 /**
- * 轮次令牌。一轮可能被下一轮「就地打断」——意图自动跳转就是在上一轮还没收尾时
+ * 轮次令牌。一轮可能被下一轮「就地打断」——用户操作可能在上一轮还没收尾时
  * 直接 startTurn 的，此时旧连接 abort 后 await 才返回，它带着的那次 settle 会把
  * 新轮的气泡清掉、看门狗干掉。所有回调都先比对这个令牌，过期的一律不认。
  */
@@ -244,9 +258,9 @@ const families = JOB_FAMILIES
 const typing = computed(() => typingId.value !== 0)
 
 const COMPOSER_HINT = {
-  GREET: '也可以直接打字，比如「我想面 Java 后端」',
-  PICK_JOB: '说出方向就行，比如「算法吧」',
-  UPLOAD: '没有简历就说「我没有简历」',
+  GREET: '聊聊你的经历，或问问感兴趣的岗位…',
+  PICK_JOB: '可以比较岗位、聊聊顾虑，不用急着选…',
+  UPLOAD: '还可以继续聊岗位，或说说简历准备的疑问…',
   DONE: '还有什么想问的？',
 }
 const composerHint = computed(() => COMPOSER_HINT[stage.value] || '说点什么…')
@@ -266,7 +280,7 @@ function stopTimer() {
 function tick() {
   if (!queue) {
     stopTimer()
-    typingId.value = 0
+    // 分片间隙仍在回复中；只有整轮结束且文字显示完才解锁输入。
     if (turnSettled) revealControls()
     return
   }
@@ -274,6 +288,7 @@ function tick() {
   const n = queue.length > 80 ? 4 : queue.length > 30 ? 2 : 1
   currentMsg.text += queue.slice(0, n)
   queue = queue.slice(n)
+  scrollToEnd()
 }
 
 function pushText(text) {
@@ -314,7 +329,7 @@ function jobOptions() {
 }
 
 function buildPayload(s, userText) {
-  const payload = { stage: s }
+  const payload = { stage: s, history: buildPrepHistory(messages.value, userText) }
   if (userText) payload.message = userText
   if (selectedJob.value) payload.jobName = selectedJob.value.title
   if (s === 'GREET' || s === 'PICK_JOB') payload.families = families.map(f => f.name)
@@ -323,6 +338,16 @@ function buildPayload(s, userText) {
   if (extractedSkills.value.length) payload.skills = extractedSkills.value.slice(0, 20)
   if (uploadedName.value) payload.resumeFilename = uploadedName.value
   return payload
+}
+
+/** 等待首个模型响应或后续分片；meta 只说明连接成功，不算模型已回复。 */
+function refreshWatchdog(mine) {
+  clearTimeout(watchdog)
+  watchdog = setTimeout(() => {
+    if (mine !== turnId) return
+    fallbackReason.value = 'TIMEOUT'
+    settle(mine)
+  }, FIRST_BYTE_MS)
 }
 
 async function startTurn(s, userText) {
@@ -345,39 +370,38 @@ async function startTurn(s, userText) {
   turnSettled = false
   // 上一轮失败过不代表这一轮也会失败，后端每轮都会重新发 meta
   fallbackReason.value = ''
+  failedTurn.value = null
   queue = ''
 
-  const msg = reactive({ id: ++seq, role: 'ai', text: '' })
+  const payload = buildPayload(s, userText)
+  const msg = reactive({ id: ++seq, role: 'ai', text: '', userText, stage: s })
   messages.value.push(msg)
   currentMsg = msg
   typingId.value = msg.id
   scrollToEnd()
 
   abortCtrl = new AbortController()
-  watchdog = setTimeout(() => {
-    if (mine !== turnId) return
-    fallbackReason.value = 'TIMEOUT'
-    try { abortCtrl.abort() } catch { /* 已结束 */ }
-    settle(mine)
-  }, FIRST_BYTE_MS)
+  refreshWatchdog(mine)
 
   try {
-    await postSse('/ai/prep/stream', buildPayload(s, userText), {
+    await postSse('/ai/prep/stream', payload, {
       meta: (d) => { if (mine === turnId && d.mode) aiMode.value = d.mode },
       delta: (d) => {
         if (mine !== turnId) return
+        refreshWatchdog(mine)
         gotDelta = true
         pushText(d.t)
       },
       // 意图比正文先到（首行就回传），但这里只记下来不执行：
       // 得等这句话说完、用户看完了再动界面，否则状态跳走了话还在往外吐
-      act: (d) => { if (mine === turnId) pendingAct = d },
+      act: (d) => { if (mine === turnId) { refreshWatchdog(mine); pendingAct = d } },
       fallback: (d) => { if (mine === turnId && d.reason) fallbackReason.value = d.reason },
       done: () => settle(mine),
     }, { signal: abortCtrl.signal })
     // 流正常结束但没等到 done（被中途截断）也要收尾
     settle(mine)
-  } catch {
+  } catch (error) {
+    if (mine === turnId && !turnSettled && error.name !== 'AbortError') fallbackReason.value = prepFailureReason(error)
     settle(mine)
   }
 }
@@ -400,7 +424,11 @@ function settle(mine) {
   // 说了一半又失败（fallback 晚于 delta）也算：半句话后面接另一句会拼出怪句，整段丢弃重打。
   if (!gotDelta || fallbackReason.value) {
     aiMode.value = 'RULE'
-    queue = SCRIPT[stage.value] || SCRIPT.GREET
+    pendingAct = null
+    if (!fallbackReason.value) fallbackReason.value = 'AI_ERROR'
+    failedTurn.value = { stage: currentMsg?.stage || stage.value, message: currentMsg?.userText }
+    if (currentMsg) currentMsg.failed = true
+    queue = prepUnavailableReply({ stage: currentMsg?.stage || stage.value, message: currentMsg?.userText, reason: fallbackReason.value })
     if (currentMsg) currentMsg.text = ''
     ensureTimer()
   }
@@ -421,34 +449,22 @@ function revealControls() {
   applyAct()
 }
 
-/**
- * 执行意图。高置信直接跳，低置信出一条确认栏。
- *
- * 后端的 confidence 只在「模型给出了一个清单里真实存在的 jobCode」时才是 HIGH，
- * 所以能走到自动跳转的只有「用户明确说了某个岗位」这一种情形；其余一律问一句再动。
- */
+/** AI 只提出操作建议；无论置信度多高，都等用户确认。 */
 function applyAct() {
   if (actApplied) return
   actApplied = true
   const plan = actPlan(pendingAct)
   if (!plan) return
 
-  // 降级时这句回复是预置文案，压根没读用户那句话，这时候再自动跳会很突兀
-  if (pendingAct.confidence === 'HIGH' && !fallbackReason.value) {
-    plan.run(false)
-  } else {
-    confirmAct.value = { label: plan.label, run: plan.run }
-  }
+  if (fallbackReason.value) return
+  confirmAct.value = { label: plan.label, run: plan.run }
 }
 
 /**
  * 把一个意图翻译成界面上的一次操作。返回 null = 这条意图在当前阶段无事可做。
  *
  * 大多数消息都会落到 null：AI 是在聊天，不是每条消息都要改状态。
- * 每个分支都先卡当前 stage，防止模型在错误的阶段把流程推回去。
- *
- * @param bubble 走确认条时需要补一条用户气泡（用户没打字，只有一次点击），
- *               自动跳转时不用（用户那句话已经挂在上面了）
+ * 已选岗位后仍可讨论换岗，只有确认操作才改变岗位。
  */
 function actPlan(act) {
   if (!act) return null
@@ -456,31 +472,17 @@ function actPlan(act) {
 
   switch (act.intent) {
     case 'PICK_JOB':
-      if (job && stage.value === 'GREET') {
+      if (job && job.code !== selectedJob.value?.code) {
         return {
-          label: `帮你选「${job.title}」，然后传简历？`,
-          run: (bubble) => selectJob(job, bubble ? job.title : ''),
+          label: `使用「${job.title}」作为目标岗位？`,
+          run: () => selectJob(job, `确认选择 ${job.title}`),
         }
       }
-      if (job && stage.value === 'PICK_JOB') {
+      if (!job && act.family && (stage.value === 'GREET' || stage.value === 'PICK_JOB')) {
         return {
-          label: `选「${job.title}」？`,
-          run: (bubble) => selectJob(job, bubble ? job.title : ''),
+          label: `浏览「${act.family}」方向的岗位？`,
+          run: () => goFamily(act.family, `看看${act.family}方向`),
         }
-      }
-      // 只说得出方向（后端因此给不出 HIGH）：切到对应岗位族，让卡片替他收敛
-      if (!job && act.family && stage.value === 'GREET') {
-        return {
-          label: `想看「${act.family}」方向的岗位？`,
-          run: (bubble) => goFamily(act.family, bubble ? act.family : ''),
-        }
-      }
-      return null
-
-    case 'READY':
-    case 'CONFIRM':
-      if (stage.value === 'GREET') {
-        return { label: '开始挑岗位？', run: (bubble) => advance('PICK_JOB', bubble ? '好' : '') }
       }
       return null
 
@@ -498,7 +500,7 @@ function actPlan(act) {
 function runConfirm() {
   const c = confirmAct.value
   confirmAct.value = null
-  if (c?.run) c.run(true)
+  if (c?.run) c.run()
 }
 
 function findReadyJob(code) {
@@ -520,11 +522,29 @@ function advance(next, userText) {
 /*  各阶段的用户动作                                                   */
 /* ------------------------------------------------------------------ */
 function beginJobPick() {
-  advance('PICK_JOB', '好')
+  showJobOptions.value = true
+  advance('PICK_JOB', '我想先看看有哪些岗位')
 }
 
 function toggleFamily(code) {
-  activeFamily.value = activeFamily.value === code ? '' : code
+  if (busy.value || typing.value) return
+  activeFamily.value = code
+  showJobOptions.value = true
+  const name = families.find(f => f.code === code)?.name || code
+  const text = `我想先了解${name}方向，请介绍工作内容和能力要求，暂时不确定具体岗位。`
+  messages.value.push(reactive({ id: ++seq, role: 'user', text }))
+  startTurn(stage.value, text)
+}
+
+function retryReply() {
+  if (busy.value || typing.value || !failedTurn.value) return
+  if (fallbackReason.value === 'AUTH_REQUIRED') {
+    useUserStore().logout()
+    router.push('/login')
+    return
+  }
+  const turn = failedTurn.value
+  startTurn(turn.stage, turn.message)
 }
 
 function pickJob(job) {
@@ -536,11 +556,12 @@ function pickJob(job) {
 function selectJob(job, bubbleText) {
   if (!isReadyJob(job) || busy.value) return
   selectedJob.value = job
-  advance('UPLOAD', bubbleText)
+  advance(uploadedName.value ? 'DONE' : 'UPLOAD', bubbleText)
 }
 
 /** 只识别出方向时用：先把岗位族筛出来，再让用户在卡片里收敛到具体岗位 */
 function goFamily(familyName, bubbleText) {
+  showJobOptions.value = true
   const hit = families.find(f => f.name === familyName || f.code === familyName)
   if (hit) activeFamily.value = hit.code
   advance('PICK_JOB', bubbleText)
@@ -553,6 +574,7 @@ function send() {
   const text = draft.value.trim()
   if (!text || busy.value || typing.value) return
   draft.value = ''
+  showJobOptions.value = false
   messages.value.push(reactive({ id: ++seq, role: 'user', text }))
   scrollToEnd()
   // 停在当前阶段发一句：这句话算不算推进流程，交给 AI 判断，前端只认它给出的意图
@@ -665,9 +687,6 @@ function goTargets() {
   })
 }
 
-function goManual() {
-  router.push('/jobs')
-}
 
 /* ------------------------------------------------------------------ */
 /*  数据加载                                                           */
@@ -701,13 +720,19 @@ const controlsFor = computed(() => {
 })
 
 async function fetchJobs() {
+  jobsLoading.value = true
+  jobsError.value = ''
   try {
-    const [data, profile] = await Promise.all([getJobList(), getCareerProfile().catch(() => null)])
+    const data = await getJobList()
     jobs.value = (Array.isArray(data) ? data : []).map(mapJobFromBackend)
-    preferredJob.value = jobs.value.find(job => job.id === profile?.targetJobId) || null
+    const profile = await getCareerProfile().catch(() => null)
+    preferredJob.value = jobs.value.find(job => job.code === route.query.job) || jobs.value.find(job => job.id === profile?.targetJobId) || null
     if (preferredJob.value && !selectedJob.value) activeFamily.value = preferredJob.value.family
   } catch (e) {
+    jobsError.value = '岗位暂未加载成功，请重试。'
     console.error('Failed to load jobs:', e)
+  } finally {
+    jobsLoading.value = false
   }
 }
 

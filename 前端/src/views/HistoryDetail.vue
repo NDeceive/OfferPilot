@@ -6,11 +6,12 @@
         {{route.query.assignmentId?'返回教学任务':'返回面试记录'}}
       </router-link>
 
-      <div v-if="loading" class="state-panel">正在整理本次面试报告…</div>
+      <div v-if="loading" class="state-panel" role="status">面试已结束，正在整理本次面试报告，请稍候…</div>
       <div v-else-if="loadError" class="state-panel error-state">
         <strong>报告暂时无法加载</strong>
         <span>{{ loadError }}</span>
         <button type="button" @click="loadReport">重新加载</button>
+        <button v-if="reportFailed" type="button" @click="retryReport">重新生成报告</button>
       </div>
 
       <template v-else>
@@ -199,10 +200,11 @@
 
         <footer class="report-actions">
           <div>
+            <label class="export-transcript"><input v-model="includeTranscript" type="checkbox">包含完整问答</label>
             <button type="button" class="secondary-btn" @click="handleExport('pdf')">导出 PDF</button>
             <button type="button" class="secondary-btn" @click="handleExport('docx')">导出 Word</button>
           </div>
-          <router-link to="/interview/ai" class="primary-btn">再次练习</router-link>
+          <router-link to="/jobs" class="primary-btn">再次练习</router-link>
         </footer>
       </template>
     </main>
@@ -210,9 +212,10 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { exportReport, getImprovementPath, getJobList, getReportDetail, getSessionMessages } from '../api'
+import { exportReport, getImprovementPath, getJobList, getReportDetail, getSessionMessages, getReportStatus, retryInterviewReport } from '../api'
+import { pollInterviewReport } from '../utils/interviewCompletion'
 import JobLogo from '../components/jobs/JobLogo.vue'
 import AppLayout from '../components/layout/AppLayout.vue'
 import TeachingFeedback from '../components/teacher/TeachingFeedback.vue'
@@ -222,7 +225,11 @@ import ExpressionUploadStatus from '../components/interview/ExpressionUploadStat
 import { getJobPresentation } from '../utils/jobPresentation'
 
 const route = useRoute()
-const reportId = route.params.id
+let reportId = route.params.id
+const reportFailed = ref(false)
+let loadStarted = false
+let disposed = false
+onBeforeUnmount(() => { disposed = true })
 const loading = ref(true)
 const loadError = ref('')
 const totalScore = ref(null)
@@ -241,6 +248,7 @@ const weaknesses = ref([])
 const suggestions = ref([])
 const followupRecords = ref([])
 const expandedItems = ref([0])
+const includeTranscript = ref(false)
 const displayLevel = ref('')
 const profileLabel = ref('')
 const radarTargets = ref([])
@@ -338,7 +346,7 @@ function toggleExpand(index) {
 
 async function handleExport(format) {
   try {
-    const response = await exportReport(reportId, format)
+    const response = await exportReport(reportId, format, includeTranscript.value)
     const url = window.URL.createObjectURL(response.data)
     const link = document.createElement('a')
     link.href = url
@@ -351,9 +359,25 @@ async function handleExport(format) {
 }
 
 async function loadReport() {
+  if (loading.value && loadStarted) return
+  loadStarted = true
   loading.value = true
   loadError.value = ''
   try {
+    if (route.params.sessionId) {
+      reportFailed.value = false
+      const status = await pollInterviewReport(config => getReportStatus(route.params.sessionId, config), {
+        budgetMs: 120000, cancelled: () => disposed,
+      })
+      if (disposed) return
+      if (status?.state === 'FAILED') {
+        reportFailed.value = true
+        throw new Error(status.failureReason || '报告生成失败，可以重新生成。')
+      }
+      if (!status?.ready || !status.reportId) throw new Error('报告仍在生成或网络暂时不可用，请稍后重新加载。')
+      reportId = status.reportId
+    }
+    if (!reportId) throw new Error('缺少报告编号，请从面试记录重新打开。')
     const [data, jobs] = await Promise.all([
       getReportDetail(reportId),
       getJobList().catch(() => []),
@@ -388,24 +412,41 @@ async function loadReport() {
     strengths.value = normalizeTextList(data.strengths)
     weaknesses.value = normalizeTextList(data.weaknesses)
     suggestions.value = normalizeTextList(data.suggestions)
+    // Render the report before loading optional recommendations and conversation history.
+    loading.value = false
     if (isNewReport.value) {
-      try {
-        const paths = await getImprovementPath(reportId)
+      getImprovementPath(reportId).then(paths => {
+        if (disposed) return
         const pathSuggestions = Object.values(paths || {}).flatMap(item => [item.diagnosis, item.actionPlan]).filter(Boolean)
         if (pathSuggestions.length) suggestions.value = pathSuggestions
-      } catch (error) {
+      }).catch(error => {
         console.warn('Failed to load improvement path:', error)
-      }
+      })
     }
     if (data.sessionId) {
-      const messages = await getSessionMessages(data.sessionId)
-      followupRecords.value = groupMessages(Array.isArray(messages) ? messages : messages.data || [])
+      getSessionMessages(data.sessionId).then(messages => {
+        if (!disposed) followupRecords.value = groupMessages(Array.isArray(messages) ? messages : messages?.data || [])
+      }).catch(error => console.warn('Failed to load conversation history:', error))
     }
   } catch (error) {
-    loadError.value = error.response?.data?.message || '请检查网络连接后重试。'
+    loadError.value = error.response?.data?.message || error.message || '请检查网络连接后重试。'
   } finally {
     loading.value = false
   }
+}
+
+async function retryReport() {
+  if (loading.value) return
+  loading.value = true
+  try {
+    await retryInterviewReport(route.params.sessionId)
+  } catch (error) {
+    loadError.value = error.message || '重新生成失败，请稍后重试。'
+    return
+  } finally {
+    loading.value = false
+  }
+  await loadReport()
 }
 
 onMounted(loadReport)
@@ -504,7 +545,9 @@ onMounted(loadReport)
 .dialogue p { margin: 6px 0 0; color: var(--neutral-700); font-size: 14px; line-height: 1.7; white-space: pre-wrap; }
 .empty-review { padding: 40px; color: var(--neutral-400); text-align: center; }
 .report-actions { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding-top: 24px; }
-.report-actions > div { display: flex; gap: 10px; }
+.report-actions > div { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.export-transcript { display: flex; align-items: center; gap: 8px; min-height: 44px; font-size: 14px; }
+.export-transcript input { accent-color: #059669; }
 .secondary-btn, .primary-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 42px; padding: 0 18px; border-radius: 10px; font-size: 14px; font-weight: 600; text-decoration: none; cursor: pointer; }
 .secondary-btn { border: 1px solid var(--neutral-200); color: var(--neutral-700); background: white; }
 .secondary-btn:hover { border-color: #7fa58f; color: #275c46; }

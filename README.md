@@ -11,7 +11,7 @@
 
 - **岗位化模拟面试**：按目标岗位生成贴合岗位的面试题目与场景。
 - **简历工作台**：核实事实、按岗位制作多版本简历，预览并导出 PDF/DOCX；面试前获得简历评价和训练建议。详见 [简历工作台说明](简历工作台说明.md)。
-- **动态追问**：基于智谱 GLM 大模型对考生回答实时生成追问；不可用时自动回退到内置规则（RULE）追问，保证流程不中断。
+- **动态追问**：基于 DeepSeek 大模型对考生回答实时生成追问；不可用时自动回退到内置规则（RULE）追问，保证流程不中断。
 - **语音回答**：支持微信通话式开麦/静音、自动分句，并通过 GLM-ASR 转换为可编辑文字。
 - **多维评分报告**：面试结束自动生成五维能力评分（专业知识掌握 / 项目实践表达 / 逻辑表达能力 / 岗位匹配程度 / 动态追问应对），含雷达图与优势 / 不足 / 建议。
 - **专项刷题**：知识题作答、代码提交、收藏与训练历史均按用户持久化保存；编程题可接入自部署 Judge0 CE 进行真实判题。
@@ -24,7 +24,7 @@
 - 岗位选择
 - 简历事实台账 / 在线制作 / 面试准备
 - 模拟面试流程（提问 → 作答 → 追问 → 下一题 → 结束）
-- 智谱 GLM AI 动态追问
+- DeepSeek AI 动态追问
 - GLM-ASR 语音回答转写
 - RULE 规则化追问回退（AI 不可用时自动启用）
 - 多维能力评分报告
@@ -39,7 +39,7 @@
 | 前端 | Vue 3 + Vite + Element Plus + Vue Router + Pinia + Axios + ECharts |
 | 后端 | Java 17 + Spring Boot 3 + MyBatis-Plus |
 | 数据库 | MySQL 8 |
-| AI 服务 | 智谱 GLM-4.7-Flash 动态追问 + GLM-ASR-2512 语音转写 + RULE 回退 |
+| AI 服务 | DeepSeek 动态追问 + GLM-ASR-2512 语音转写 + RULE 回退 |
 | 鉴权 | JWT（无状态 Token 鉴权） |
 
 ## 目录结构
@@ -67,9 +67,23 @@ OfferPilot/
 - **MySQL 8**
 - **Python 3.10**（数字人首次启动时自动创建 `.venv`）
 - **Maven Wrapper**：仓库内置 `后端/mvnw.cmd`，无需单独安装 Maven
-- **智谱 API Key**：大模型追问与语音转写共用，通过后端环境变量注入；严禁写入前端或仓库
+- **API Key**：DeepSeek 大模型使用 `DEEPSEEK_API_KEY`，智谱语音转写使用独立的 `ZHIPU_API_KEY`；严禁写入前端或仓库
 
-### Windows 首次启动
+### 拉取更新后的前端依赖
+
+首次克隆或拉取更新后，手动启动前端前请在项目根目录执行：
+
+```powershell
+cd 前端
+npm ci
+npm run dev
+```
+
+如果出现 `Failed to resolve import "face-api.js"`，说明本机前端依赖缺失或安装不完整。停止旧的 Vite 进程，执行上述命令重新安装并启动；仅执行 `git pull` 不会更新 `node_modules`。一键启动器会检查全部前端直接依赖，发现缺失或版本不匹配时自动执行 `npm ci`。
+
+表情识别模型已随仓库提供于 `前端/public/models/face-api/`，构建部署时应完整发布 `前端/dist/`（包含模型文件）。摄像头、麦克风在其他电脑通过浏览器访问时需要 HTTPS；本机开发可使用 `localhost`。
+
+### Windows 一键启动
 
 安装上述 JDK、Node.js、MySQL 和 Python 3.10，按下方说明初始化数据库后，双击根目录的 `一键启动网页.bat`。
 启动器检查数字人 Python 是否实际可执行，自动创建或修复项目内 `.venv`，缺少依赖时安装默认 Wav2Lip 所需的 `数字人/requirements-offerpilot.txt`。
@@ -101,7 +115,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\数字人\start_offerpilot
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-startup.ps1
 ```
 
-### 配置智谱 API Key（每位使用者自行输入）
+### 配置 DeepSeek API Key
+
+智能追问使用 DeepSeek。后端从 `DEEPSEEK_API_KEY` 读取密钥，也会自动加载 `后端/config/ai.local.properties`（已被 Git 忽略）。本地文件可配置 `ai.api-key=你的密钥`；配置后重启后端。密钥不要放入前端或提交到 Git。共享 AI 客户端的报告评分、面试教练也使用此配置。
+
+在后端目录运行 `$env:RUN_DEEPSEEK_SMOKE="true"; .\mvnw.cmd -Dtest=DeepSeekIntegrationTest test` 可执行真实追问验证（会调用 API）。
+
+### 配置智谱 API Key（语音识别）
 
 1. 在智谱开放平台创建你自己的 API Key，并了解对应模型的计费规则。
 2. Windows 用户运行项目根目录的 `一键启动网页.bat`。首次启动后端且未检测到密钥时，启动窗口会询问是否配置；选择 `Y` 或直接回车，再在隐藏输入框中粘贴密钥。输入不会显示，也不会写入项目文件。选择 `n` 可以跳过，但语音识别不可用。
@@ -157,6 +177,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-startup.ps1
 
    专项训练会从第 4 步的技能题库抽取知识题，并将每次训练、回答、代码提交和收藏单独保存。
 
+   选择题与判断题扩充：首次在已有练习库上运行 `python scripts/import-practice-pack.py --pack 后端/src/main/resources/practice-bank/objective.json --apply`，自动执行增量建表并导入 241 道题。支持单选、多选、判断与自动判分，不删除已有练习记录。来源、安装前提和验证方法见 [题库说明](docs/objective-practice-bank.md)。
+
 ## 环境变量
 
 后端通过环境变量注入配置，开发环境多数项有安全默认值，**生产环境必须显式注入敏感项**。
@@ -167,8 +189,10 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-startup.ps1
 | `DB_USERNAME` | 数据库用户名 | `root` | 建议显式注入 |
 | `DB_PASSWORD` | 数据库密码 | `123456`（仅本地） | **必须注入，无默认值** |
 | `JWT_SECRET` | JWT 签名密钥（HS256，≥32 字符） | 开发占位值 | **必须注入，无默认值** |
-| `ZHIPU_API_KEY` | 智谱 API Key（LLM 与 ASR 共用） | 空（AI 走 RULE，语音转写不可用） | **必须注入，无默认值** |
-| `ZHIPU_LLM_MODEL` | 智谱大模型名称 | `glm-4.7-flash` | 可覆盖 |
+| `DEEPSEEK_API_KEY` | DeepSeek 大模型密钥 | 空（追问回退 RULE） | **必须注入，无默认值** |
+| `ZHIPU_API_KEY` | 智谱语音转写密钥 | 空（语音转写不可用） | **必须注入，无默认值** |
+| `DEEPSEEK_MODEL` | DeepSeek 大模型名称 | `deepseek-flash` | 可覆盖 |
+| `DEEPSEEK_BASE_URL` | DeepSeek API 地址 | `https://api.deepseek.com` | 可覆盖 |
 | `ZHIPU_ASR_MODEL` | 智谱语音识别模型 | `glm-asr-2512` | 可覆盖 |
 | `JUDGE_ENABLED` | 是否启用自部署 Judge0 CE | `false` | 按需设为 `true` |
 | `JUDGE_BASE_URL` | 自部署 Judge0 CE 的服务地址 | 空 | 启用判题时必须注入 |
@@ -189,7 +213,7 @@ cd 后端
 
 - 使用默认 profile（`application.yml`），数据库密码等敏感项有本地默认值，开箱即用。
 - 日志仅输出到控制台。
-- 若未配置 `ZHIPU_API_KEY` 或大模型调用失败，动态追问自动回退到 RULE；语音转写需要有效密钥。
+- 若未配置 `DEEPSEEK_API_KEY` 或大模型调用失败，动态追问自动回退到 RULE；语音转写需要独立的 `ZHIPU_API_KEY`。
 - 后端会检查 `8010` 端口；数字人未运行时自动启动 `数字人/start_offerpilot_digital_human.bat`。
 - 数字人首次启动会从项目 GitHub Release 下载 Wav2Lip 模型、基础头像和当前使用的 `offerpilot_interviewer_v2` 头像资源（这些大文件不进入 Git 历史），随后创建 Python 3.10 虚拟环境并安装依赖，耗时较长；进度见 `后端/logs/digital-human.log`。
 - 后端关闭时，只关闭由本次后端启动的数字人实例。
@@ -207,6 +231,7 @@ $env:DB_URL                 = "jdbc:mysql://<db-host>:3306/zhimian?useUnicode=tr
 $env:DB_USERNAME            = "<db-user>"
 $env:DB_PASSWORD            = "<db-password>"
 $env:JWT_SECRET             = "<至少32字符的随机密钥>"
+$env:DEEPSEEK_API_KEY       = "<your-deepseek-api-key>"
 $env:ZHIPU_API_KEY          = "<your-zhipu-api-key>"
 $env:CORS_ALLOWED_ORIGINS   = "https://your-frontend-domain"
 $env:LOG_PATH               = "logs"
@@ -215,7 +240,7 @@ cd 后端
 .\mvnw.cmd spring-boot:run
 ```
 
-> 生产 profile 对 `DB_PASSWORD` / `JWT_SECRET` / `ZHIPU_API_KEY` 不提供默认值——未注入则启动失败（快速失败），避免带弱默认值上线。
+> 生产 profile 对 `DB_PASSWORD` / `JWT_SECRET` / `DEEPSEEK_API_KEY` / `ZHIPU_API_KEY` 不提供默认值——未注入则启动失败（快速失败），避免带弱默认值上线。
 
 ## 前端启动
 
@@ -235,8 +260,9 @@ npm run build      # 生产构建，产物输出到 前端/dist
 | `admin` | ADMIN | `123456`（本地演示） |
 | `teacher` | TEACHER | `123456`（本地演示） |
 | `student` | STUDENT | `123456`（本地演示） |
+| `enterprise` | ENTERPRISE | `123456`（本地演示） |
 
-> 这些账号仅用于本地演示与联调。生产部署前请删除或重置为强密码，切勿暴露任何生产口令。注意：公开注册接口只会创建 **STUDENT** 角色，TEACHER / ADMIN 不能通过注册自助开通。
+> 这些账号仅用于本地演示与联调。生产部署前请删除或重置为强密码，切勿暴露任何生产口令。注意：公开注册接口支持 **STUDENT / ENTERPRISE** 角色，TEACHER / ADMIN 不能通过注册自助开通。
 
 ## 主要 API 示例
 
@@ -279,7 +305,7 @@ Authorization: Bearer <token>
 
 ## 安全注意事项
 
-- **严禁提交真实 `ZHIPU_API_KEY`** 到仓库、前端代码、截图或聊天记录。
+- **严禁提交真实 `DEEPSEEK_API_KEY` 或 `ZHIPU_API_KEY`** 到仓库、前端代码、截图或聊天记录。
 - **严禁提交生产数据库密码 `DB_PASSWORD`**。
 - **严禁提交 `JWT_SECRET`**；生产环境必须使用足够强度的随机密钥（HS256 要求 ≥32 字符）。
 - 公开注册接口仅创建 **STUDENT** 角色，无法自助提权。

@@ -90,6 +90,14 @@
                 {{ endingId === row.id ? '结束中…' : '结束' }}
               </button>
               <button class="btn btn-ghost btn-sm" @click="openAdvice(row)">建议</button>
+              <button
+                v-if="row.status === 'ENDED' && activeTab === 'hosted'"
+                class="btn btn-danger btn-sm delete-record"
+                :disabled="deletingId !== null"
+                @click="handleDelete(row)"
+              >
+                {{ deletingId === row.id ? '删除中…' : '删除记录' }}
+              </button>
             </div>
           </div>
         </div>
@@ -128,7 +136,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AppLayout from '../../components/layout/AppLayout.vue'
 import AdvicePanel from '../../components/meeting/AdvicePanel.vue'
-import { createMeeting, endMeeting, getMeetingAdvice, getMyMeetings, postMeetingAdvice } from '../../api/meeting'
+import { createMeeting, deleteMeeting, endMeeting, getMeetingAdvice, getMyMeetings, postMeetingAdvice } from '../../api/meeting'
 import { formatTime } from '../../utils/time'
 import { demoState } from '../../utils/offlineDemo'
 
@@ -166,6 +174,7 @@ const hosted = ref([])
 const joined = ref([])
 const activeTab = ref('hosted')
 const endingId = ref(null)
+const deletingId = ref(null)
 const copiedId = ref(null)
 
 const tabs = computed(() => [
@@ -210,6 +219,22 @@ async function handleEnd(row) {
     window.alert(e.message || '结束会议失败，请重试')
   } finally {
     endingId.value = null
+  }
+}
+
+async function handleDelete(row) {
+  if (deletingId.value !== null) return
+  if (!window.confirm(`删除「${row.title}」的会议记录？参会记录和相关建议会一并删除，所有参会者将无法回看，且无法恢复。`)) return
+  deletingId.value = row.id
+  try {
+    await deleteMeeting(row.id)
+    hosted.value = hosted.value.filter((item) => item.id !== row.id)
+    joined.value = joined.value.filter((item) => item.id !== row.id)
+    if (adviceMeetingId.value === row.id) adviceOpen.value = false
+  } catch (e) {
+    window.alert(e.message || '删除会议记录失败，请重试')
+  } finally {
+    deletingId.value = null
   }
 }
 
@@ -370,6 +395,8 @@ onMounted(loadMine)
 .btn-ghost { background: transparent; border-color: var(--neutral-300); color: var(--neutral-600); }
 .btn-ghost:hover:not(:disabled) { border-color: var(--neutral-400); color: var(--neutral-800); }
 .btn-sm { padding: 6px 14px; font-size: var(--text-xs); }
+.delete-record { min-height: 44px; }
+.delete-record:focus-visible { outline: 2px solid var(--color-error); outline-offset: 2px; }
 
 /* === 我的会议 === */
 .section-head {

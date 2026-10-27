@@ -85,7 +85,7 @@
 
             <footer class="mrec__foot">
               <span>{{ statusLabel(record.status) }}</span>
-              <button type="button" :disabled="!record.reportId && !record.assignmentId" @click="view(record)">
+              <button type="button" :disabled="!record.reportId && !record.assignmentId && record.status !== 'FINISHED'" @click="view(record)">
                 {{ record.reportId ? '查看报告 →' : record.assignmentId ? '查看任务 →' : (record.status === 'ONGOING' ? '训练进行中' : '报告生成中') }}
               </button>
             </footer>
@@ -106,6 +106,7 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { getInterviewRecords } from '../../api'
+import { interviewReportRoute } from '../../utils/interviewCompletion'
 import MobileShell from '../components/MobileShell.vue'
 import MobileState from '../components/MobileState.vue'
 import MobileSkeleton from '../components/MobileSkeleton.vue'
@@ -245,12 +246,12 @@ const emptyCopy = computed(() => {
     return { title: '这个来源下还没有记录', description: '自主训练与教学任务分开展示，换个来源看看。', action: '查看全部来源', to: null }
   }
   if (active.value === 'ongoing') {
-    return { title: '没有进行中的面试', description: '所有开始的面试都已收尾。', action: '开始新一场', to: '/interview/ai' }
+    return { title: '没有进行中的面试', description: '所有开始的面试都已收尾。', action: '开始新一场', to: '/jobs' }
   }
   if (active.value === 'finished') {
-    return { title: '还没有完成的面试', description: '完整走完一场面试后，报告和分数会出现在这里。', action: '开始第一场面试', to: '/interview/ai' }
+    return { title: '还没有完成的面试', description: '完整走完一场面试后，报告和分数会出现在这里。', action: '开始第一场面试', to: '/jobs' }
   }
-  return { title: '还没有训练记录', description: '完成第一场面试后，你的训练记录会出现在这里。', action: '开始第一场面试', to: '/interview/ai' }
+  return { title: '还没有训练记录', description: '完成第一场面试后，你的训练记录会出现在这里。', action: '开始第一场面试', to: '/jobs' }
 })
 
 function onEmptyAction() {
@@ -271,7 +272,7 @@ function iconBg(record) {
 }
 
 function view(record) {
-  if (record.reportId) router.push(`/history/${record.reportId}`)
+  if (record.reportId || record.status === 'FINISHED') router.push(interviewReportRoute(record.sessionId, record.reportId, record.assignmentId))
   else if (record.assignmentId) router.push(`/my/tasks/${record.assignmentId}`)
 }
 

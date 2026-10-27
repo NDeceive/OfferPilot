@@ -201,7 +201,7 @@
         <button type="button" class="mobile-secondary-button" :disabled="exporting" @click="handleExport('docx')">
           导出 Word
         </button>
-        <router-link to="/interview/ai" class="mobile-primary-button">再次练习 <span>→</span></router-link>
+        <router-link to="/jobs" class="mobile-primary-button">再次练习 <span>→</span></router-link>
       </footer>
     </template>
   </MobileShell>
