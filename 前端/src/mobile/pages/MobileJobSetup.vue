@@ -544,7 +544,10 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* 全屏四段式：顶栏 / 步骤条 / 内容 / 操作条。同 MobileAiPrep 用 dvh。 */
+/* 全屏四段式：顶栏 / 步骤条 / 内容 / 操作条。同 MobileAiPrep 用 dvh。
+   注意：曾经为了避让离线演示横幅扣过 --demo-banner-h，横幅 2026-10-17 已移除，
+   这里回到干净的 100dvh（.wiz__body 有 overscroll-behavior: contain，操作条
+   一旦被任何东西推出视口，用户滑到底也够不到「下一步」，改高度前先想这条）。 */
 .wiz {
   display: flex;
   height: 100vh;
@@ -562,7 +565,7 @@ onMounted(async () => {
   padding: max(8px, env(safe-area-inset-top)) 12px 8px;
   align-items: center;
   gap: 10px;
-  background: rgba(255, 255, 255, .94);
+  background: color-mix(in srgb, var(--surface-elevated) 94%, transparent);
   backdrop-filter: blur(12px);
 }
 .wiz__back {
@@ -583,9 +586,9 @@ onMounted(async () => {
 .wiz__head strong { display: block; font-size: 16px; line-height: 1.2; }
 .wiz__head small { display: block; margin-top: 2px; color: var(--m-text-tertiary); font-size: 11.5px; }
 
-.wiz__step-back { flex: 0 0 auto; min-height: 36px; padding: 0 12px; color: var(--m-text-secondary); background: #f2f4f0; border: 0; border-radius: 999px; font-size: 12px; font-weight: 600; }
+.wiz__step-back { flex: 0 0 auto; min-height: 36px; padding: 0 12px; color: var(--m-text-secondary); background: var(--surface-soft); border: 0; border-radius: 999px; font-size: 12px; font-weight: 600; }
 
-.wiz__track { display: flex; flex: 0 0 auto; padding: 0 14px 10px; gap: 5px; background: rgba(255, 255, 255, .94); }
+.wiz__track { display: flex; flex: 0 0 auto; padding: 0 14px 10px; gap: 5px; background: color-mix(in srgb, var(--surface-elevated) 94%, transparent); }
 .wiz__track i { height: 3px; flex: 1; background: var(--m-border); border-radius: 3px; transition: background var(--m-motion); }
 .wiz__track i.is-done { background: #9bc4aa; }
 .wiz__track i.is-now { background: var(--m-primary); }
@@ -596,7 +599,7 @@ onMounted(async () => {
   flex: 0 0 auto;
   justify-content: center;
   padding: 0 14px 6px;
-  background: rgba(255, 255, 255, .94);
+  background: color-mix(in srgb, var(--surface-elevated) 94%, transparent);
 }
 .wiz__mode button {
   min-height: 28px;
@@ -634,7 +637,7 @@ onMounted(async () => {
   padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
   align-items: center;
   gap: 10px;
-  background: rgba(255, 255, 255, .96);
+  background: color-mix(in srgb, var(--surface-elevated) 96%, transparent);
   backdrop-filter: blur(12px);
   border-top: 1px solid var(--m-border);
 }
@@ -656,7 +659,7 @@ onMounted(async () => {
   min-height: 48px;
   padding: 0 20px;
   color: var(--m-text-secondary);
-  background: #f2f4f0;
+  background: var(--surface-soft);
   border: 0;
   border-radius: var(--m-radius-button);
   font-size: 14px;
@@ -665,5 +668,5 @@ onMounted(async () => {
 </style>
 
 <style scoped>
-.version-picker{display:block;margin-bottom:16px;font-size:13px}.version-picker select{display:block;width:100%;min-height:42px;margin-top:8px;border:1px solid #dce6df;background:white;border-radius:8px;padding:8px;font:inherit}
+.version-picker{display:block;margin-bottom:16px;font-size:13px}.version-picker select{display:block;width:100%;min-height:42px;margin-top:8px;border:1px solid #dce6df;background:var(--surface-elevated);border-radius:8px;padding:8px;font:inherit}
 </style>

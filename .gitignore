@@ -69,6 +69,8 @@ Thumbs.db
 /*.pptx
 /scripts/check-*
 /scripts/seed-teacher-demo.cjs
+# runtime data: 用户作答音频
+/后端/data/
 /scripts/fixtures/
 /前端/android/
 /前端/assets/

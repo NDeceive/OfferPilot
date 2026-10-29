@@ -1,17 +1,10 @@
 <template>
   <!--
-    常驻横幅。刻意不做成「一个小图标」，因为它是整个离线演示模式的唯一保险：
-    假数据比没数据更危险——界面无声无息换成假数字，讲的人未必察觉，就会照着编。
-
-    位置按平台各挑一边「没被固定元素占住」的边：
-      · 手机：底部被 tab 栏钉死了，走顶部（移动端的标题栏是普通文档流，压不着谁）
-      · 桌面：顶部被固定顶栏占着，走底部
+    只在「连不上后端」时弹一次确认框（用户点了才切到离线模式）。刻意不再显示
+    任何常驻横幅：离线演示要和正常使用看起来完全一样，进去之后看不出是离线。
+    切换方式 = 杀掉 App 重进：登录能成功即在线；连不上时在登录页选「离线演示」
+    进入（进去后无任何标识）。
   -->
-  <div v-if="demoState.active" class="demo-banner" role="status">
-    <span class="demo-banner-dot" aria-hidden="true"></span>
-    <p><b>离线演示模式</b><span class="demo-banner-sep">·</span>当前是内置演示数据，不是真实面试结果</p>
-    <button type="button" @click="turnOff">退出</button>
-  </div>
 
   <!-- 确认框：连不上后端时问一次，用户点了才切 -->
   <Teleport to="body">
@@ -23,7 +16,7 @@
         </p>
         <ul class="demo-dialog-list">
           <li>切过去之后，岗位、面试题、评分报告都会换成<b>内置的演示数据</b>，不是真实结果。</li>
-          <li>顶部（手机）/ 底部（桌面）会一直挂着一条横幅提醒，不会悄悄换回来。</li>
+          <li>想切回真实数据：杀掉 App 重新打开、重新登录即可（登录页也能随时退出离线演示）。</li>
           <li>想连真后端，检查手机和电脑是否在同一个 WiFi，或用登录页的「服务器设置」改地址。</li>
         </ul>
         <div class="demo-dialog-actions">
@@ -37,12 +30,8 @@
 
 <script setup>
 import { computed } from 'vue'
-import { DEMO_TOKEN } from '../../utils/demoAdapter'
 import { getApiBase } from '../../utils/apiBase'
-import { answerDemoPrompt, demoState, setDemoActive } from '../../utils/offlineDemo'
-import { useUserStore } from '../../store/user'
-
-const userStore = useUserStore()
+import { answerDemoPrompt, demoState } from '../../utils/offlineDemo'
 
 // getApiBase() 读的是 localStorage，不是响应式的；弹框一次只弹一下，取了就够
 const apiBase = computed(() => (demoState.asking ? getApiBase() : ''))
@@ -50,103 +39,9 @@ const apiBase = computed(() => (demoState.asking ? getApiBase() : ''))
 function answer(accepted) {
   answerDemoPrompt(accepted)
 }
-
-/**
- * 退出演示模式。
- *
- * 演示模式下拿到的登录态是假的（DEMO_TOKEN），直接带着它去连真后端只会一路 401，
- * 所以先把它清掉，让人回登录页重新登。
- *
- * 最后整页重载：演示模式下攒的东西——内存里的面试会话、报告、走过的路由——本来就
- * 该随模式一起丢掉，逐个复位反而容易漏。
- */
-function turnOff() {
-  setDemoActive(false)
-  if (userStore.token === DEMO_TOKEN) userStore.logout()
-  window.location.reload()
-}
 </script>
 
 <style scoped>
-/* === 横幅 === */
-.demo-banner {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 14px;
-  color: #7c4a03;
-  background: #fff7e6;
-  border-bottom: 1px solid #f5d9a8;
-  font-family: var(--font-ui);
-  font-size: 13px;
-  line-height: 1.4;
-}
-
-.demo-banner p {
-  flex: 1;
-  margin: 0;
-  min-width: 0;
-}
-
-.demo-banner b {
-  font-weight: 700;
-}
-
-.demo-banner-sep {
-  margin: 0 5px;
-  opacity: 0.5;
-}
-
-.demo-banner-dot {
-  flex: none;
-  width: 8px;
-  height: 8px;
-  background: var(--warning, #f59e0b);
-  border-radius: 50%;
-}
-
-.demo-banner button {
-  flex: none;
-  padding: 4px 10px;
-  color: #7c4a03;
-  background: transparent;
-  border: 1px solid #e2b96b;
-  border-radius: 999px;
-  font-family: inherit;
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.demo-banner button:hover {
-  background: #fdedcd;
-}
-
-/* 手机：钉在视口顶部，滚到哪儿都看得见 */
-@media (max-width: 767.98px) {
-  .demo-banner {
-    position: sticky;
-    top: 0;
-    z-index: 999;
-    padding-top: max(8px, env(safe-area-inset-top));
-  }
-}
-
-/* 桌面：底部完全没被固定元素占着，钉在这儿不会压住顶栏和侧栏 */
-@media (min-width: 768px) {
-  .demo-banner {
-    position: fixed;
-    right: 20px;
-    bottom: 20px;
-    left: auto;
-    z-index: 999;
-    max-width: 520px;
-    padding: 10px 12px 10px 16px;
-    border: 1px solid #f5d9a8;
-    border-radius: var(--radius, 8px);
-    box-shadow: var(--shadow-md, 0 16px 40px rgba(37, 99, 235, 0.13));
-  }
-}
-
 /* === 确认框 === */
 .demo-mask {
   position: fixed;

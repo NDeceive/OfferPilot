@@ -39,6 +39,9 @@ public class StartInterviewRequest {
     @Max(value = 7200, message = "面试时长不能超过2小时")
     private Integer durationSeconds;
 
+    /** 本场是否开启语音分析；不传按开启处理 */
+    private Boolean voiceEnabled;
+
     /** 模块偏好（可选）：[{code, rank, level}]，缺省使用默认5模块均衡模式 */
     @jakarta.validation.Valid
     @jakarta.validation.constraints.Size(max = 10)

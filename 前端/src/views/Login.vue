@@ -101,6 +101,32 @@
           </button>
         </form>
 
+        <!-- 离线演示入口：现场没网/后端起不来时的兜底。放在登录按钮正下方、默认可见
+             （之前只藏在折叠的「服务器设置」里，手机上根本找不着）。点开先给一句说明
+             再确认进入，避免误触把演示数据当成真实结果。身份跟上面的端 tab 走：
+             选「教师端」进来就是教师演示数据。 -->
+        <div class="demo-entry">
+          <template v-if="!demoState.active">
+            <button type="button" class="demo-entry-toggle" @click="demoPanelOpen = !demoPanelOpen">
+              {{ demoPanelOpen ? '收起离线演示' : '没有网络？进入离线演示' }}
+            </button>
+            <div v-if="demoPanelOpen" class="demo-panel">
+              <p>不连接服务器，用内置演示数据以「{{ activeRoleLabel }}」身份进入，完整体验{{ demoScope }}。</p>
+              <button type="button" class="demo-enter" @click="enterOfflineDemo">
+                以「{{ activeRoleLabel }}」身份进入离线演示
+              </button>
+              <p class="demo-panel-hint">想换身份，先在上方的「学生端 / 教师端 / 企业端」里切换再进入。</p>
+            </div>
+          </template>
+          <div v-else class="demo-panel is-on">
+            <p><strong>离线演示模式已开启</strong>，登录与数据都来自内置演示数据，不连服务器。</p>
+            <button type="button" class="demo-enter" @click="enterOfflineDemo">
+              以「{{ activeRoleLabel }}」身份进入
+            </button>
+            <button type="button" class="demo-exit" @click="exitOfflineDemo">退出演示模式</button>
+          </div>
+        </div>
+
         <p class="form-foot">
           还没有账号?<router-link to="/register" class="reg-link">立即注册</router-link>
         </p>
@@ -154,6 +180,8 @@ import BrandLogo from '../components/ui/BrandLogo.vue'
 import AuthShowcase from '../components/auth/AuthShowcase.vue'
 import { getApiBase, setApiBase, getRuntimeApiBase } from '../utils/apiBase'
 import { demoState, setDemoActive } from '../utils/offlineDemo'
+// 演示登录的角色由登录页的端 tab 决定；DEMO_TOKEN 用于退出演示时识别假登录态
+import { DEMO_TOKEN, setDemoLoginRole } from '../utils/demoAdapter'
 // 登录成功后的角色分流与路由守卫共用同一份判断（企业端 / 教师端 / 学生端）
 import { roleHome } from '../router'
 
@@ -195,19 +223,45 @@ const roles = [
   { id: 'student', label: '学生端', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>' },
   { id: 'teacher', label: '教师端', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>' },
   { id: 'enterprise', label: '企业端', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>' },
-  { id: 'admin', label: '管理端', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4"/></svg>' },
 ]
 
 // tab 不决定登录归属（账号角色说了算，见 handleLogin 里的 roleHome），
-// 但点选后副标题跟着切换，让「学生/教师/企业/管理」的切换有可见反馈，
+// 但点选后副标题跟着切换，让「学生/教师/企业」的切换有可见反馈，
 // 而不是一个点了没反应的装饰。
 const ROLE_SUBS = {
   student: '登录后继续查看练习记录与复盘',
   teacher: '登录后进入教师工作台，管理班级、任务与数据分析',
   enterprise: '登录后进入会议中心，开启视频面试并留存面试建议',
-  admin: '登录后进入管理工作台',
 }
 const formSub = computed(() => ROLE_SUBS[activeRole.value] || ROLE_SUBS.student)
+
+/* ---------- 离线演示入口 ---------- */
+const demoPanelOpen = ref(false)
+
+const ROLE_LABELS = { student: '学生端', teacher: '教师端', enterprise: '企业端' }
+const activeRoleLabel = computed(() => ROLE_LABELS[activeRole.value] || ROLE_LABELS.student)
+
+/** 当前端在演示模式里能走到的东西，给进入前的说明用 */
+const ROLE_DEMO_SCOPE = {
+  student: '岗位选择、AI 模拟面试、评分报告与复盘',
+  teacher: '教学班管理、成员审核、训练任务与站内消息',
+  enterprise: '会议中心、创建会议与查看面试建议',
+}
+const demoScope = computed(() => ROLE_DEMO_SCOPE[activeRole.value] || ROLE_DEMO_SCOPE.student)
+
+/** 进入演示：先开模式、按当前端定好假登录角色，再走正常登录流程跳转 */
+function enterOfflineDemo() {
+  setDemoActive(true)
+  setDemoLoginRole(activeRole.value)
+  handleLogin()
+}
+
+/** 退出演示：假 token 留着连不了真后端，一并在本地清掉 */
+function exitOfflineDemo() {
+  setDemoActive(false)
+  if (userStore.token === DEMO_TOKEN) userStore.logout()
+  errorMsg.value = ''
+}
 
 const form = reactive({ account: '', password: '', remember: false })
 
@@ -221,6 +275,8 @@ async function handleLogin() {
   errorMsg.value = ''
   loading.value = true
   try {
+    // 演示模式下登录接口由假后端接管：先按当前端 tab 定好要签发的角色
+    if (demoState.active) setDemoLoginRole(activeRole.value)
     const data = await loginApi({ username: form.account, password: form.password })
     userStore.setAuth(data)
     router.push(roleHome((data.role || '').toUpperCase()))
@@ -863,6 +919,86 @@ async function handleLogin() {
   display: block;
   color: var(--neutral-400);
 }
+
+/* === 离线演示入口（默认可见，与折叠的服务器设置区分开） === */
+.demo-entry {
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px dashed var(--neutral-200);
+}
+.demo-entry-toggle {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  background: transparent;
+  border: 1.5px dashed var(--neutral-300);
+  border-radius: var(--radius-md);
+  color: var(--neutral-500);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: color var(--duration-fast), border-color var(--duration-fast), background var(--duration-fast);
+}
+.demo-entry-toggle:hover {
+  color: var(--accent-600);
+  border-color: var(--accent-400);
+  background: rgba(16, 185, 129, 0.04);
+}
+.demo-panel {
+  margin-top: var(--space-3);
+  padding: var(--space-4);
+  background: var(--neutral-50);
+  border: 1px solid var(--neutral-200);
+  border-radius: var(--radius-sm);
+  text-align: left;
+}
+.demo-panel.is-on {
+  margin-top: 0;
+  background: var(--surface-soft);
+  border-color: #f5d9a8;
+}
+.demo-panel p {
+  margin: 0;
+  color: var(--neutral-500);
+  font-size: var(--text-xs);
+  line-height: 1.6;
+}
+.demo-panel.is-on p {
+  color: #7c4a03;
+}
+.demo-enter {
+  width: 100%;
+  min-height: 44px;
+  margin-top: var(--space-3);
+  background: var(--accent-500);
+  border: none;
+  border-radius: var(--radius-md);
+  color: #fff;
+  font-family: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--duration-fast);
+}
+.demo-enter:hover { background: var(--accent-600); }
+.demo-panel-hint {
+  margin-top: var(--space-2) !important;
+  color: var(--neutral-400) !important;
+}
+.demo-exit {
+  width: 100%;
+  min-height: 40px;
+  margin-top: var(--space-2);
+  background: transparent;
+  border: 1px solid var(--neutral-300);
+  border-radius: var(--radius-md);
+  color: var(--neutral-600);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: border-color var(--duration-fast);
+}
+.demo-exit:hover { border-color: var(--neutral-400); }
 
 /* === Responsive === */
 @media (max-width: 900px) {

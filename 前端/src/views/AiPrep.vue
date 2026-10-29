@@ -445,8 +445,25 @@ function revealControls() {
   controlsVisible.value = true
   // 控件是挂上去了，但吐字结束那一刻的滚动位置是按旧内容算的——整块控件（拖拽区
   // 一百多像素）会把新入口顶到折叠线以下。补一次滚动，让它们真的露出来。
-  scrollToEnd()
+  scrollToTurnStart()
   applyAct()
+}
+
+/**
+ * 控件露出后只把「本轮问题」定位到对话区顶部附近，让新出现的岗位清单从第一行开始看。
+ * 不能 scrollToEnd：岗位清单很长，底部全是「敬请期待」，一路甩到底用户会觉得页面莫名跳走
+ * （2026-10-17 与手机端同款 bug 一并修）。
+ */
+function scrollToTurnStart() {
+  nextTick(() => {
+    const el = scroller.value
+    if (!el) return
+    const rows = el.querySelectorAll('.row--ai')
+    const last = rows[rows.length - 1]
+    if (!last) return
+    const top = last.getBoundingClientRect().top - el.getBoundingClientRect().top + el.scrollTop
+    el.scrollTo({ top: Math.max(0, top - 8), behavior: 'smooth' })
+  })
 }
 
 /** AI 只提出操作建议；无论置信度多高，都等用户确认。 */

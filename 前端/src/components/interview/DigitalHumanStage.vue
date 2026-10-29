@@ -367,7 +367,7 @@ defineExpose({
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 18px;
   box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
-  background: #e3ebf6;
+  background: var(--surface-soft);
 }
 
 .stage-video,
@@ -378,7 +378,7 @@ defineExpose({
   width: 100%;
   height: 100%;
   border: 0;
-  background: #e3ebf6;
+  background: var(--surface-soft);
   pointer-events: none;
   object-fit: cover;
   object-position: center;

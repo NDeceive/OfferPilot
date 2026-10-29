@@ -113,7 +113,7 @@ function remove(index) {
   font: inherit;
   line-height: 1.6;
   color: #203c34;
-  background: white;
+  background: var(--surface-elevated);
 }
 .entry-editor article > div {
   display: flex;
@@ -123,7 +123,7 @@ function remove(index) {
   min-height: 40px;
   padding: 8px 12px;
   border: 1px solid #c4dbd0;
-  background: white;
+  background: var(--surface-elevated);
   color: #087f5b;
   border-radius: 8px;
   cursor: pointer;

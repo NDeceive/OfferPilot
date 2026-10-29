@@ -1,11 +1,41 @@
 <template>
   <AppLayout>
     <div class="meeting-page">
-      <!-- 手机端不做会议适配：明确引导到电脑端，也避免白耗资源去连 WS -->
-      <div v-if="isMobile" class="mobile-card">
-        <h1 class="mobile-title">视频会议</h1>
-        <p class="mobile-desc">视频面试需要摄像头与麦克风，请使用电脑端浏览器打开本页面。</p>
-      </div>
+      <!-- 离线演示分支：界面上与真实房间看起来一致（刻意无任何离线/演示标识）。
+           信令连不上，但本机摄像头/麦克风是真的——演示时能直接对着镜头说话。
+           实时房间（成员间画面互通）需要真实后端，这里把「本机设备」这一半先给到。 -->
+      <template v-if="demoActive">
+        <div class="room-head">
+          <div class="head-left">
+            <h1 class="room-title">{{ meetingTitle }}</h1>
+            <button class="code-chip" title="点击复制会议号" @click="copyCode">
+              {{ displayCode }}
+              <span class="code-copy">{{ copied ? '已复制' : '复制' }}</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="demo-stage">
+          <VideoTile
+            local
+            :stream="localStream"
+            :name="selfName"
+            :mic-on="micEnabled"
+            :cam-on="camEnabled"
+          />
+          <p v-if="mediaStatus === 'requesting'" class="demo-stage-hint">正在打开摄像头与麦克风…</p>
+          <p v-else-if="mediaError" class="demo-stage-hint is-error" role="alert">{{ mediaError }}</p>
+        </div>
+
+        <MeetingControls
+          :mic-on="micEnabled"
+          :cam-on="camEnabled"
+          :mic-available="micAvailable"
+          @toggle-mic="media.toggleMic()"
+          @toggle-cam="media.toggleCam()"
+          @leave="leaveDemo"
+        />
+      </template>
 
       <template v-else>
         <!-- 房间顶栏 -->
@@ -163,27 +193,34 @@ import VideoTile from '../../components/meeting/VideoTile.vue'
 import AdvicePanel from '../../components/meeting/AdvicePanel.vue'
 import MeetingControls from '../../components/meeting/MeetingControls.vue'
 import { useMeetingRoom } from '../../composables/useMeetingRoom'
-import { endMeeting, getMeetingAdvice } from '../../api/meeting'
+import { useMeetingMediaShared } from '../../composables/useMeetingMedia'
+import { endMeeting, getMeetingAdvice, previewMeeting } from '../../api/meeting'
 import { formatCodeInput } from '../../utils/meetingProtocol'
 import { useUserStore } from '../../store/user'
-import { useIsMobile } from '../../mobile/composables/useIsMobile'
+import { demoState } from '../../utils/offlineDemo'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
-const isMobile = useIsMobile()
+const demoActive = computed(() => demoState.active)
 
 const room = useMeetingRoom()
-const { status, errorMessage, meeting, selfId, peers, remotePeers, localStream, micEnabled, camEnabled, micAvailable, mediaStatus, adviceList, isHost } = room
+// 与 room 内部共用同一条采集流（共享单例）：离线演示分支单独开设备预览靠它，
+// 显示状态（localStream/micEnabled 等）仍从 room 解构——两边指向同一批 ref。
+const media = useMeetingMediaShared()
+const { status, errorMessage, meeting, selfId, peers, remotePeers, localStream, micEnabled, camEnabled, micAvailable, mediaStatus, mediaError, adviceList, isHost } = room
 
 const code = computed(() => String(route.params.code || ''))
 const displayCode = computed(() => formatCodeInput(code.value))
-const meetingTitle = computed(() => meeting.value?.title || '视频会议')
+// 演示模式没有信令会话（room.meeting 是 null），标题单独向预检接口问一次
+const demoMeetingTitle = ref('')
+const meetingTitle = computed(() => (demoActive.value ? demoMeetingTitle.value : meeting.value?.title) || '视频会议')
 const selfName = computed(() => userStore.nickname || userStore.username || '我')
 const canWrite = computed(() => ['ENTERPRISE', 'TEACHER', 'ADMIN'].includes((userStore.role || '').toUpperCase()))
 // 终态才需要用户看遮罩决策；idle 也算「进行中」（onMounted 首帧还没跑 join，防止闪一下错误卡）
 const finalStatus = computed(() => ['ended', 'kicked', 'error'].includes(status.value))
-const overlayVisible = computed(() => !isMobile.value && status.value !== 'joined')
+// 手机端也真进房（2026-10-10 放开），进房过程/失败态同样要这张卡；演示模式有自己的页面，不要
+const overlayVisible = computed(() => !demoActive.value && status.value !== 'joined')
 
 const sideTab = ref('members')
 const copied = ref(false)
@@ -212,13 +249,32 @@ watch(status, (next) => {
 
 /* ---------- 生命周期 ---------- */
 onMounted(() => {
-  if (isMobile.value) return
+  if (demoActive.value) {
+    // 演示模式没有后端信令，但本机设备是真的：开摄像头/麦克风给人看，标题向预检接口问一次
+    media.start()
+    loadDemoMeeting()
+    return
+  }
+  // 手机端也真进房：采流 + WS 握手，能不能开麦/开摄像头由设备与权限说了算
   room.join(code.value)
 })
+
+/** 演示模式拿会议标题：失败就退回「视频会议」，不影响设备演示 */
+async function loadDemoMeeting() {
+  try {
+    const info = await previewMeeting(code.value)
+    demoMeetingTitle.value = info?.title || ''
+  } catch { /* 标题拿不到不影响本机设备演示 */ }
+}
 
 // 顶栏导航离开时挂断（否则摄像头灯不灭、其他成员一直看着你的画面）。
 // leave() 幂等，挂断按钮自己 push 时重复调用无副作用。
 onBeforeRouteLeave(() => {
+  if (demoActive.value) {
+    // 演示模式没进过信令会话，room.leave() 是 no-op；直接停本机设备
+    media.stop()
+    return
+  }
   room.leave()
 })
 
@@ -236,6 +292,12 @@ async function copyCode() {
 function handleLeave() {
   room.leave()
   router.push('/meeting')
+}
+
+/** 演示模式的退出：没有会议可挂断，停掉本机设备后返回（不然摄像头灯一直亮着） */
+function leaveDemo() {
+  media.stop()
+  goBack()
 }
 
 async function handleEnd() {
@@ -312,18 +374,10 @@ function connTitle(p) {
   padding-bottom: var(--space-6);
 }
 
-/* === 移动端引导 === */
-.mobile-card {
-  max-width: 480px;
-  margin: 18vh auto 0;
-  padding: var(--space-8);
-  text-align: center;
-  background: var(--surface-elevated);
-  border: 1px solid var(--neutral-200);
-  border-radius: var(--radius-xl);
-}
-.mobile-title { font-family: var(--font-display); font-size: var(--text-2xl); font-weight: 700; color: var(--neutral-900); margin-bottom: var(--space-3); }
-.mobile-desc { font-size: var(--text-sm); color: var(--neutral-500); line-height: 1.7; }
+/* === 离线演示：本机设备预览（无标识，布局与真实房间一致） === */
+.demo-stage { width: 100%; max-width: 760px; margin: 0 auto; }
+.demo-stage-hint { margin-top: var(--space-2); text-align: center; color: var(--neutral-500); font-size: var(--text-sm); }
+.demo-stage-hint.is-error { color: var(--color-error); line-height: 1.7; }
 
 /* === 顶栏 === */
 .room-head {
@@ -414,7 +468,7 @@ function connTitle(p) {
   cursor: pointer;
   transition: background var(--duration-fast);
 }
-.waiting-copy:hover { background: rgba(255, 255, 255, 0.1); }
+.waiting-copy:hover { background: color-mix(in srgb, var(--surface-elevated) 10%, transparent); }
 
 .tile-grid {
   width: 100%;
@@ -503,7 +557,7 @@ function connTitle(p) {
 .conn-dot.ok { background: var(--accent-500); }
 .conn-dot.warn { background: #f59e0b; animation: pulse 1.4s ease-in-out infinite; }
 .conn-dot.bad { background: var(--color-error); }
-.member-note { font-size: var(--text-xs); color: #8a6100; background: #fef7e6; border-radius: var(--radius-sm); padding: 8px 10px; margin-top: var(--space-2); line-height: 1.6; }
+.member-note { font-size: var(--text-xs); color: #8a6100; background: var(--surface-soft); border-radius: var(--radius-sm); padding: 8px 10px; margin-top: var(--space-2); line-height: 1.6; }
 
 .side-advice { overflow-y: auto; padding: 0 var(--space-4) var(--space-4); }
 
@@ -560,5 +614,16 @@ function connTitle(p) {
 @media (max-width: 1100px) {
   .room-body { flex-direction: column; }
   .side { width: 100%; max-height: none; }
+}
+
+/* 手机：真房间布局收紧（手机端也能进房开摄像头/麦克风，房间与演示共用这套骨架） */
+@media (max-width: 767.98px) {
+  .meeting-page { gap: var(--space-3); }
+  .room-head { gap: var(--space-2); }
+  .room-title { font-size: var(--text-lg, 1.125rem); }
+  .stage { min-height: 46vh; padding: var(--space-2); }
+  .pip { width: 116px; right: var(--space-2); bottom: var(--space-2); }
+  .waiting-code { font-size: 2rem; }
+  .waiting-hint { font-size: var(--text-xs); }
 }
 </style>

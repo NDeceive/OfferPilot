@@ -84,7 +84,7 @@ export const MOCK_USER = {
   id: 3,
   username: 'student',
   password: null,
-  nickname: '演示同学',
+  nickname: '林晓',
   role: 'STUDENT',
   email: 'student@example.com',
   phone: '13800000000',
@@ -387,4 +387,243 @@ export const MOCK_AI_PREP_FOCUS = {
   'DA-PROD': '这个岗位重点看埋点设计与 A/B 实验，能不能从数据里说出一个可执行的产品结论是核心。',
   'QA-AUTO': '这个岗位重点看自动化框架设计和用例分层，PO 模式和稳定性治理是常考点。',
   'QA-PERF': '这个岗位重点看压测方案与瓶颈定位，能说清一次真实的调优过程最有说服力。',
+}
+
+/* ---------------------------------------------------------------------------
+ * 教学班 / 训练任务 / 站内消息 / 会议（教师端与企业端移动页）
+ *
+ * 字段名照后端 TeachingService / MeetingService 的 DTO 抄：成员行的 state 用
+ * PENDING/JOINED/REJECTED/REMOVED，任务的 lifecycle 用 DRAFT/ACTIVE/ENDED/CLOSED。
+ * 数量刻意是「看得到过程」的样子：有进行中任务、有等审核的申请、有等点评的
+ * 报告、有开着和已结束的会议，演示时随手点哪里都有东西可讲。
+ * ------------------------------------------------------------------------- */
+
+/** 后端返回的是本地时间（无时区后缀），前端按 +08:00 解析——演示数据对齐这个约定 */
+function localStamp(offsetDays, hour = 10, minute = 0) {
+  const d = new Date()
+  d.setDate(d.getDate() + offsetDays)
+  d.setHours(hour, minute, 0, 0)
+  const p = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:00`
+}
+
+export const MOCK_TEACHING_CLASSES = [
+  { id: 201, name: '软件工程 2024 级 · 1 班', semester: '2026–2027 第一学期', inviteCode: '7C4B29E8A1F3', archived: false, createdAt: localStamp(-21, 9, 0) },
+  { id: 202, name: 'Java 后端方向 · 冲刺训练班', semester: '2026–2027 第一学期', inviteCode: 'B8E14A6C2D90', archived: false, createdAt: localStamp(-14, 15, 30) },
+  { id: 203, name: '算法与 AI 兴趣小组（上学期）', semester: '2025–2026 第二学期', inviteCode: '5D3F7A9C1E42', archived: true, createdAt: localStamp(-120, 10, 0) },
+]
+
+export const MOCK_TEACHING_MEMBERS = [
+  { id: 5201, classId: 201, studentId: 3, name: '林晓', username: 'student', state: 'JOINED', accountStatus: 'ACTIVE' },
+  { id: 5202, classId: 201, studentId: 31, name: '林一鸣', username: 'linyiming', state: 'JOINED', accountStatus: 'ACTIVE' },
+  { id: 5203, classId: 201, studentId: 32, name: '周雨桐', username: 'zhouyutong', state: 'JOINED', accountStatus: 'ACTIVE' },
+  { id: 5204, classId: 201, studentId: 33, name: '陈子昂', username: 'chenziang', state: 'PENDING', accountStatus: 'ACTIVE' },
+  { id: 5205, classId: 202, studentId: 34, name: '苏晚晴', username: 'suwanqing', state: 'JOINED', accountStatus: 'ACTIVE' },
+  { id: 5206, classId: 202, studentId: 35, name: '何嘉树', username: 'hejiashu', state: 'JOINED', accountStatus: 'ACTIVE' },
+  { id: 5207, classId: 203, studentId: 31, name: '林一鸣', username: 'linyiming', state: 'JOINED', accountStatus: 'ACTIVE' },
+  { id: 5208, classId: 203, studentId: 34, name: '苏晚晴', username: 'suwanqing', state: 'JOINED', accountStatus: 'ACTIVE' },
+]
+
+/** 训练问题直接用真题库的题干，任务详情里能看到「真问题」而不是摆设 */
+const DEMO_QUESTION_TEXT = MOCK_QUESTIONS.map((q) => q.content)
+
+export const MOCK_TEACHING_TASKS = [
+  {
+    id: 7101,
+    title: 'Java 集合与并发 · 第 1 次模拟面试',
+    classId: 201,
+    className: '软件工程 2024 级 · 1 班',
+    jobId: 1,
+    jobName: 'Java后端开发工程师',
+    lifecycle: 'ACTIVE',
+    publishedAt: localStamp(-2, 9, 0),
+    deadline: localStamp(2, 22, 0),
+    archived: false,
+    endedAt: null,
+    description: '围绕集合、并发与 JVM 的高频考点做一轮完整模拟，建议先自主完成一次、看过报告再约复盘。',
+    minAttempts: 1,
+    maxAttempts: 3,
+    durationSeconds: 1800,
+    allowLate: false,
+    questions: DEMO_QUESTION_TEXT.slice(0, 3),
+    scorePlan: {},
+    assignments: [
+      {
+        id: 8101, studentId: 3, name: '林晓', username: 'student', exempt: false,
+        completionStatus: 'COMPLETED', validCount: 1,
+        attempts: [{ id: 9101, state: 'READY', submittedAt: localStamp(-1, 20, 12), reportId: 6101, failureReason: null }],
+      },
+      {
+        id: 8102, studentId: 31, name: '林一鸣', username: 'linyiming', exempt: false,
+        completionStatus: 'IN_PROGRESS', validCount: 0,
+        attempts: [{ id: 9102, state: 'INVALID', submittedAt: localStamp(-1, 15, 40), reportId: 6102, failureReason: '回答时长不足，未达到有效标准' }],
+      },
+      {
+        id: 8103, studentId: 32, name: '周雨桐', username: 'zhouyutong', exempt: false,
+        completionStatus: 'PENDING_VALIDATION', validCount: 1,
+        attempts: [{ id: 9103, state: 'READY', submittedAt: localStamp(0, 9, 24), reportId: 6103, failureReason: null }],
+      },
+    ],
+  },
+  {
+    id: 7102,
+    title: 'MySQL 索引与事务 · 专项训练',
+    classId: 202,
+    className: 'Java 后端方向 · 冲刺训练班',
+    jobId: 1,
+    jobName: 'Java后端开发工程师',
+    lifecycle: 'ACTIVE',
+    publishedAt: localStamp(-1, 17, 5),
+    deadline: localStamp(6, 20, 0),
+    archived: false,
+    endedAt: null,
+    description: '复盘索引失效的常见场景与隔离级别，练完再看报告里的「技术深度」维度。',
+    minAttempts: 2,
+    maxAttempts: 4,
+    durationSeconds: 2400,
+    allowLate: true,
+    questions: DEMO_QUESTION_TEXT.slice(3, 6),
+    scorePlan: {},
+    assignments: [
+      {
+        id: 8104, studentId: 34, name: '苏晚晴', username: 'suwanqing', exempt: false,
+        completionStatus: 'IN_PROGRESS', validCount: 1,
+        attempts: [{ id: 9104, state: 'ONGOING', submittedAt: null, reportId: null, failureReason: null }],
+      },
+      {
+        id: 8105, studentId: 35, name: '何嘉树', username: 'hejiashu', exempt: false,
+        completionStatus: 'NOT_STARTED', validCount: 0,
+        attempts: [],
+      },
+    ],
+  },
+  {
+    id: 7103,
+    title: 'Spring 框架原理 · 模拟面试（草稿）',
+    classId: 201,
+    className: '软件工程 2024 级 · 1 班',
+    jobId: 1,
+    jobName: 'Java后端开发工程师',
+    lifecycle: 'DRAFT',
+    publishedAt: null,
+    deadline: localStamp(9, 22, 0),
+    archived: false,
+    endedAt: null,
+    description: 'IoC、AOP 与事务传播，发布前请先确认题目顺序。',
+    minAttempts: 1,
+    maxAttempts: 2,
+    durationSeconds: 1800,
+    allowLate: false,
+    questions: DEMO_QUESTION_TEXT.slice(6, 9),
+    scorePlan: {},
+    assignments: [],
+  },
+  {
+    id: 7104,
+    title: '计算机基础 · 摸底训练',
+    classId: 201,
+    className: '软件工程 2024 级 · 1 班',
+    jobId: 1,
+    jobName: 'Java后端开发工程师',
+    lifecycle: 'CLOSED',
+    publishedAt: localStamp(-21, 9, 0),
+    deadline: localStamp(-14, 22, 0),
+    archived: false,
+    endedAt: localStamp(-13, 10, 0),
+    description: '开学摸底，已结束并完成点评。',
+    minAttempts: 1,
+    maxAttempts: 2,
+    durationSeconds: 1200,
+    allowLate: false,
+    questions: DEMO_QUESTION_TEXT.slice(9, 12),
+    scorePlan: {},
+    assignments: [
+      {
+        id: 8106, studentId: 3, name: '林晓', username: 'student', exempt: false,
+        completionStatus: 'COMPLETED', validCount: 2,
+        attempts: [
+          { id: 9105, state: 'READY', submittedAt: localStamp(-16, 19, 0), reportId: 6104, failureReason: null },
+          { id: 9106, state: 'READY', submittedAt: localStamp(-15, 20, 30), reportId: 6105, failureReason: null },
+        ],
+      },
+      {
+        id: 8107, studentId: 31, name: '林一鸣', username: 'linyiming', exempt: true,
+        completionStatus: 'EXEMPT', validCount: 0, attempts: [],
+      },
+      {
+        id: 8108, studentId: 32, name: '周雨桐', username: 'zhouyutong', exempt: false,
+        completionStatus: 'COMPLETED', validCount: 1,
+        attempts: [{ id: 9107, state: 'READY', submittedAt: localStamp(-15, 14, 10), reportId: 6106, failureReason: null }],
+      },
+    ],
+  },
+]
+
+export const MOCK_TEACHING_MESSAGES = [
+  {
+    id: 3101, title: '周雨桐提交了训练报告',
+    body: '「Java 集合与并发 · 第 1 次模拟面试」收到一份新报告，去报告点评看看她在并发题上的展开。',
+    link: '/teacher/reports/6103', isRead: false, createdAt: localStamp(0, 9, 24),
+  },
+  {
+    id: 3102, title: '新的班级加入申请',
+    body: '陈子昂 申请加入「软件工程 2024 级 · 1 班」，去成员审核里处理。',
+    link: '/teacher/classes/201/members', isRead: false, createdAt: localStamp(0, 8, 15),
+  },
+  {
+    id: 3103, title: '任务已发布',
+    body: '「MySQL 索引与事务 · 专项训练」已发布到「Java 后端方向 · 冲刺训练班」，2 名学生已收到通知。',
+    link: '/teacher/tasks/7102', isRead: true, createdAt: localStamp(-1, 17, 5),
+  },
+]
+
+export const MOCK_MEETINGS_HOSTED = [
+  {
+    // 会议号必须落在无歧义字母表内（没有 O/I/0/1）——查号页的格式校验拦在前端，
+    // 「DEMO2026」这种带 O/0 的号根本递不到假后端，演示时会被当成 bug。
+    id: 301, title: '星屿科技 · Java 后端岗一面', code: 'TECH2749', codeDisplay: 'TECH-2749',
+    hostName: '陈经理', participantCount: 1, status: 'OPEN', createdAt: localStamp(0, 9, 30), joinTime: null,
+  },
+  {
+    id: 302, title: '前端实习生 · 群面点评', code: 'TECH8888', codeDisplay: 'TECH-8888',
+    hostName: '陈经理', participantCount: 2, status: 'ENDED', createdAt: localStamp(-3, 14, 0), joinTime: null,
+  },
+]
+
+export const MOCK_MEETINGS_JOINED = [
+  {
+    id: 302, title: '前端实习生 · 群面点评', code: 'TECH8888', codeDisplay: 'TECH-8888',
+    hostName: '陈经理', participantCount: 2, status: 'ENDED', createdAt: localStamp(-3, 14, 0), joinTime: localStamp(-3, 14, 5),
+  },
+]
+
+export const MOCK_MEETING_ADVICE = {
+  301: [
+    {
+      id: 9501, authorName: '王老师', authorId: 2, targetUserId: null,
+      content: '自我介绍信息密度不错。项目部分建议把「我负责什么」和「团队做了什么」分开讲，面试官更容易判断你的贡献。',
+      createdAt: localStamp(0, 9, 50),
+    },
+  ],
+  302: [
+    {
+      id: 9502, authorName: '陈经理', authorId: 7, targetUserId: null,
+      content: '整体表达清晰，但简历里的两个项目都集中在后台管理类，建议补一个高并发场景的案例，和岗位更贴。',
+      createdAt: localStamp(-3, 15, 10),
+    },
+    {
+      id: 9503, authorName: '陈经理', authorId: 7, targetUserId: null,
+      content: '被追问「为什么这么设计」时的回答比较依赖模板，多用具体数字（QPS、耗时改善）会更有说服力。',
+      createdAt: localStamp(-3, 15, 32),
+    },
+  ],
+}
+
+export const MOCK_CAREER = {
+  stage: '校招',
+  school: '云麓大学',
+  major: '软件工程',
+  graduationYear: '2027',
+  targetJobId: 1,
+  targetCompany: '星屿科技',
 }

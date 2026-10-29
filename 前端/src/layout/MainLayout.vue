@@ -174,7 +174,7 @@ const handleCommand = (cmd) => {
   min-width: 320px;
   height: 100dvh;
   overflow: hidden;
-  background: #f7faff;
+  background: var(--surface-soft);
 }
 
 .sidebar {
@@ -186,7 +186,7 @@ const handleCommand = (cmd) => {
   width: 248px;
   min-width: 248px;
   padding: 44px 20px 24px;
-  background: rgba(255, 255, 255, 0.94);
+  background: color-mix(in srgb, var(--surface-elevated) 94%, transparent);
   border-right: 1px solid rgba(215, 225, 241, 0.92);
   box-shadow: 12px 0 34px rgba(35, 83, 149, 0.04);
   transition: width 0.22s ease, min-width 0.22s ease, flex-basis 0.22s ease;
@@ -312,7 +312,7 @@ const handleCommand = (cmd) => {
   margin: 16px auto 0;
   color: #627391;
   place-items: center;
-  background: #fff;
+  background: var(--surface-elevated);
   border: 1px solid #dbe4f3;
   border-radius: 10px;
   cursor: pointer;
@@ -333,7 +333,7 @@ const handleCommand = (cmd) => {
   gap: 20px;
   min-height: 72px;
   padding: 0 34px;
-  background: rgba(255, 255, 255, 0.9);
+  background: color-mix(in srgb, var(--surface-elevated) 90%, transparent);
   border-bottom: 1px solid rgba(215, 225, 241, 0.92);
   backdrop-filter: blur(18px);
 }
@@ -346,7 +346,7 @@ const handleCommand = (cmd) => {
   height: 44px;
   padding: 0 12px 0 16px;
   color: #8a98b1;
-  background: #fff;
+  background: var(--surface-elevated);
   border: 1px solid #dbe4f3;
   border-radius: 8px;
   box-shadow: 0 6px 20px rgba(35, 83, 149, 0.04);
@@ -367,7 +367,7 @@ const handleCommand = (cmd) => {
   min-width: 50px;
   padding: 6px 8px;
   color: #687792;
-  background: #f3f6fb;
+  background: var(--surface-soft);
   border-radius: 8px;
   font: 700 13px/1 var(--font-ui);
   text-align: center;

@@ -6,12 +6,6 @@
         <p class="page-desc">开启一场视频面试，把会议号发给学生或教师，对方凭号进入；面对面交流后可留下书面建议。</p>
       </header>
 
-      <!-- 会议接口不在离线演示数据覆盖范围，先说清楚比点下去报错强。
-           出口指横幅上的「退出」：登录页对已登录账号是走不到的（守卫会弹回来）。 -->
-      <div v-if="demoActive" class="notice notice-warn">
-        离线演示模式已开启，会议功能需要连接服务器。请点屏幕上的横幅「退出」关闭离线演示模式后再使用。
-      </div>
-
       <!-- 开启会议 -->
       <section class="card create-card">
         <div class="create-field">
@@ -138,11 +132,8 @@ import AppLayout from '../../components/layout/AppLayout.vue'
 import AdvicePanel from '../../components/meeting/AdvicePanel.vue'
 import { createMeeting, deleteMeeting, endMeeting, getMeetingAdvice, getMyMeetings, postMeetingAdvice } from '../../api/meeting'
 import { formatTime } from '../../utils/time'
-import { demoState } from '../../utils/offlineDemo'
 
 const router = useRouter()
-
-const demoActive = computed(() => demoState.active)
 
 /* ---------- 开启会议 ---------- */
 const createTitle = ref('')
@@ -159,9 +150,7 @@ async function handleCreate() {
     // 创建成功即以发起人身份进房，会议号在房间里可复制
     router.push(`/meeting/${meeting.code}/room`)
   } catch (e) {
-    createError.value = demoActive.value
-      ? '离线演示模式不含会议功能，点横幅上的「退出」关闭离线演示后可用。'
-      : (e.message || '创建会议失败，请重试')
+    createError.value = e.message || '创建会议失败，请重试'
   } finally {
     creating.value = false
   }
@@ -196,9 +185,7 @@ async function loadMine() {
     hosted.value = data.hosted || []
     joined.value = data.joined || []
   } catch (e) {
-    loadError.value = demoActive.value
-      ? '离线演示模式不含会议数据，点横幅上的「退出」关闭离线演示后可用。'
-      : (e.message || '加载会议列表失败')
+    loadError.value = e.message || '加载会议列表失败'
   } finally {
     loading.value = false
   }
@@ -310,14 +297,6 @@ onMounted(loadMine)
   border-radius: var(--radius-xl);
   padding: var(--space-6);
 }
-.notice {
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-md);
-  font-size: var(--text-sm);
-  margin-bottom: var(--space-4);
-  line-height: 1.6;
-}
-.notice-warn { background: #fef7e6; border: 1px solid #f5d789; color: #8a6100; }
 .inline-error {
   display: flex;
   align-items: center;

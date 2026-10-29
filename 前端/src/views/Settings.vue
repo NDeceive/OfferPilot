@@ -192,21 +192,42 @@
 
           <div class="setting-group">
             <label class="setting-label">主题</label>
-            <p class="setting-desc">深色主题尚在开发中，当前版本为浅色界面。</p>
-            <div class="theme-options">
-              <button class="theme-btn active" disabled>
+            <p class="setting-desc">当前为{{ themeResolvedLabel }}界面，选择「跟随系统」时会随系统深浅色自动切换。</p>
+            <div class="theme-options" role="radiogroup" aria-label="主题">
+              <button
+                type="button"
+                class="theme-btn"
+                :class="{ active: themeMode === 'light' }"
+                role="radio"
+                :aria-checked="themeMode === 'light'"
+                @click="chooseTheme('light')"
+              >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
                 </svg>
                 浅色
               </button>
-              <button class="theme-btn" disabled>
+              <button
+                type="button"
+                class="theme-btn"
+                :class="{ active: themeMode === 'dark' }"
+                role="radio"
+                :aria-checked="themeMode === 'dark'"
+                @click="chooseTheme('dark')"
+              >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
                 </svg>
                 深色
               </button>
-              <button class="theme-btn" disabled>
+              <button
+                type="button"
+                class="theme-btn"
+                :class="{ active: themeMode === 'system' }"
+                role="radio"
+                :aria-checked="themeMode === 'system'"
+                @click="chooseTheme('system')"
+              >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
                 </svg>
@@ -300,10 +321,18 @@ import AppLayout from '../components/layout/AppLayout.vue'
 import { getInterviewRecords, getMe, updateProfile } from '../api'
 import { useUserStore } from '../store/user'
 import { assetUrl } from '../utils/assetUrl'
+import { useTheme } from '../composables/useTheme'
 
 const route = useRoute()
 const router = useRouter()
 const store = useUserStore()
+
+/* ==================== 外观 ==================== */
+const { mode: themeMode, resolved: themeResolved, setThemeMode } = useTheme()
+const themeResolvedLabel = computed(() => (themeResolved.value === 'dark' ? '深色' : '浅色'))
+function chooseTheme(value) {
+  setThemeMode(value)
+}
 
 // 预览视频/封面：走 assetUrl() 才能在 5+App（file://）构建下找到文件
 const AVATAR_VIDEO = assetUrl('assets/interview-avatar/interviewer-v3.mp4')
@@ -850,7 +879,7 @@ onMounted(() => {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: white;
+  background: var(--surface-elevated);
   transition: transform var(--duration-normal);
   box-shadow: var(--shadow-sm);
 }

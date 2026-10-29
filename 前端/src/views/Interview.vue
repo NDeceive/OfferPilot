@@ -64,6 +64,13 @@
           <span class="stage-caption">AI 面试官</span>
         </div>
 
+        <!-- 手机端自拍画面：放在 AI 面试官下方，当前题目再放在它下面（用户指定顺序） -->
+        <div v-if="isMobile" class="mobile-cam-card">
+          <CameraPreview ref="cameraPreviewRef" compact :session-id="sessionId" :question-id="currentQuestionId"
+            :round-no="currentQuestion" :paused="isPaused || pauseChanging || isSubmitting || expressionEnding || needsNextQuestion" :server-offset="serverOffset" :clock-ready="clockReady"
+            @expression-sample="recordExpression" @expression-state="liveExpression = $event" @retry-clock="syncExpressionClock" />
+        </div>
+
         <p v-if="isMobile && latestQuestion" class="mobile-question">
           <span class="mq-label">当前题目</span>
           <span class="mq-text">{{ latestQuestion }}</span>
@@ -105,13 +112,7 @@
               <p>正在思考下一步问题……</p>
             </div>
           </div>
-          <div v-if="isMobile" class="answer-head">
-            <div v-if="isMobile" class="mobile-cam-chip">
-              <CameraPreview ref="cameraPreviewRef" compact :session-id="sessionId" :question-id="currentQuestionId"
-                :round-no="currentQuestion" :paused="isPaused || pauseChanging || isSubmitting || expressionEnding || needsNextQuestion" :server-offset="serverOffset" :clock-ready="clockReady"
-                @expression-sample="recordExpression" @expression-state="liveExpression = $event" @retry-clock="syncExpressionClock" />
-            </div>
-          </div>
+          <!-- 作答只允许语音：文字输入入口已移除（2026-10-17） -->
           <MicrophoneControl
             ref="microphoneRef"
             :session-id="sessionId"
@@ -180,6 +181,7 @@ import CameraPreview from '../components/interview/CameraPreview.vue'
 import DigitalHumanStage from '../components/interview/DigitalHumanStage.vue'
 import MicrophoneControl from '../components/interview/MicrophoneControl.vue'
 import { useIsMobile } from '../mobile/composables/useIsMobile'
+import { useAnswerAudio } from '../composables/useAnswerAudio'
 
 const router = useRouter()
 const route = useRoute()
@@ -214,9 +216,17 @@ const clockReady = ref(false)
 const pauseChanging = ref(false)
 const needsNextQuestion = ref(false)
 const liveExpression = ref({ label: '等待开启' })
+// 作答录音：与 ASR 并行，交卷时整段上传；voice=0 表示本场没开
+const answerAudio = useAnswerAudio()
+const voiceEnabled = computed(() => route.query.voice !== '0')
 let pendingAnswerRequest = null
 let pendingSkipRequest = null
 watch(sessionId, sid => { if (sid) syncExpressionClock() })
+// 换题就重开一段录音；同一题的追问不打断
+watch([currentQuestionId, sessionFinished], ([id, finished]) => {
+  if (!id || finished || !voiceEnabled.value || !sessionId.value) return
+  answerAudio.start({ sessionId: sessionId.value, roundNo: currentQuestion.value, questionId: id })
+})
 async function syncExpressionClock() {
   clockReady.value = false
   const sid = sessionId.value
@@ -249,6 +259,7 @@ function finishInterview(sid) {
         if(state?.status!=='FINISHED')throw error
       }
       sessionFinished.value=true
+      answerAudio.discard()
       return sid
     } catch(error) { expressionEnding.value=false; finishError.value='结束结果暂未确认，请检查网络后重试。'; throw error }
   })().finally(()=>{ finishPromise=null })
@@ -410,6 +421,8 @@ async function submitAnswerFn() {
     pendingAnswerRequest = null
 
     isAiTyping.value = false
+    // 追问还是同一题，继续录；进入下一题才把这一段传上去
+    if (res.nextAction !== 'FOLLOWUP') answerAudio.stopAndUpload()
 
     if (res.nextAction === 'FOLLOWUP' && res.followupQuestion) {
       const followupText = normalizeFollowupQuestion(res.followupQuestion)
@@ -895,7 +908,7 @@ function waitForReport(sid) {
 }
 
 /* Interview V2 — video-first execution workspace */
-.topbar{height:58px;padding:0 28px}.progress-track{top:58px;height:2px}.interview-body{grid-template-columns:minmax(0,1fr) 310px;margin-top:60px;height:calc(100dvh - 60px);background:#fff}.chat-panel{position:relative;padding:14px 16px 10px;gap:10px;background:#fff}.digital-human-stage{min-height:0;flex:1;padding:0;border-radius:16px;background:#e3ebf6}.digital-human-stage :deep(.digital-human){border-radius:16px}.question-strip{display:flex;min-height:76px;flex:0 0 76px;align-items:center;justify-content:space-between;gap:20px;padding:11px 16px;border-radius:13px;background:#f8faf9}.question-strip>div{min-width:0}.question-strip strong{display:block;margin-bottom:4px;color:var(--accent-700);font-size:11px}.question-strip p{display:-webkit-box;margin:0;overflow:hidden;color:var(--neutral-800);font-size:13px;line-height:1.45;-webkit-box-orient:vertical;-webkit-line-clamp:2}.question-strip button{flex:0 0 auto;padding:6px 9px;border:1px solid var(--neutral-200);border-radius:7px;background:#fff;color:var(--neutral-600);font:inherit;font-size:10px;cursor:pointer}.input-bar{height:auto;flex:0 0 auto;padding:5px 4px 0;border-top:1px solid var(--neutral-200);background:#fff}.conversation-scroll{flex:0 0 auto;min-height:0;max-height:220px;overflow-y:auto;padding:10px 12px;border:1px solid var(--neutral-200);border-radius:12px;background:rgba(255,255,255,.97);box-shadow:0 10px 24px rgba(25,55,45,.10)}.conversation-entry{padding:8px 10px}.conversation-entry p{margin:0;font-size:12px}.transcript-enter-active,.transcript-leave-active{transition:opacity 180ms ease,transform 240ms cubic-bezier(.16,1,.3,1)}.transcript-enter-from,.transcript-leave-to{opacity:0;transform:translateY(8px)}.info-panel{height:100%;padding:14px;gap:12px;background:#fbfcfb}.vr-card{position:relative;top:auto;width:100%;aspect-ratio:16/9;border:0;border-radius:14px;background:#f4f5f6}.info-card{padding:16px;border:1px solid rgba(25,80,60,.06);border-radius:14px;background:#f8faf9}.q-num{font-family:inherit;font-size:18px}.q-progress{height:2px}.q-row{padding:4px 0}.ql,.qv{font-size:12px}.eval-list{gap:11px}.eval-track{height:5px}.eval-val{font-family:inherit}.eval-footnote{margin-bottom:0}.timer{font-family:inherit;font-size:17px}.session-tag{font-size:12px}.end-btn{min-height:36px}.ctrl-btn{height:36px}
+.topbar{height:58px;padding:0 28px}.progress-track{top:58px;height:2px}.interview-body{grid-template-columns:minmax(0,1fr) 310px;margin-top:60px;height:calc(100dvh - 60px);background:var(--surface-elevated)}.chat-panel{position:relative;padding:14px 16px 10px;gap:10px;background:var(--surface-elevated)}.digital-human-stage{min-height:0;flex:1;padding:0;border-radius:16px;background:var(--surface-soft)}.digital-human-stage :deep(.digital-human){border-radius:16px}.question-strip{display:flex;min-height:76px;flex:0 0 76px;align-items:center;justify-content:space-between;gap:20px;padding:11px 16px;border-radius:13px;background:var(--surface-soft)}.question-strip>div{min-width:0}.question-strip strong{display:block;margin-bottom:4px;color:var(--accent-700);font-size:11px}.question-strip p{display:-webkit-box;margin:0;overflow:hidden;color:var(--neutral-800);font-size:13px;line-height:1.45;-webkit-box-orient:vertical;-webkit-line-clamp:2}.question-strip button{flex:0 0 auto;padding:6px 9px;border:1px solid var(--neutral-200);border-radius:7px;background:var(--surface-elevated);color:var(--neutral-600);font:inherit;font-size:10px;cursor:pointer}.input-bar{height:auto;flex:0 0 auto;padding:5px 4px 0;border-top:1px solid var(--neutral-200);background:var(--surface-elevated)}.conversation-scroll{flex:0 0 auto;min-height:0;max-height:220px;overflow-y:auto;padding:10px 12px;border:1px solid var(--neutral-200);border-radius:12px;background:color-mix(in srgb, var(--surface-elevated) 97%, transparent);box-shadow:0 10px 24px rgba(25,55,45,.10)}.conversation-entry{padding:8px 10px}.conversation-entry p{margin:0;font-size:12px}.transcript-enter-active,.transcript-leave-active{transition:opacity 180ms ease,transform 240ms cubic-bezier(.16,1,.3,1)}.transcript-enter-from,.transcript-leave-to{opacity:0;transform:translateY(8px)}.info-panel{height:100%;padding:14px;gap:12px;background:var(--surface-soft)}.vr-card{position:relative;top:auto;width:100%;aspect-ratio:16/9;border:0;border-radius:14px;background:var(--surface-soft)}.info-card{padding:16px;border:1px solid rgba(25,80,60,.06);border-radius:14px;background:var(--surface-soft)}.q-num{font-family:inherit;font-size:18px}.q-progress{height:2px}.q-row{padding:4px 0}.ql,.qv{font-size:12px}.eval-list{gap:11px}.eval-track{height:5px}.eval-val{font-family:inherit}.eval-footnote{margin-bottom:0}.timer{font-family:inherit;font-size:17px}.session-tag{font-size:12px}.end-btn{min-height:36px}.ctrl-btn{height:36px}
 
 @media(max-width:1024px){.interview-page{height:auto;min-height:100dvh;overflow:auto}.interview-body{height:auto;min-height:calc(100dvh - 60px);grid-template-columns:1fr;grid-template-rows:auto auto;overflow:visible}.chat-panel{height:calc(100dvh - 60px);min-height:620px}.info-panel{height:auto;display:grid;grid-template-columns:200px 1fr 1fr;border-top:1px solid var(--neutral-200);border-left:0;overflow:visible}.vr-card{width:auto}.conversation-scroll{right:16px}.digital-human-stage{min-height:360px}}
 @media(max-width:700px){.topbar{padding:0 12px}.session-tag{max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.interview-body{margin-top:60px}.chat-panel{height:calc(100dvh - 60px);min-height:600px;padding:9px}.digital-human-stage{min-height:310px}.question-strip{min-height:82px;flex-basis:82px;padding:10px 12px}.question-strip button{display:none}.input-bar{height:auto;min-height:0;flex-basis:auto}.conversation-scroll{right:9px;bottom:84px;left:9px}.info-panel{display:flex;padding:10px;flex-direction:column}.vr-card{width:100%;max-width:none}.topbar-center{position:absolute;left:50%;transform:translateX(-50%)}.session-tag{display:none}}
@@ -903,15 +916,19 @@ function waitForReport(sid) {
 
 /* 移动端面试布局（断点与 useIsMobile 一致）：数字人缩小置顶，作答区收口到底部 */
 .stage-caption{display:none}
-.answer-head{display:flex;flex-direction:column}
 @media(max-width:767.98px){
   .digital-human-stage{flex:0 0 auto;min-height:0;display:flex;flex-direction:column;align-items:center;gap:6px;border-radius:0;background:transparent}
   .digital-human-stage :deep(.digital-human){width:100%;max-width:360px;height:auto;aspect-ratio:1920/768}
   .stage-caption{display:block;color:var(--neutral-500);font-size:11px;line-height:1}
+  /* 自拍画面放在 AI 面试官下方：16:10 横版，宽 min(62vw,240px)——竖版会吃光中间留白、
+     短屏挤到麦克风；横版既比原来的 84×48 大得多，又不抢题目和作答区的高度 */
+  .mobile-cam-card{flex:0 0 auto;width:min(62vw,240px);aspect-ratio:16/10;margin:4px auto 0;overflow:hidden;border:1px solid var(--neutral-200);border-radius:14px;background:#111827;box-shadow:0 8px 20px rgba(17,24,39,.14)}
+  .mobile-cam-card :deep(.cam-chip){border-color:rgba(255,255,255,.5);background:rgba(17,24,39,.92);color:#fff}
+  .mobile-cam-card :deep(.cam-chip svg){width:30px;height:30px}
+  .mobile-cam-card :deep(.cam-chip-label){font-size:12px}
+  .mobile-cam-card :deep(.cam-chip-dot){top:8px;right:8px;width:8px;height:8px}
   .input-bar{gap:8px;margin-top:auto}
-  .answer-head{flex-direction:row;gap:8px}
-  .mobile-cam-chip{flex:0 0 auto;display:flex;width:84px}
-  .mobile-question{margin:0;padding:10px 12px;border-radius:12px;background:#f8faf9;color:var(--neutral-800);font-size:13px;line-height:1.5}
+  .mobile-question{margin:0;padding:10px 12px;border-radius:12px;background:var(--surface-soft);color:var(--neutral-800);font-size:13px;line-height:1.5}
   .mobile-question .mq-label{display:block;margin-bottom:3px;color:var(--accent-700,#047857);font-size:11px;font-weight:600}
   .mobile-question .mq-text{display:block;max-height:150px;overflow-y:auto;overflow-wrap:anywhere}
 }

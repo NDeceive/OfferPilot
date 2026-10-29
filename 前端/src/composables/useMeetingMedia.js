@@ -69,7 +69,12 @@ export function useMeetingMedia(options = {}) {
     if (status.value === 'active' || status.value === 'requesting') return
     if (!navigator.mediaDevices?.getUserMedia) {
       status.value = 'error'
-      errorMessage.value = `当前环境不支持摄像头/麦克风（mediaDevices 缺失，secureContext=${window.isSecureContext}）。局域网 http 页面请改用 localhost 打开，或给 Chrome 加 --unsafely-treat-insecure-origin-as-secure 参数。`
+      // 手机浏览器打开 http:// 局域网地址时 mediaDevices 直接缺失；给的建议要真的做得到——
+      // 手机上并没有 localhost 可用，唯一可靠路径是 OfferPilot App（WebView 内核层放行 getUserMedia）
+      const mobileEnv = /Android|iPhone|iPad|Mobi/i.test(navigator.userAgent)
+      errorMessage.value = mobileEnv
+        ? `手机浏览器的安全策略不允许在 http:// 页面使用摄像头/麦克风（secureContext=${window.isSecureContext}）。请改用 OfferPilot App 打开本页，或在电脑端进入会议。`
+        : `当前环境不支持摄像头/麦克风（mediaDevices 缺失，secureContext=${window.isSecureContext}）。局域网 http 页面请改用 localhost 打开，或给 Chrome 加 --unsafely-treat-insecure-origin-as-secure 参数。`
       return
     }
 

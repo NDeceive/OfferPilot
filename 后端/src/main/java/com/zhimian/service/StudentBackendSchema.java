@@ -29,5 +29,11 @@ public class StudentBackendSchema {
                 .execute(jdbc.getDataSource());
         new ResourceDatabasePopulator(new ClassPathResource("db/migration_meeting.sql"))
                 .execute(jdbc.getDataSource());
+        new ResourceDatabasePopulator(new ClassPathResource("db/migration_followup_chain.sql"))
+                .execute(jdbc.getDataSource());
+        new ResourceDatabasePopulator(new ClassPathResource("db/migration_voice_analysis.sql"))
+                .execute(jdbc.getDataSource());
+        new ResourceDatabasePopulator(new ClassPathResource("db/voice_retention.sql"))
+                .execute(jdbc.getDataSource());
     }
 }

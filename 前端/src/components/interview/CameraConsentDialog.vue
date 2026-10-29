@@ -31,15 +31,15 @@ watch([cameraConsentOpen, dialogRef], ([open, dialog]) => {
 </script>
 
 <style scoped>
-.camera-consent { width:min(480px,calc(100vw - 32px)); max-height:calc(100dvh - 32px); overflow:auto; margin:auto; padding:28px; border:0; border-radius:16px; background:#fff; color:#20342e; box-shadow:0 20px 64px #142a2233; font:inherit; }
+.camera-consent { width:min(480px,calc(100vw - 32px)); max-height:calc(100dvh - 32px); overflow:auto; margin:auto; padding:28px; border:0; border-radius:16px; background:var(--surface-elevated); color:#20342e; box-shadow:0 20px 64px #142a2233; font:inherit; }
 .camera-consent::backdrop { background:#142a2266; }
 .camera-consent__icon { display:flex; align-items:center; width:32px; height:32px; color:#4b6056; margin-bottom:20px; }
 .camera-consent h2 { margin:0 0 12px; font-size:21px; line-height:1.5; }
 .camera-consent p { margin:0 0 16px; font-size:14px; line-height:1.8; color:#4b6056; }
-.camera-consent .camera-consent__note { padding:12px 14px; border-radius:8px; background:#f4f7f5; font-size:12px; }
+.camera-consent .camera-consent__note { padding:12px 14px; border-radius:8px; background:var(--surface-soft); font-size:12px; }
 .camera-consent__actions { display:flex; justify-content:flex-end; gap:12px; margin-top:24px; }
-.camera-consent button { min-height:44px; padding:10px 16px; border:1px solid #d6e3dd; border-radius:8px; background:#fff; color:#334b3e; font:inherit; font-size:14px; cursor:pointer; }
-.camera-consent button:hover { background:#f0f7f4; }
+.camera-consent button { min-height:44px; padding:10px 16px; border:1px solid #d6e3dd; border-radius:8px; background:var(--surface-elevated); color:#334b3e; font:inherit; font-size:14px; cursor:pointer; }
+.camera-consent button:hover { background:var(--surface-soft); }
 .camera-consent .camera-consent__allow { background:var(--accent-500,#10b981); border-color:transparent; color:#fff; font-weight:600; }
 .camera-consent .camera-consent__allow:hover { background:var(--accent-600,#059669); }
 .camera-consent button:focus-visible { outline:3px solid #059669; outline-offset:3px; }

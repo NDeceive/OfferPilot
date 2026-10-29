@@ -6,21 +6,20 @@ import com.zhimian.dto.FollowUpRequest;
 import com.zhimian.dto.FollowUpResponse;
 import com.zhimian.service.ai.DeepSeekClient;
 import com.zhimian.service.ai.FollowUpPromptBuilder;
+import com.zhimian.service.followup.FollowupDimension;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 /**
- * Dynamic follow-up service V2: DeepSeek handles both the "whether to follow up" decision
- * and the "follow-up question text" generation.
+ * 动态追问生成 V3：决策（问不问）已经交给 FollowupGate，这里只负责「在指定方向上把问题写好」。
  * <p>
  * Flow:
  * <ol>
- *   <li>Answer shorter than 15 chars: rule-based fallback (no AI call)</li>
- *   <li>AI not usable: rule-based fallback</li>
- *   <li>AI usable: send original question + reference answer + user answer, let AI decide</li>
- *   <li>AI returns a focused follow-up question for every interview round</li>
- *   <li>AI call fails: rule-based fallback</li>
+ *   <li>回答短于 15 字：规则兜底，不调用大模型</li>
+ *   <li>AI 不可用：按方向的规则模板兜底</li>
+ *   <li>AI 可用：带上层号、方向、此前问答链生成追问</li>
+ *   <li>调用失败或返回空：规则兜底</li>
  * </ol>
  */
 @Slf4j
@@ -29,75 +28,69 @@ import org.springframework.stereotype.Service;
 public class FollowUpService {
 
     private static final String SOURCE_AI = "AI";
-    private static final String SOURCE_RULE = "RULE";
 
     private final AiProperties aiProps;
     private final DeepSeekClient deepSeekClient;
     private final FollowUpPromptBuilder promptBuilder;
     private final RuleBasedFollowUpGenerator ruleGenerator;
 
-    /**
-     * Generate one focused follow-up question for the current interview round.
-     *
-     * @param req follow-up request (position / question / answer / referenceAnswer)
-     * @return AI follow-up response, or a rule-based fallback when AI is unavailable
-     */
     public FollowUpResponse generate(FollowUpRequest req) {
         String answer = req.getAnswer() == null ? "" : req.getAnswer().trim();
-        boolean tooShort = answer.length() < RuleBasedFollowUpGenerator.MIN_ANSWER_LENGTH;
+        int layer = req.getLayer() == null || req.getLayer() < 1 ? 1 : req.getLayer();
+        FollowupDimension planned = FollowupDimension.fromCode(req.getDimension());
 
-        // Answer too short: rule-based fallback, don't waste an AI call
-        if (tooShort) {
-            return ruleGenerator.tooShortResponse();
+        // 回答过短：规则兜底，不浪费一次模型调用
+        if (answer.length() < RuleBasedFollowUpGenerator.MIN_ANSWER_LENGTH) {
+            FollowUpResponse resp = ruleGenerator.tooShortResponse();
+            resp.setDimension(planned == null ? FollowupDimension.CLARIFY.name() : planned.name());
+            return resp;
         }
 
-        // AI not enabled or key not configured: rule-based fallback
         if (!aiProps.isUsable()) {
             log.debug("AI not usable, using rule-based fallback");
-            return ruleGenerator.defaultResponse();
+            return ruleGenerator.responseFor(planned, layer);
         }
 
-        // Call DeepSeek: original question + reference answer + user answer
         JsonNode aiResult = deepSeekClient.chatJson(
-                promptBuilder.systemPrompt(),
-                promptBuilder.userPrompt(
-                        req.getPosition(),
-                        req.getQuestion(),
-                        req.getReferenceAnswer(),
-                        req.getAnswer()));
+                promptBuilder.systemPrompt(layer, planned, req.getAskedDimensions()),
+                promptBuilder.userPrompt(req.getPosition(), req.getQuestion(),
+                        req.getReferenceAnswer(), req.getChainText(), req.getAnswer()));
 
         if (aiResult != null) {
             try {
                 String aiQuestion = aiResult.path("followUpQuestion").asText("");
                 String reason = aiResult.path("reason").asText("AI judgement");
 
-                // Follow-up is a core part of every interview round. Keep compatibility
-                // with older model responses that incorrectly set shouldFollowUp=false.
                 if (aiQuestion != null && !aiQuestion.isBlank()) {
-                    log.info("[AI-FollowUp] generated, reason={}", reason);
-                    return FollowUpResponse.of(cleanup(aiQuestion), SOURCE_AI, reason);
+                    FollowupDimension returned = FollowupDimension.fromCode(
+                            aiResult.path("dimension").asText(null));
+                    FollowupDimension used = returned != null ? returned : planned;
+
+                    FollowUpResponse resp = FollowUpResponse.of(cleanup(aiQuestion), SOURCE_AI, reason);
+                    resp.setDimension(used == null ? FollowupDimension.CLARIFY.name() : used.name());
+                    resp.setErrorDetected(aiResult.path("errorDetected").asBoolean(false));
+                    JsonNode uncovered = aiResult.path("uncoveredPoints");
+                    resp.setUncoveredCount(uncovered.isArray() ? uncovered.size() : -1);
+                    log.info("[AI-FollowUp] layer={}, dimension={}, reason={}", layer, resp.getDimension(), reason);
+                    return resp;
                 }
-                log.warn("DeepSeek returned no follow-up question, shouldFollowUp={}, reason={}",
-                        aiResult.path("shouldFollowUp").asText(), reason);
+                log.warn("DeepSeek returned no follow-up question, reason={}", reason);
             } catch (Exception e) {
                 log.warn("Failed to parse DeepSeek follow-up JSON, fallback to rule: {}", e.getMessage());
             }
         }
 
-        // AI failed / timed out / returned empty: rule-based fallback
         log.debug("DeepSeek did not return a usable follow-up question, using rule-based fallback");
-        return ruleGenerator.defaultResponse();
+        return ruleGenerator.responseFor(planned, layer);
     }
 
     /** Clean model output: strip extra newlines and surrounding quotes. */
     private String cleanup(String text) {
         String t = text.trim();
-        // Model sometimes appends extra content after newlines; only take the first line
         int nl = t.indexOf('\n');
         if (nl > 0) {
             t = t.substring(0, nl).trim();
         }
-        // Remove surrounding ASCII double or single quotes
         if (t.length() >= 2
                 && ((t.startsWith("\"") && t.endsWith("\""))
                     || (t.startsWith("'") && t.endsWith("'")))) {

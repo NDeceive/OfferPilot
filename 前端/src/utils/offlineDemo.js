@@ -6,14 +6,19 @@
  *
  * 设计上刻意**不静默切换**：连不上后端时弹框问一次，用户点了确认才切。
  * 理由是演示时假数据比没数据更危险——一旦界面无声无息换成假数字，讲的人
- * 未必察觉，就会照着编。所以切过去之后还有一条常驻横幅提醒。
+ * 未必察觉，就会照着编。
+ *
+ * 切过去之后**没有任何常驻提醒**：离线演示要和正常使用看起来完全一样，
+ * 进去之后看不出是离线（比赛演示需要）。
+ *
+ * **不跨重启保留**（刻意设计）：大退 App 重进就是一次干净的重新选择——
+ * 回登录页，登录能成功即在线；连不上时在登录页选「离线演示」进离线。
+ * 刷新页面同理回到在线态。这是切换两种模式的唯一枢纽。
  */
 import { reactive } from 'vue'
 
-const STORAGE_KEY = 'offerpilot.offlineDemo'
-
 export const demoState = reactive({
-  /** 当前是否处于离线演示模式 */
+  /** 当前是否处于离线演示模式（仅内存，不持久化） */
   active: false,
   /** 是否正在显示「要不要切到演示模式」的确认框 */
   asking: false,
@@ -21,29 +26,16 @@ export const demoState = reactive({
    * 用户是否已经就这次「连不上后端」做过选择（同意或拒绝都算）。
    *
    * 没有它的话，用户在弹框上点了「不用」，下一个失败请求会立刻再弹一次——
-   * 首屏就有好几个请求，会弹到人崩溃。拒绝一次就闭嘴，想切可以从横幅或
-   * 登录页手动开。
+   * 首屏就有好几个请求，会弹到人崩溃。拒绝一次就闭嘴，想切可以从登录页手动开。
    */
   answered: false,
 })
 
-try {
-  demoState.active = localStorage.getItem(STORAGE_KEY) === '1'
-} catch {
-  /* 存储被禁用，那就每次重来，不影响使用 */
-}
-
-/** 开关演示模式并持久化 */
+/** 开关演示模式（刻意不持久化：大退重进 = 回到在线态重新选择） */
 export function setDemoActive(value) {
   demoState.active = !!value
   // 关掉的时候把「已问过」一并复位：下次连不上后端应该重新问一次
   if (!value) demoState.answered = false
-  try {
-    if (value) localStorage.setItem(STORAGE_KEY, '1')
-    else localStorage.removeItem(STORAGE_KEY)
-  } catch {
-    /* 忽略：持久化失败只影响下次启动的记忆 */
-  }
 }
 
 // 询问的 promise 放在模块作用域而不是 reactive 对象里——放进 reactive 会被 Vue

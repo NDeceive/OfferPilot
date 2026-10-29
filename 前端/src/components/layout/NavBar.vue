@@ -97,7 +97,7 @@ import LogoIcon from '../ui/LogoIcon.vue'
 .nav-link:hover,
 .nav-link.router-link-active {
   color: var(--text-primary);
-  background: rgba(255,255,255,0.05);
+  background: color-mix(in srgb, var(--surface-elevated) 5%, transparent);
 }
 
 .nav-link.router-link-active {
@@ -123,7 +123,7 @@ import LogoIcon from '../ui/LogoIcon.vue'
 
 .notification-btn:hover {
   color: var(--text-primary);
-  background: rgba(255,255,255,0.05);
+  background: color-mix(in srgb, var(--surface-elevated) 5%, transparent);
 }
 
 .notification-dot {

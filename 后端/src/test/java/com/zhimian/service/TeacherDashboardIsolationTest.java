@@ -99,7 +99,8 @@ class TeacherDashboardIsolationTest {
         InterviewReportMapper reportMapper = mapper(InterviewReportMapper.class,
                 (name, args) -> filter((LambdaQueryWrapper<?>) args[0], reports, InterviewReport::getSessionId));
         JobPositionMapper jobs = mapper(JobPositionMapper.class, (name, args) -> List.of());
-        return new TeacherDashboardService(userMapper, sessionMapper, reportMapper, jobs, followups, teaching);
+        return new TeacherDashboardService(userMapper, sessionMapper, reportMapper, jobs, followups,
+                mapper(com.zhimian.mapper.InterviewFollowupChainMapper.class, (name, args) -> List.of()), teaching);
     }
 
     private static <T> List<T> byId(Collection<?> ids, List<T> items, java.util.function.Function<T, Long> id) {

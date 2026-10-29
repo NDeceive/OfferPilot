@@ -14,8 +14,8 @@ spring:
   servlet:
     multipart:
       enabled: true
-      max-file-size: 10MB
-      max-request-size: 10MB
+      max-file-size: 25MB
+      max-request-size: 30MB
 
 mybatis-plus:
   configuration:
@@ -38,15 +38,15 @@ jwt:
 
 # AI 大模型配置（DeepSeek，OpenAI 兼容接口）
 ai:
-  provider: deepseek
-  base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
-  # 密钥通过环境变量或被 Git 忽略的后端本地配置注入。
+  provider: ${AI_PROVIDER:deepseek}
+  base-url: ${AI_BASE_URL:https://api.deepseek.com}
+  # DeepSeek；换回智谱时改 provider/base-url/model 三行即可
   api-key: ${DEEPSEEK_API_KEY:}
-  model: ${DEEPSEEK_MODEL:deepseek-flash}
+  model: ${AI_MODEL:deepseek-chat}
   # 是否启用真实 AI 调用；false 时使用内置规则/模拟（无 key 也能演示）
   enabled: true
   # 调用超时（毫秒），同时作为连接与读取超时
-  timeout-ms: 20000
+  timeout-ms: 60000
 
 # Resume AI only. DeepSeek API Key is supplied by the backend environment, never by the browser.
 resume-ai:
@@ -59,7 +59,8 @@ resume-ai:
 # 智谱 GLM-ASR-2512 文件转写
 asr:
   base-url: ${ZHIPU_ASR_BASE_URL:https://open.bigmodel.cn/api/paas/v4}
-  api-key: ${ZHIPU_API_KEY:}
+  # 免费 key，随仓库分发；环境变量 ZHIPU_API_KEY 可覆盖
+  api-key: ${ZHIPU_API_KEY:f2eef235e2284bb38480fbe167e8bb77.6flCCwdm4I4cdNOi}
   model: ${ZHIPU_ASR_MODEL:glm-asr-2512}
   timeout-ms: 60000
   max-file-size: 10485760
@@ -102,6 +103,27 @@ cors:
 meeting:
   ws:
     allowed-origins: "${MEETING_WS_ALLOWED_ORIGINS:*}"
+
+# 多层追问：第 k 层条件概率 p = p0 * gamma^(k-1) * phi
+# 关闭 enabled 后退回单层追问的旧行为，便于对比实验。
+interview:
+  followup:
+    enabled: "${INTERVIEW_FOLLOWUP_ENABLED:true}"
+    p0: "${INTERVIEW_FOLLOWUP_P0:0.90}"
+    gamma: "${INTERVIEW_FOLLOWUP_GAMMA:0.55}"
+    max-depth: "${INTERVIEW_FOLLOWUP_MAX_DEPTH:4}"
+    depth-by-difficulty: "${INTERVIEW_FOLLOWUP_DEPTH:2,3,4}"
+    min-time-left-seconds: "${INTERVIEW_FOLLOWUP_MIN_TIME_LEFT:90}"
+    quality-min: "${INTERVIEW_FOLLOWUP_QUALITY_MIN:0.70}"
+    quality-max: "${INTERVIEW_FOLLOWUP_QUALITY_MAX:1.30}"
+    seed-salt: "${INTERVIEW_FOLLOWUP_SEED_SALT:offerpilot}"
+  # 作答录音落盘目录；语音分析边车地址
+  audio:
+    dir: "${INTERVIEW_AUDIO_DIR:data/answer-audio}"
+  voice:
+    enabled: "${INTERVIEW_VOICE_ENABLED:true}"
+    service-url: "${INTERVIEW_VOICE_URL:http://127.0.0.1:8020}"
+    timeout-ms: "${INTERVIEW_VOICE_TIMEOUT_MS:20000}"
 
 logging:
   level:

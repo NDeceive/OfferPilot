@@ -439,8 +439,25 @@ function revealControls() {
   controlsVisible.value = true
   // 控件挂上去时不会自己滚动（吐字结束时算的滚动位置是旧内容的），手机屏更矮，
   // 整块上传区会被顶到折叠线以下——补一次，让新入口真的看得见。
-  scrollToEnd()
+  scrollToTurnStart()
   applyAct()
+}
+
+/**
+ * 控件露出后只把「本轮问题」定位到对话区顶部附近，让新出现的岗位清单从第一行开始看。
+ * 不能 scrollToEnd：岗位清单很长，底部全是「敬请期待」，一路甩到底用户会觉得页面莫名跳走、
+ * 甚至以为没有岗位可选（2026-10-17 用户报的 bug）。
+ */
+function scrollToTurnStart() {
+  nextTick(() => {
+    const el = scroller.value
+    if (!el) return
+    const rows = el.querySelectorAll('.mrow--ai')
+    const last = rows[rows.length - 1]
+    if (!last) return
+    const top = last.getBoundingClientRect().top - el.getBoundingClientRect().top + el.scrollTop
+    el.scrollTo({ top: Math.max(0, top - 8), behavior: 'smooth' })
+  })
 }
 
 /** AI 只提出操作建议；无论置信度多高，都等用户确认。 */
@@ -761,7 +778,9 @@ onUnmounted(() => {
 
 <style scoped>
 /* 全屏三段式：顶栏 / 可滚动对话区 / 输入条。
-   高度用 dvh——移动浏览器地址栏收放和软键盘弹起时 vh 不会跟着变，输入条会被顶出屏幕。 */
+   高度用 dvh——移动浏览器地址栏收放和软键盘弹起时 vh 不会跟着变，输入条会被顶出屏幕。
+   注意：曾经为避让离线演示横幅扣过 --demo-banner-h，横幅 2026-10-17 已移除，
+   这里回到干净的 100dvh；任何新增的贴顶元素都别再把输入条挤出视口。 */
 .mchat {
   display: flex;
   height: 100vh;
@@ -780,7 +799,7 @@ onUnmounted(() => {
   padding: max(8px, env(safe-area-inset-top)) 12px 8px;
   align-items: center;
   gap: 10px;
-  background: rgba(255, 255, 255, .94);
+  background: color-mix(in srgb, var(--surface-elevated) 94%, transparent);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--m-border);
 }
@@ -893,7 +912,7 @@ onUnmounted(() => {
 .mconfirm > div { display: flex; gap: 8px; }
 .mconfirm button { min-height: 36px; padding: 0 18px; border: 0; border-radius: 999px; font-size: 13px; font-weight: 700; }
 .mconfirm__yes { color: #fff; background: var(--m-primary); }
-.mconfirm__no { color: var(--m-text-secondary); background: rgba(255,255,255,.8); }
+.mconfirm__no { color: var(--m-text-secondary); background: color-mix(in srgb, var(--surface-elevated) 80%, transparent); }
 
 /* 岗位族横滑条：复用 mobile.css 的 .mobile-chip-row，只补个下边距 */
 .mchat__families { width: 100%; margin-bottom: 2px; }
@@ -918,7 +937,7 @@ onUnmounted(() => {
 .mjob__name { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 700; overflow-wrap: anywhere; }
 .mjob__go { color: var(--m-primary); font-size: 17px; }
 .mjob:active { transform: scale(.99); background: var(--m-surface-soft); }
-.mjob.is-off { color: var(--m-text-tertiary); background: #f4f4f1; }
+.mjob.is-off { color: var(--m-text-tertiary); background: var(--surface-soft); }
 .mjob.is-off .mjob__bar { opacity: .35; }
 .mjob__soon { flex: 0 0 auto; padding: 3px 8px; color: var(--m-text-tertiary); background: var(--m-border); border-radius: 999px; font-size: 11px; }
 
@@ -987,7 +1006,7 @@ onUnmounted(() => {
 }
 .mskills__cap { width: 100%; margin-bottom: 4px; color: var(--m-text-secondary); font-size: 12.5px; }
 .mskills__cap span { color: var(--m-text-tertiary); }
-.mskill { padding: 4px 10px; color: var(--m-primary-dark); background: rgba(255,255,255,.8); border-radius: 999px; font-size: 12px; }
+.mskill { padding: 4px 10px; color: var(--m-primary-dark); background: color-mix(in srgb, var(--surface-elevated) 80%, transparent); border-radius: 999px; font-size: 12px; }
 
 /* ---- 输入条 ---- */
 .mchat__composer {
@@ -996,7 +1015,7 @@ onUnmounted(() => {
   padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
   align-items: center;
   gap: 8px;
-  background: rgba(255, 255, 255, .96);
+  background: color-mix(in srgb, var(--surface-elevated) 96%, transparent);
   backdrop-filter: blur(12px);
   border-top: 1px solid var(--m-border);
 }
@@ -1006,13 +1025,13 @@ onUnmounted(() => {
   height: 44px;
   padding: 0 16px;
   color: var(--m-text);
-  background: #f2f4f0;
+  background: var(--surface-soft);
   border: 1px solid transparent;
   border-radius: 999px;
   outline: 0;
   font-size: 14px;
 }
-.mchat__composer input:focus { background: #fff; border-color: var(--m-primary); }
+.mchat__composer input:focus { background: var(--surface-elevated); border-color: var(--m-primary); }
 .mchat__composer input::placeholder { color: #7c8882; }
 .mchat__composer input:disabled { color: var(--m-text-tertiary); }
 .mchat__composer button {

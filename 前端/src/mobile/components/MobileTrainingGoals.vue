@@ -184,18 +184,18 @@ function levelLabel(value) {
   flex: 1;
   min-height: 30px;
   color: var(--m-text-secondary);
-  background: #fafbf9;
+  background: var(--surface-soft);
   border: 0;
   font-size: 13px;
 }
 .mgoal__arrows button:first-child { border-bottom: 1px solid var(--m-border); }
 .mgoal__arrows button:active:not(:disabled) { background: var(--m-primary-soft); color: var(--m-primary-dark); }
-.mgoal__arrows button:disabled { color: #cfd6d1; background: #f6f7f5; }
+.mgoal__arrows button:disabled { color: #cfd6d1; background: var(--surface-soft); }
 
 .mgoal__detail { margin-top: 12px; padding: 14px; background: var(--m-surface-soft); border-radius: var(--m-radius-card); }
 .mgoal__detail h4 { font-size: 14px; }
 .mgoal__detail p { margin-top: 5px; color: var(--m-text-secondary); font-size: 12.5px; line-height: 1.6; }
-.mgoal__levels { margin-top: 12px; background: rgba(255,255,255,.8); }
+.mgoal__levels { margin-top: 12px; background: color-mix(in srgb, var(--surface-elevated) 80%, transparent); }
 .mgoal__hint { color: var(--m-text-tertiary) !important; font-size: 11.5px !important; }
 
 .mgoal__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
@@ -214,7 +214,7 @@ function levelLabel(value) {
   line-height: 1.3;
 }
 .mgoal__chip.is-on { color: var(--m-primary-dark); background: var(--m-primary-soft); border-color: #9bbda8; font-weight: 700; }
-.mgoal__tick { display: grid; flex: 0 0 auto; width: 20px; height: 20px; color: var(--m-text-tertiary); place-items: center; background: #f0f1ed; border-radius: 6px; font-size: 12px; font-weight: 800; }
+.mgoal__tick { display: grid; flex: 0 0 auto; width: 20px; height: 20px; color: var(--m-text-tertiary); place-items: center; background: var(--surface-soft); border-radius: 6px; font-size: 12px; font-weight: 800; }
 .mgoal__chip.is-on .mgoal__tick { color: #fff; background: var(--m-primary); }
 
 .mgoal__feedback { margin-top: 10px; padding: 10px 12px; color: #7c4315; background: var(--m-accent-soft); border-radius: 10px; font-size: 12px; line-height: 1.5; }

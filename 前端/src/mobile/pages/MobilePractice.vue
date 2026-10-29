@@ -126,5 +126,5 @@ async function refreshCatalog() {
 
 <style scoped>
 .mobile-chip-row>a{display:inline-flex;align-items:center;min-height:44px;padding:8px;color:#087c55}.mobile-section button{min-height:44px}
-.company-choice{display:flex;align-items:center;gap:12px;margin:12px 0;color:#34453e}.company-choice select{flex:1;min-width:0;min-height:44px;padding:8px 12px;border:1px solid #dce5e1;border-radius:8px;background:#fff;color:#25372e;font:inherit}.company-choice select:focus-visible{outline:2px solid #059669;outline-offset:2px}
+.company-choice{display:flex;align-items:center;gap:12px;margin:12px 0;color:#34453e}.company-choice select{flex:1;min-width:0;min-height:44px;padding:8px 12px;border:1px solid #dce5e1;border-radius:8px;background:var(--surface-elevated);color:#25372e;font:inherit}.company-choice select:focus-visible{outline:2px solid #059669;outline-offset:2px}
 </style>

@@ -64,13 +64,16 @@ public class DeepSeekClient {
             );
 
             // 用 Bearer Token 鉴权，API Key 来自配置/环境变量
-            String raw = restClient().post()
+            // 用 byte[] 收，部分网关（如智谱）返回 application/octet-stream，String 转换器会直接报错
+            byte[] rawBytes = restClient().post()
                     .uri("/chat/completions")
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + props.getApiKey())
+                    .accept(MediaType.ALL)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(body)
                     .retrieve()
-                    .body(String.class);
+                    .body(byte[].class);
+            String raw = rawBytes == null ? "" : new String(rawBytes, java.nio.charset.StandardCharsets.UTF_8);
 
             return extractContent(raw);
         } catch (Exception e) {

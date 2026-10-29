@@ -6,10 +6,6 @@
         <p class="page-sub">{{ pageSub }}</p>
       </header>
 
-      <div v-if="demoActive" class="notice-bar">
-        离线演示模式已开启：会议功能需要连接服务器，点横幅上的「退出」关闭离线演示后再使用。
-      </div>
-
       <!-- 会议号查找 -->
       <section class="card">
         <label class="field-label" for="meeting-code">会议号</label>
@@ -172,12 +168,10 @@ import { useMeetingMediaShared } from '../../composables/useMeetingMedia'
 import { getMeetingAdvice, getMyMeetings, previewMeeting } from '../../api/meeting'
 import { formatCodeInput, isValidCode, normalizeCode } from '../../utils/meetingProtocol'
 import { formatTime } from '../../utils/time'
-import { demoState } from '../../utils/offlineDemo'
 import { useUserStore } from '../../store/user'
 
 const router = useRouter()
 const userStore = useUserStore()
-const demoActive = computed(() => demoState.active)
 const selfName = computed(() => userStore.nickname || userStore.username || '我')
 
 /* ---------- 角色文案：学生凭码进场；教师收到企业发的码；企业是发码方 ---------- */
@@ -271,9 +265,7 @@ onMounted(async () => {
     hostedList.value = data?.hosted || []
     joinedList.value = data?.joined || []
   } catch (e) {
-    historyError.value = demoActive.value
-      ? '离线演示模式不含会议数据，点横幅上的「退出」关闭离线演示后可用。'
-      : (e.message || '加载参会记录失败')
+    historyError.value = e.message || '加载参会记录失败'
   } finally {
     historyLoading.value = false
   }
@@ -326,16 +318,6 @@ async function openAdvice(row) {
   margin-bottom: var(--space-2);
 }
 .page-sub { font-size: var(--text-sm); color: var(--neutral-500); line-height: 1.7; }
-
-.notice-bar {
-  font-size: var(--text-sm);
-  color: #8a6100;
-  background: #fef7e6;
-  border: 1px solid #f5e2b8;
-  border-radius: var(--radius-lg);
-  padding: 10px 14px;
-  line-height: 1.6;
-}
 
 .card {
   background: var(--surface-elevated);
@@ -450,7 +432,7 @@ async function openAdvice(row) {
   margin-top: var(--space-3);
   font-size: var(--text-xs);
   color: #8a6100;
-  background: #fef7e6;
+  background: var(--surface-soft);
   border-radius: var(--radius-sm);
   padding: 8px 10px;
   line-height: 1.6;

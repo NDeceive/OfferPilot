@@ -9,6 +9,7 @@
     <section class="mobile-menu-group" aria-label="求职资料">
       <router-link to="/resume"><span>▤</span><div class="mobile-grow"><strong>我的简历</strong><small>{{ resumeLabel }}</small></div><b>›</b></router-link>
       <router-link to="/jobs"><span>◎</span><div class="mobile-grow"><strong>目标岗位</strong><small>管理面试方向</small></div><b>›</b></router-link>
+      <router-link to="/meeting"><span>▷</span><div class="mobile-grow"><strong>视频面试</strong><small>凭会议号加入，回看面试建议</small></div><b>›</b></router-link>
       <router-link :to="{ path: '/settings', query: { tab: 'digital' } }"><span>◉</span><div class="mobile-grow"><strong>数字人设置</strong><small>面试官与语音偏好</small></div><b>›</b></router-link>
     </section>
 

@@ -1,7 +1,7 @@
 <template>
-  <nav class="mtb" aria-label="移动端主导航">
+  <nav class="mtb" aria-label="移动端主导航" :style="{ gridTemplateColumns: `repeat(${list.length}, 1fr)` }">
     <router-link
-      v-for="item in items"
+      v-for="item in list"
       :key="item.path"
       :to="item.path"
       :aria-label="item.label"
@@ -14,19 +14,29 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
+
 // 自包含：样式全部写在这个组件里，不依赖 mobile.css。
 // 因为 AppLayout 会用它，而 AppLayout 会在「没走过 AdaptiveStudentView」的路由上直接渲染
 // （比如直接打开 /settings），那时 mobile.css 根本没被注入，靠 --m-* 变量会全线失效。
 //
 // 中间「面试」做成浮起主入口。只靠位移，列数不变，仍与其余四项等分。
+//
+// items 省略时是学生默认五项；教师/企业传入自己的项（见 ../nav.js），
+// 列数跟随 items.length —— 学生五列、企业三列都各占等分。
+const props = defineProps({
+  items: { type: Array, default: null },
+})
 
-const items = [
+const studentItems = [
   { path: '/home', label: '首页', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m3 10 9-7 9 7v10H3z"/><path d="M9 20v-6h6v6"/></svg>' },
   { path: '/learning', label: '刷题', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 4h12a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2z"/><path d="M8 8h8M8 12h6"/></svg>' },
   { path: '/jobs', label: '面试', center: true, icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12a8 8 0 0 1-8 8H7l-4 3v-7a8 8 0 0 1 8-8h2a8 8 0 0 1 8 4z"/><path d="M9 12h.01M13 12h.01M17 12h.01"/></svg>' },
   { path: '/history', label: '记录', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>' },
   { path: '/profile', label: '我的', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>' },
 ]
+
+const list = computed(() => (Array.isArray(props.items) && props.items.length ? props.items : studentItems))
 </script>
 
 <style scoped>
@@ -40,7 +50,7 @@ const items = [
   height: calc(64px + env(safe-area-inset-bottom));
   padding: 6px max(12px, calc((100vw - 480px) / 2)) env(safe-area-inset-bottom);
   grid-template-columns: repeat(5, 1fr);
-  background: rgba(255, 255, 255, .96);
+  background: color-mix(in srgb, var(--surface-elevated) 96%, transparent);
   backdrop-filter: blur(12px);
   border-top: 1px solid #e6e9e5;
 }

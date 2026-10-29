@@ -134,7 +134,7 @@ function formatDuration(totalSeconds) {
 
 .mcfm__skills { display: flex; margin-top: 10px; flex-wrap: wrap; gap: 6px; }
 .mcfm__skills span { padding: 4px 10px; color: var(--m-primary-dark); background: var(--m-primary-soft); border-radius: 999px; font-size: 12px; }
-.mcfm__skills .is-more { color: var(--m-text-secondary); background: #f0f1ed; }
+.mcfm__skills .is-more { color: var(--m-text-secondary); background: var(--surface-soft); }
 
 .mcfm__goals { display: flex; flex-direction: column; gap: 9px; }
 .mcfm__goals li { display: flex; align-items: center; gap: 10px; }
@@ -148,7 +148,7 @@ function formatDuration(totalSeconds) {
 .mcfm__bar i { display: block; height: 100%; }
 
 .mcfm__presets { display: grid; margin-bottom: 12px; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 7px; }
-.mcfm__presets button { min-height: 40px; color: var(--m-text-secondary); background: #f2f4f0; border: 1px solid transparent; border-radius: 10px; font-size: 12.5px; }
+.mcfm__presets button { min-height: 40px; color: var(--m-text-secondary); background: var(--surface-soft); border: 1px solid transparent; border-radius: 10px; font-size: 12.5px; }
 .mcfm__presets button.active { color: var(--m-primary-dark); background: var(--m-primary-soft); border-color: #9bbda8; font-weight: 700; }
 
 .mcfm__stepper { display: flex; align-items: center; gap: 10px; }
@@ -165,7 +165,7 @@ function formatDuration(totalSeconds) {
   font-size: 20px;
   font-weight: 700;
 }
-.mcfm__stepper > button:disabled { color: #c3cdc6; background: #f2f4f0; }
+.mcfm__stepper > button:disabled { color: #c3cdc6; background: var(--surface-soft); }
 .mcfm__stepper > button:active:not(:disabled) { background: #cfe6d7; }
 .mcfm__time { flex: 1; min-width: 0; text-align: center; }
 .mcfm__time strong { display: block; color: var(--m-primary-dark); font-size: 20px; font-weight: 800; }

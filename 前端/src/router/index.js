@@ -2,6 +2,8 @@ import { createRouter, createWebHistory, createWebHashHistory } from 'vue-router
 import { prepareInterviewCamera, releaseInterviewCamera } from '../utils/interviewCamera'
 
 const AdaptiveStudentView = () => import('../mobile/AdaptiveStudentView.vue')
+const AdaptiveTeacherView = () => import('../mobile/AdaptiveTeacherView.vue')
+const AdaptiveEnterpriseView = () => import('../mobile/AdaptiveEnterpriseView.vue')
 
 function currentRole() {
   return (localStorage.getItem('role') || '').trim().toUpperCase()
@@ -54,32 +56,38 @@ const routes = [
   { path: '/member', redirect: '/home' },
 
   ...['/my/classes','/my/tasks','/my/tasks/:id','/my/messages'].map(path=>({path,component:()=>import('../views/TeachingPortal.vue'),meta:{roles:['STUDENT']}})),
-  {path:'/teacher/messages',component:()=>import('../views/TeachingPortal.vue'),meta:{roles:['TEACHER','ADMIN']}},
+  {path:'/teacher/messages',component:AdaptiveTeacherView,meta:{roles:['TEACHER','ADMIN'],teacherMobile:'messages'}},
 
   // Teacher portal: all new pages retain the existing role guard.
+  // meta.teacherMobile 标记手机端 surface（AdaptiveTeacherView 双表切换用）；没有这个 meta 的路由
+  // （数据分析 / 报告点评 / 设置 / demo 工作台面）保持桌面组件直连，手机视口下也走桌面版——
+  // 这是既定取舍：这些页面为宽屏设计，手机上重做一套收益低。
   { path: '/teacher', redirect: to => ({ path: '/teacher/dashboard', query: to.query }) },
-  { path: '/teacher/dashboard', name: 'TeacherDashboard', component: () => import('../views/teacher/TeacherOverview.vue'), meta: { roles: ['TEACHER', 'ADMIN'] } },
+  { path: '/teacher/dashboard', name: 'TeacherDashboard', component: AdaptiveTeacherView, meta: { roles: ['TEACHER', 'ADMIN'], teacherMobile: 'overview' } },
   ...['activity', 'training-records', 'growth', 'reviews'].map(surface => ({ path: '/teacher/' + surface, component: () => import('../views/teacher/TeacherWorkspace.vue'), meta: { roles: ['TEACHER', 'ADMIN'], teacherSurface: surface } })),
   { path: '/teacher/class', redirect: to => ({ path: '/teacher/classes', query: to.query }), meta: { roles: ['TEACHER', 'ADMIN'] } },
-  { path: '/teacher/classes', component: () => import('../views/teacher/ClassInsights.vue'), meta: { roles: ['TEACHER', 'ADMIN'] } },
-  { path: '/teacher/classes/manage', component: () => import('../views/TeachingPortal.vue'), meta: { roles: ['TEACHER', 'ADMIN'] } },
-  { path: '/teacher/classes/:classId', component: () => import('../views/teacher/ClassInsights.vue'), meta: { roles: ['TEACHER', 'ADMIN'] } },
-  { path: '/teacher/classes/:classId/members', component: () => import('../views/teacher/ClassMembers.vue'), meta: { roles: ['TEACHER', 'ADMIN'] } },
+  { path: '/teacher/classes', component: AdaptiveTeacherView, meta: { roles: ['TEACHER', 'ADMIN'], teacherMobile: 'classes' } },
+  { path: '/teacher/classes/manage', component: AdaptiveTeacherView, meta: { roles: ['TEACHER', 'ADMIN'], teacherMobile: 'classesManage' } },
+  { path: '/teacher/classes/:classId', component: AdaptiveTeacherView, meta: { roles: ['TEACHER', 'ADMIN'], teacherMobile: 'classes' } },
+  { path: '/teacher/classes/:classId/members', component: AdaptiveTeacherView, meta: { roles: ['TEACHER', 'ADMIN'], teacherMobile: 'classMembers' } },
   { path:'/teacher/reports/:id',component:()=>import('../views/teacher/TeacherTrainingReport.vue'),meta:{roles:['TEACHER','ADMIN']} },
   { path: '/teacher/analytics', component: () => import('../views/teacher/TeacherAnalytics.vue'), meta: { roles: ['TEACHER', 'ADMIN'] } },
   { path: '/teacher/analytics/abilities', redirect: to => ({ path: '/teacher/analytics', query: { ...to.query, tab: 'roles', roleId: to.query.position || undefined, timeRange: to.query.period || undefined, classIds: to.query.classId || undefined } }), meta: { roles: ['TEACHER', 'ADMIN'] } },
-  ...['/teacher/students', '/teacher/students/:id'].map(path => ({ path, component: () => import('../views/teacher/StudentCenter.vue'), meta: { roles: ['TEACHER', 'ADMIN'] } })),
-  ...['/teacher/tasks', '/teacher/tasks/create', '/teacher/tasks/templates', '/teacher/tasks/:id/edit', '/teacher/tasks/:id'].map(path => ({ path, component: () => import('../views/teacher/TrainingTasks.vue'), meta: { roles: ['TEACHER', 'ADMIN'] } })),
+  ...['/teacher/students', '/teacher/students/:id'].map(path => ({ path, component: AdaptiveTeacherView, meta: { roles: ['TEACHER', 'ADMIN'], teacherMobile: 'students' } })),
+  ...['/teacher/tasks', '/teacher/tasks/create', '/teacher/tasks/templates', '/teacher/tasks/:id/edit', '/teacher/tasks/:id'].map(path => ({ path, component: AdaptiveTeacherView, meta: { roles: ['TEACHER', 'ADMIN'], teacherMobile: 'tasks' } })),
   { path:'/teacher/reports',redirect:to=>({path:'/teacher/analytics',query:{...to.query,tab:'overview'}}),meta:{roles:['TEACHER','ADMIN']} },
-  { path:'/teacher/account',component:()=>import('../views/teacher/TeacherAccount.vue'),meta:{roles:['TEACHER','ADMIN']} },
+  { path:'/teacher/account',component:AdaptiveTeacherView,meta:{roles:['TEACHER','ADMIN'],teacherMobile:'account'} },
   { path:'/teacher/settings',component:()=>import('../views/Settings.vue'),meta:{roles:['TEACHER','ADMIN']} },
 
   // Enterprise portal & meeting：企业端开会生成会议号，教师/学生凭码进会视频面试。
   // /enterprise 仅企业/教师/管理员；/meeting 不加 meta.roles——学生、教师都要能被拉进会。
-  // 全部懒加载且不带 meta.mobileSurface：视频会议为桌面端功能，不走手机端自适应壳。
+  // entPortal / meetingJoin / account 有手机版（AdaptiveEnterpriseView 双表切换）；
+  // 房间页（/meeting/:code/room）不走双表：MeetingRoom 自带手机布局，手机端也能进房
+  // 开摄像头/麦克风（2026-10-10 放开电脑端边界）；离线演示模式退化为本机设备预览。
   { path: '/enterprise', redirect: to => ({ path: '/enterprise/dashboard', query: to.query }) },
-  { path: '/enterprise/dashboard', name: 'EnterprisePortal', component: () => import('../views/enterprise/EnterprisePortal.vue'), meta: { roles: ['ENTERPRISE', 'TEACHER', 'ADMIN'] } },
-  { path: '/meeting', name: 'MeetingJoin', component: () => import('../views/meeting/MeetingJoin.vue') },
+  { path: '/enterprise/dashboard', name: 'EnterprisePortal', component: AdaptiveEnterpriseView, meta: { roles: ['ENTERPRISE', 'TEACHER', 'ADMIN'], enterpriseMobile: 'entPortal' } },
+  { path: '/enterprise/account', component: AdaptiveEnterpriseView, meta: { roles: ['ENTERPRISE'], enterpriseMobile: 'account' } },
+  { path: '/meeting', name: 'MeetingJoin', component: AdaptiveEnterpriseView, meta: { enterpriseMobile: 'meetingJoin' } },
   { path: '/meeting/:code/room', name: 'MeetingRoom', component: () => import('../views/meeting/MeetingRoom.vue') },
 
   // 未知路径兜底：按当前角色回各自首页（未登录再由守卫转登录页），不再白屏

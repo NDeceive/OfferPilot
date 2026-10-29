@@ -46,7 +46,7 @@ class ReportServiceTest {
         when(modules.selectList(any())).thenReturn(List.of());
         UserContext.set(21L, "USER");
         var service = new ReportService(mock(TeachingService.class),mock(ExpressionService.class),mock(InterviewSnapshotService.class),sessions,
-                messages,reports,dimensions,mock(SkillQuestionMapper.class),mock(JobPositionMapper.class),modules,mock(ScoreModuleMapper.class));
+                messages,reports,dimensions,mock(SkillQuestionMapper.class),mock(JobPositionMapper.class),modules,mock(ScoreModuleMapper.class),mock(FollowupScoreCalculator.class),mock(VoiceAnalysisService.class),mock(AnswerAudioService.class),mock(VoiceRetentionService.class));
         var detail = service.getDetail(68L);
         assertTrue(detail.getSummary().contains("未形成可评价回答"));
         assertEquals(List.of(),detail.getStrengths());
@@ -98,7 +98,8 @@ class ReportServiceTest {
                 mock(SkillQuestionMapper.class),
                 mock(JobPositionMapper.class),
                 moduleScoreMapper,
-                mock(ScoreModuleMapper.class));
+                mock(ScoreModuleMapper.class),
+                mock(FollowupScoreCalculator.class),mock(VoiceAnalysisService.class),mock(AnswerAudioService.class),mock(VoiceRetentionService.class));
 
         ReportDetailResponse detail = service.getDetail(3L);
 

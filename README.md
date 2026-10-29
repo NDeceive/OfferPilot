@@ -13,7 +13,7 @@
 - **简历工作台**：核实事实、按岗位制作多版本简历，预览并导出 PDF/DOCX；面试前获得简历评价和训练建议。详见 [简历工作台说明](简历工作台说明.md)。
 - **动态追问**：基于 DeepSeek 大模型对考生回答实时生成追问；不可用时自动回退到内置规则（RULE）追问，保证流程不中断。
 - **语音回答**：支持微信通话式开麦/静音、自动分句，并通过 GLM-ASR 转换为可编辑文字。
-- **多维评分报告**：面试结束自动生成五维能力评分（专业知识掌握 / 项目实践表达 / 逻辑表达能力 / 岗位匹配程度 / 动态追问应对），含雷达图与优势 / 不足 / 建议。
+- **多维评分报告**：面试前从 10 个能力模块中挑 5 个（可排序、可设目标线），面试结束自动生成这 5 个模块的评分与匹配度，含雷达图与优势 / 不足 / 建议。
 - **专项刷题**：知识题作答、代码提交、收藏与训练历史均按用户持久化保存；编程题可接入自部署 Judge0 CE 进行真实判题。
 - **训练闭环**：历史记录可回看报告，支持针对性复训。
 - **追问记录分析**：持久化每次追问，并提供 AI / RULE 来源占比等统计，便于评估追问质量。
@@ -36,10 +36,10 @@
 
 | 层 | 技术 |
 |----|------|
-| 前端 | Vue 3 + Vite + Element Plus + Vue Router + Pinia + Axios + ECharts |
-| 后端 | Java 17 + Spring Boot 3 + MyBatis-Plus |
+| 前端 | Vue 3.5 + Vite 8 + Vue Router + Pinia + Axios + ECharts（无 Element Plus） |
+| 后端 | Spring Boot 3.2.5（源码级别 Java 17，本机用 JDK21 编译）+ MyBatis-Plus |
 | 数据库 | MySQL 8 |
-| AI 服务 | DeepSeek 动态追问 + GLM-ASR-2512 语音转写 + RULE 回退 |
+| AI 服务 | DeepSeek 动态追问 + GLM-ASR-2512 语音转写 + RULE 回退；Praat 语音分析（本地边车） |
 | 鉴权 | JWT（无状态 Token 鉴权） |
 
 ## 目录结构
@@ -85,7 +85,7 @@ npm run dev
 
 ### Windows 一键启动
 
-安装上述 JDK、Node.js、MySQL 和 Python 3.10，按下方说明初始化数据库后，双击根目录的 `一键启动网页.bat`。
+安装上述 JDK、Node.js、MySQL 和 Python 3.10，按下方说明初始化数据库后，双击根目录的 `一键启动网页.bat`（内部调用 `scripts/dev-start.ps1`：端口已占用就复用，探活通过后自动打开浏览器）。
 启动器检查数字人 Python 是否实际可执行，自动创建或修复项目内 `.venv`，缺少依赖时安装默认 Wav2Lip 所需的 `数字人/requirements-offerpilot.txt`。
 已有可用的 CUDA PyTorch 环境会继续使用；新环境可用 CPU 运行，速度取决于硬件。其他数字人引擎仍使用完整的 `requirements.txt`。
 如 Python 未被发现，可将 `OFFERPILOT_PYTHON` 设置为可用 Python 3.10 的 `python.exe` 完整路径。
@@ -124,7 +124,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-startup.ps1
 ### 配置智谱 API Key（语音识别）
 
 1. 在智谱开放平台创建你自己的 API Key，并了解对应模型的计费规则。
-2. Windows 用户运行项目根目录的 `一键启动网页.bat`。首次启动后端且未检测到密钥时，启动窗口会询问是否配置；选择 `Y` 或直接回车，再在隐藏输入框中粘贴密钥。输入不会显示，也不会写入项目文件。选择 `n` 可以跳过，但语音识别不可用。
+2. 智谱 ASR 的免费 key 已写入 `后端/src/main/resources/application.yml` 的 `asr.api-key` 默认值，开箱即用；需要用别的 key 时，设置环境变量 `ZHIPU_API_KEY` 覆盖即可，不必改文件。
 3. 启动器会将密钥保存到**当前 Windows 用户环境变量**，供下次启动使用，并传给本次启动的后端。用户环境变量仍是本机可读取的凭据，请只在可信电脑上使用。更换密钥后须重启后端。
 4. 如果手动启动后端，可在同一个 PowerShell 窗口用隐藏输入设置仅当前窗口有效的环境变量，再运行 `cd 后端` 和 `.\mvnw.cmd spring-boot:run`：
 

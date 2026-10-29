@@ -156,7 +156,7 @@ onUnmounted(() => {
   padding: 7px 10px;
   border: 1px solid #bdddcf;
   border-radius: 6px;
-  background: white;
+  background: var(--surface-elevated);
   color: #087f5b;
   cursor: pointer;
 }
@@ -179,7 +179,7 @@ onUnmounted(() => {
 .page-surface canvas {
   display: block;
   margin: 0 auto;
-  background: white;
+  background: var(--surface-elevated);
   box-shadow: 0 8px 24px #203c341c;
 }
 .pdf-preview > p {

@@ -45,6 +45,8 @@ public class ModuleScoreService {
     private final ScorePromptBuilder scorePromptBuilder;
     private final DeepSeekClient deepSeekClient;
     private final TeachingService teachingService;
+    private final FollowupScoreCalculator followupScoreCalculator;
+    private final VoiceAnalysisService voiceAnalysisService;
 
     private static final ObjectMapper JSON = new ObjectMapper();
 
@@ -112,6 +114,9 @@ public class ModuleScoreService {
         // 4. Layer 2: 模块评分
         ScoreResult scoreResult = scoreAllModules(messages, job, session, preferences, signals);
         signals.scoringSource = scoreResult.scoringSource;
+
+        // 4.4 语音表达：有分析结果时对 expression_clarity 做 ±8 的有界修正
+        applyVoiceAdjustment(sessionId, scoreResult);
 
         // 4.5 🆕 后校验：信号极差时强制压分（防止AI虚高）
         validateAndCapScores(scoreResult, signals);
@@ -466,7 +471,7 @@ public class ModuleScoreService {
         // 2. 规则兜底
         log.info("使用规则兜底评分 sessionId={}", session.getId());
         ScoreResult ruleResult = new ScoreResult();
-        ruleResult.scores.putAll(fallbackRuleScoring(messages, job, signals));
+        ruleResult.scores.putAll(fallbackRuleScoring(messages, job, signals, session.getId()));
         ruleResult.scoringSource = "RULE";
         return ruleResult;
     }
@@ -476,7 +481,7 @@ public class ModuleScoreService {
      * 🆕 所有公式结果乘以内容质量系数，垃圾回答被大幅压低。
      */
     private Map<String, BigDecimal> fallbackRuleScoring(List<InterviewMessage> messages,
-                                                         JobPosition job, Signals s) {
+                                                         JobPosition job, Signals s, Long sessionId) {
         Map<String, BigDecimal> scores = new LinkedHashMap<>();
         double quality = s.contentQuality();
 
@@ -485,7 +490,7 @@ public class ModuleScoreService {
         scores.put("project_expression", clamp(scoreProjectRaw(s) * quality));
         scores.put("logical_structure", clamp(scoreLogicRaw(s) * quality));
         scores.put("position_cognition", clamp(scoreMatchRaw(s) * quality));
-        scores.put("followup_adaptability", clamp(scoreFollowupRaw(s) * quality));
+        scores.put("followup_adaptability", clamp(followupScoreCalculator.score(sessionId, messages) * quality));
 
         // 新5模块：信号辅助 × 质量系数
         double depthScore = 45 + Math.min(35, s.techHits * 8.0);
@@ -685,6 +690,25 @@ public class ModuleScoreService {
      * - quality < 0.45（明显偏弱）       → 上限 50 分
      * - quality >= 0.45                  → 不干预
      */
+    /** 语音分只调“表达清晰”，±8 封顶；没有分析结果就完全不动 */
+    private void applyVoiceAdjustment(Long sessionId, ScoreResult result) {
+        double voice;
+        try {
+            voice = voiceAnalysisService.overallScore(sessionId);
+        } catch (Exception e) {
+            return;
+        }
+        if (voice < 0) return;
+        BigDecimal base = result.scores.get("expression_clarity");
+        if (base == null) return;
+        double delta = 8 * (2 * voice - 1);
+        double adjusted = Math.max(0, Math.min(100, base.doubleValue() + delta));
+        result.scores.put("expression_clarity", BigDecimal.valueOf(adjusted).setScale(1, java.math.RoundingMode.HALF_UP));
+        String note = "语音表达分 " + Math.round(voice * 100) + "，已按有界修正计入";
+        result.evidences.merge("expression_clarity", note, (old, add) -> old + "；" + add);
+        log.info("[语音评分] sessionId={}, voice={}, delta={}", sessionId, String.format("%.2f", voice), String.format("%.1f", delta));
+    }
+
     private void validateAndCapScores(ScoreResult sr, Signals signals) {
         double quality = signals.contentQuality();
         int cap;

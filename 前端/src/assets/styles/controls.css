@@ -42,7 +42,7 @@ body :is(a,button):is(.primary,.primary-btn,.btn--primary,.analytics-primary,.su
   border-color: var(--accent-600) !important;
 }
 body :is(a,button):is(.secondary,.secondary-btn,.btn--ghost,.btn-ghost,.ghost-btn,.mobile-secondary-button,.modal-btn-cancel,.mini-btn,.page-btn,[data-variant="secondary"]) {
-  background: white !important;
+  background: var(--surface-elevated) !important;
   border: 1px solid var(--neutral-200) !important;
   color: var(--neutral-700) !important;
   box-shadow: none !important;
@@ -71,7 +71,7 @@ body :is(a,button):is(.danger,.danger-button,.modal-btn-danger,.batch-btn-danger
   padding: 10px 16px;
   box-shadow: none !important;
 }
-body :is(a,button):is(.danger,.danger-button,.modal-btn-danger,.batch-btn-danger,.delete-btn,[data-variant="danger"]):hover:not(:disabled) { background: #fee2e2 !important; border-color: #fca5a5 !important; }
+body :is(a,button):is(.danger,.danger-button,.modal-btn-danger,.batch-btn-danger,.delete-btn,[data-variant="danger"]):hover:not(:disabled) { background: var(--surface-soft) !important; border-color: #fca5a5 !important; }
 /* Unnamed actions in forms and toolbars share the outlined default.
    Tabs, charts, navigation and selectable rows retain their semantic layouts. */
 body :is(form,.live-pagination,.pagination,.mail-actions,.drawer-actions,.table-actions,.selection-actions) button:not([class]):not([role="tab"]) {
@@ -79,7 +79,7 @@ body :is(form,.live-pagination,.pagination,.mail-actions,.drawer-actions,.table-
   padding: 10px 16px;
   border: 1px solid var(--neutral-200);
   border-radius: var(--control-radius);
-  background: white;
+  background: var(--surface-elevated);
   color: var(--neutral-700);
   font-size: 14px;
   font-weight: 500;
@@ -97,7 +97,7 @@ body input:is([type="search"],[placeholder*="搜索"],[aria-label^="搜索"]) {
   max-width: 100%;
   border: 1px solid var(--neutral-200) !important;
   border-radius: var(--control-radius) !important;
-  background: white !important;
+  background: var(--surface-elevated) !important;
   color: var(--neutral-800) !important;
   padding: 10px 14px !important;
   font: 14px/1.5 var(--font-body) !important;
@@ -114,7 +114,7 @@ body input:is([type="search"],[placeholder*="搜索"],[aria-label^="搜索"]):di
 body :is(.mail-search,.search-shell,.search-box,.search-input-wrapper):has(input) {
   border: 1px solid var(--neutral-200) !important;
   border-radius: var(--control-radius) !important;
-  background: white !important;
+  background: var(--surface-elevated) !important;
   min-height: 44px;
 }
 body :is(.mail-search,.search-shell,.search-box,.search-input-wrapper):has(input:focus-visible) {

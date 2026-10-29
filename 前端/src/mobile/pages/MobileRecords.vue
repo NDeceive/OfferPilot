@@ -378,7 +378,7 @@ onUnmounted(disconnect)
 
 .mrec__badge { flex: 0 0 auto; padding: 5px 11px; border-radius: 999px; font-size: 11.5px; font-weight: 700; }
 .mrec__badge.is-ongoing { color: #b66b20; background: var(--m-accent-soft); }
-.mrec__badge.is-aborted { color: var(--m-text-secondary); background: #f0f1ed; }
+.mrec__badge.is-aborted { color: var(--m-text-secondary); background: var(--surface-soft); }
 .mrec__badge.is-finished { color: var(--m-primary-dark); background: var(--m-primary-soft); }
 
 .mrec__foot {

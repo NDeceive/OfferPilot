@@ -26,6 +26,7 @@ public class ReportJobService {
     private final ReportService reports;
     private final ModuleScoreService scores;
     private final TeachingService teaching;
+    private final VoiceAnalysisService voiceAnalysis;
     private final PlatformTransactionManager transactions;
 
     public void enqueue(long sessionId) {
@@ -88,6 +89,12 @@ public class ReportJobService {
                 var states=jdbc.queryForList("SELECT state FROM student_report_job WHERE session_id=? FOR UPDATE",String.class,id);
                 if(!states.contains("RUNNING"))return;
                 long reportId=reports.generateForSession(sessions.selectById(id));
+                // 语音分析排在评分前；失败只影响表达维度，报告照常出
+                try {
+                    voiceAnalysis.analyzeSession(id);
+                } catch (Exception e) {
+                    log.warn("语音分析跳过 sessionId={}, err={}", id, e.getMessage());
+                }
                 scores.scoreAndUpdateReport(id,reportId);
                 teaching.ready(id,reportId);
                 jdbc.update("UPDATE student_report_job SET state='READY',report_id=?,updated_at=NOW() WHERE session_id=?",reportId,id);

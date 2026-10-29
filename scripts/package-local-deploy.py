@@ -38,7 +38,7 @@ def copy(relative):
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src, target)
 
-for name in ['README.md', 'PRODUCT.md', 'DESIGN.md', 'DESIGN-SYSTEM.md', '一键启动网页.bat',
+for name in ['README.md', 'PRODUCT.md', 'DESIGN.md', '一键启动网页.bat',
              '后端/src', '后端/.mvn', '后端/libs', '后端/pom.xml', '后端/mvnw', '后端/mvnw.cmd',
              '前端/src', '前端/public', '前端/tests', '前端/package.json', '前端/package-lock.json',
              '前端/index.html', '前端/vite.config.js', '前端/.env.example', 'docs',

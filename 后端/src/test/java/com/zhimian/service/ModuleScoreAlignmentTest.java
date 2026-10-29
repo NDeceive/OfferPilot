@@ -6,7 +6,7 @@ import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class ModuleScoreAlignmentTest {
-    private final ModuleScoreService service=new ModuleScoreService(null,null,null,null,null,null,null,null,null,null,null);
+    private final ModuleScoreService service=new ModuleScoreService(null,null,null,null,null,null,null,null,null,null,null,null,null);
     @Test void defaultMatchUsesExactlyTheFiveDisplayedModules(){
         var scores=new LinkedHashMap<String,BigDecimal>();var weights=new LinkedHashMap<String,Double>();var targets=new LinkedHashMap<String,Integer>();
         for(int i=0;i<10;i++){scores.put("m"+i,BigDecimal.valueOf(i<5?37.5:100));if(i<5){weights.put("m"+i,.2);targets.put("m"+i,75);}}

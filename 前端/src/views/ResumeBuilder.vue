@@ -2000,7 +2000,7 @@ function returnToPreparation(useVersion = false) {
   min-height: 48px;
   padding: 10px 18px;
   border: 1px solid #d3e8de;
-  background: #f1faf6;
+  background: var(--surface-soft);
   border-radius: 10px;
   margin-bottom: 10px;
   font-size: 13px;
@@ -2027,7 +2027,7 @@ function returnToPreparation(useVersion = false) {
   width: 300px;
   max-width: 75vw;
   padding: 16px;
-  background: white;
+  background: var(--surface-elevated);
   border: 1px solid #d3e8de;
   border-radius: 10px;
   z-index: 2;
@@ -2070,7 +2070,7 @@ function returnToPreparation(useVersion = false) {
   min-width: 0;
 }
 .panel {
-  background: white;
+  background: var(--surface-elevated);
   border: 1px solid #dfe8e3;
   border-radius: 12px;
   padding: 20px;
@@ -2117,7 +2117,7 @@ function returnToPreparation(useVersion = false) {
   border: 1px solid #d6e3db;
   border-radius: 8px;
   padding: 10px 12px;
-  background: white;
+  background: var(--surface-elevated);
 }
 .panel input,
 .panel select {
@@ -2162,7 +2162,7 @@ function returnToPreparation(useVersion = false) {
   border: 1px solid var(--accent-500, #09976b);
 }
 .quiet {
-  background: white;
+  background: var(--surface-elevated);
   color: #087f5b;
   border: 1px solid #bdddcf;
 }
@@ -2170,7 +2170,7 @@ function returnToPreparation(useVersion = false) {
   filter: brightness(0.94);
 }
 .quiet:hover:not(:disabled) {
-  background: #f1faf6;
+  background: var(--surface-soft);
 }
 .builder button:disabled {
   opacity: 0.5;
@@ -2196,7 +2196,7 @@ function returnToPreparation(useVersion = false) {
   display: grid;
   gap: 5px;
   padding: 10px 12px;
-  background: #f8faf9;
+  background: var(--surface-soft);
   border: 1px solid #e7ede9;
   border-radius: 8px;
   overflow-wrap: anywhere;
@@ -2223,7 +2223,7 @@ function returnToPreparation(useVersion = false) {
 }
 .info {
   padding: 9px 12px;
-  background: #f5f8fa;
+  background: var(--surface-soft);
   border-radius: 7px;
   color: #5b6d74;
   font-size: 12px;
@@ -2247,7 +2247,7 @@ function returnToPreparation(useVersion = false) {
 .more-details summary small {
   margin-left: 12px;
   color: #087f5b;
-  background: #eaf7f0;
+  background: var(--surface-soft);
   padding: 3px 6px;
 }
 .more-details[open] > :not(summary) {
@@ -2274,7 +2274,7 @@ function returnToPreparation(useVersion = false) {
   padding: 14px;
   border: 1px solid #d3e8de;
   border-radius: 8px;
-  background: #f4faf7;
+  background: var(--surface-soft);
 }
 .example-card p,
 .suggestions p {
@@ -2359,7 +2359,7 @@ function returnToPreparation(useVersion = false) {
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background: #f3f8fb;
+  background: var(--surface-soft);
   color: #7897ae;
   font-size: 34px;
   margin-bottom: 8px;
@@ -2431,19 +2431,19 @@ function returnToPreparation(useVersion = false) {
 .status {
   font-size: 12px;
   color: #725a31;
-  background: #fff7e9;
+  background: var(--surface-soft);
   padding: 4px 8px;
   border-radius: 6px;
   white-space: nowrap;
 }
 .status.confirmed {
   color: #087c5a;
-  background: #e6f8ee;
+  background: var(--surface-soft);
 }
 .status.rejected,
 .status.expired {
   color: #8c5460;
-  background: #faebee;
+  background: var(--surface-soft);
 }
 .editor-panel {
   display: grid;
@@ -2454,7 +2454,7 @@ function returnToPreparation(useVersion = false) {
 }
 .section-tabs {
   display: flex;
-  background: #f5f8f7;
+  background: var(--surface-soft);
   border-radius: 8px;
   overflow-x: auto;
 }
@@ -2472,7 +2472,7 @@ function returnToPreparation(useVersion = false) {
   cursor: pointer;
 }
 .section-tabs button.active {
-  background: white;
+  background: var(--surface-elevated);
   color: #078660;
   border-color: #078660;
   border-radius: 8px;
@@ -2499,7 +2499,7 @@ function returnToPreparation(useVersion = false) {
   width: 100%;
   border: 1px solid #e1eae4;
   border-radius: 8px;
-  background: white;
+  background: var(--surface-elevated);
   padding: 12px;
   margin-top: 10px;
   cursor: pointer;
@@ -2508,7 +2508,7 @@ function returnToPreparation(useVersion = false) {
 }
 .version-card.active {
   border-color: #0ca574;
-  background: #f1fbf6;
+  background: var(--surface-soft);
 }
 .version-card small {
   color: #61736d;
@@ -2550,7 +2550,7 @@ function returnToPreparation(useVersion = false) {
   min-height: 36px;
 }
 .document-canvas {
-  background: #eef3f1;
+  background: var(--surface-soft);
   padding: 24px;
   border-radius: 8px;
   display: flex;
@@ -2558,7 +2558,7 @@ function returnToPreparation(useVersion = false) {
   min-width: 0;
 }
 .a4-paper {
-  background: white;
+  background: var(--surface-elevated);
   width: min(100%, 430px);
   aspect-ratio: 210/297;
   display: grid;
@@ -2591,13 +2591,13 @@ function returnToPreparation(useVersion = false) {
 .notice {
   padding: 12px 16px;
   border-radius: 8px;
-  background: #fff8e6;
+  background: var(--surface-soft);
   color: #785712;
   font-size: 13px;
   margin-bottom: 14px;
 }
 .notice--error {
-  background: #fff0ee;
+  background: var(--surface-soft);
   color: #ad332a;
 }
 .review-dialog {
@@ -2609,7 +2609,7 @@ function returnToPreparation(useVersion = false) {
   border-radius: 12px;
   padding: 24px;
   color: #203c34;
-  background: white;
+  background: var(--surface-elevated);
 }
 .review-dialog::backdrop {
   background: #15342966;
@@ -2728,5 +2728,5 @@ function returnToPreparation(useVersion = false) {
 </style>
 
 <style scoped>
-.analysis-dialog{margin:auto;width:min(1100px,calc(100vw - 32px));max-height:90dvh;border:1px solid #dce7e1;border-radius:12px;padding:24px;overflow:auto}.analysis-dialog::backdrop{background:rgba(18,37,28,.32)}.analysis-close{display:block;margin:0 0 16px auto}.review-dialog pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:220px;overflow:auto;background:#f5f8f6;padding:12px;font:inherit}@media(max-width:760px){.analysis-dialog{padding:16px}}
+.analysis-dialog{margin:auto;width:min(1100px,calc(100vw - 32px));max-height:90dvh;border:1px solid #dce7e1;border-radius:12px;padding:24px;overflow:auto}.analysis-dialog::backdrop{background:rgba(18,37,28,.32)}.analysis-close{display:block;margin:0 0 16px auto}.review-dialog pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:220px;overflow:auto;background:var(--surface-soft);padding:12px;font:inherit}@media(max-width:760px){.analysis-dialog{padding:16px}}
 </style>

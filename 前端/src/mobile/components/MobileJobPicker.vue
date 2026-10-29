@@ -147,7 +147,7 @@ const readyCount = computed(() => list.value.filter(isReadyJob).length)
 }
 .mjob-card:active { transform: scale(.99); }
 .mjob-card.is-selected { background: var(--m-primary-soft); border-color: #9bbda8; }
-.mjob-card.is-off { color: var(--m-text-tertiary); background: #f5f6f3; border-style: dashed; }
+.mjob-card.is-off { color: var(--m-text-tertiary); background: var(--surface-soft); border-style: dashed; }
 
 .mjob-card__accent { position: absolute; top: 14px; bottom: 14px; left: 0; width: 3px; border-radius: 0 3px 3px 0; }
 .mjob-card.is-off .mjob-card__accent { opacity: .35; }
@@ -157,7 +157,7 @@ const readyCount = computed(() => list.value.filter(isReadyJob).length)
 .mjob-card__main small { color: var(--m-text-tertiary); font-size: 12px; }
 .mjob-card__tags { display: flex; margin-top: 3px; flex-wrap: wrap; gap: 5px; }
 .mjob-card__tags em { padding: 2px 7px; color: var(--m-text-secondary); background: rgba(0,0,0,.035); border-radius: 999px; font-size: 11px; font-style: normal; }
-.mjob-card.is-selected .mjob-card__tags em { background: rgba(255,255,255,.75); }
+.mjob-card.is-selected .mjob-card__tags em { background: color-mix(in srgb, var(--surface-elevated) 75%, transparent); }
 
 .mjob-card__mark { flex: 0 0 auto; color: var(--m-text-tertiary); font-size: 17px; font-weight: 700; }
 .mjob-card.is-selected .mjob-card__mark { color: var(--m-primary); font-size: 19px; }

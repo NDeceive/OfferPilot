@@ -10,6 +10,7 @@ import com.zhimian.dto.InterviewStartResponse;
 import com.zhimian.dto.InterviewStep;
 import com.zhimian.dto.QuestionView;
 import com.zhimian.dto.StartInterviewRequest;
+import com.zhimian.entity.InterviewFollowupChain;
 import com.zhimian.entity.InterviewFollowupRecord;
 import com.zhimian.entity.InterviewMessage;
 import com.zhimian.entity.InterviewReport;
@@ -28,6 +29,10 @@ import com.zhimian.mapper.ReportDimensionMapper;
 import com.zhimian.mapper.SkillQuestionMapper;
 import com.zhimian.mapper.SkillQuestionTagRelMapper;
 import com.zhimian.mapper.SkillTagMapper;
+import com.zhimian.service.followup.FollowupDimension;
+import com.zhimian.service.followup.FollowupDirectionPolicy;
+import com.zhimian.service.followup.FollowupGate;
+import com.zhimian.service.followup.GateDecision;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -64,6 +69,12 @@ public class InterviewFlowService {
     private final ReportService reportService;
     private final FollowUpService followUpService;
     private final InterviewFollowupRecordService followupRecordService;
+    private final InterviewFollowupChainService followupChainService;
+    private final AnswerAudioService answerAudioService;
+    private final VoiceAnalysisService voiceAnalysisService;
+    private final VoiceRetentionService voiceRetentionService;
+    private final FollowupGate followupGate;
+    private final FollowupDirectionPolicy followupDirectionPolicy;
     private final ExperienceQuestionService experienceQuestionService;
     private final QuestionBootstrapper questionBootstrapper;
     private final InterviewReportMapper reportMapper;
@@ -195,6 +206,8 @@ public class InterviewFlowService {
             log.warn("未收到模块偏好或为空！req.getModulePreferences()={}", req.getModulePreferences());
         }
         sessionMapper.insert(session);
+        voiceAnalysisService.markEnabled(session.getId(), req.getVoiceEnabled() == null || req.getVoiceEnabled());
+        voiceRetentionService.ensureDefault(session.getId());
         snapshots.capture(session.getId(),userId,req,job,resume);
 
         // 保存偏好必须在session.id生成之后
@@ -328,29 +341,38 @@ public class InterviewFlowService {
         String questionRefAnswer = (question != null) ? question.getReferenceAnswer() : parentMain.getReferenceAnswer();
         String abilityTag = parentMain.getAbilityTag();
 
-        boolean followupExists = messageMapper.selectCount(
+        // 本轮已经问过几层；考生这次回答的是上一层追问
+        int followupLayers = messageMapper.selectCount(
                 new LambdaQueryWrapper<InterviewMessage>()
                         .eq(InterviewMessage::getSessionId, sessionId)
                         .eq(InterviewMessage::getRoundNo, round)
-                        .eq(InterviewMessage::getMsgType, MSG_FOLLOWUP)) > 0;
+                        .eq(InterviewMessage::getMsgType, MSG_FOLLOWUP)).intValue();
+        if (followupLayers > 0) {
+            followupChainService.recordAnswer(sessionId, round, followupLayers, req.getAnswer());
+        }
 
         InterviewStep step = new InterviewStep();
-        if (!followupExists && shouldFollowUp(req.getAnswer())) {
-            FollowupResult followup = generateFollowup(session, question, abilityTag,
-                    req.getAnswer(), questionContent, questionRefAnswer);
-            if (followup == null) {
-                // AI 判定无需追问，直接进入下一题
-                step.setNextAction(hasTimeLeft(session) ? ACTION_NEXT : ACTION_FINISHABLE);
-                return step;
-            }
-            saveMessage(sessionId, req.getQuestionId(), round, ROLE_INTERVIEWER, MSG_FOLLOWUP,
-                    followup.followUpQuestion, abilityTag);
+        FollowupPlan plan = planFollowup(session, sessionId, parentMain, question, abilityTag,
+                req.getAnswer(), questionContent, questionRefAnswer, round, followupLayers);
 
-            saveFollowupRecord(session, question, req, abilityTag, followup);
+        if (plan.ask) {
+            saveMessage(sessionId, req.getQuestionId(), round, ROLE_INTERVIEWER, MSG_FOLLOWUP,
+                    plan.followUpQuestion, abilityTag);
+
+            // 老表只记首层，教师看板与追问记录页的口径保持不变
+            if (plan.layer == 1) {
+                saveFollowupRecord(session, question, req, abilityTag, plan.toResult());
+            }
+            saveChainRecord(sessionId, req.getQuestionId(), round, plan);
 
             step.setNextAction(ACTION_FOLLOWUP);
-            step.setFollowupQuestion(followup.followUpQuestion);
+            step.setFollowupQuestion(plan.followUpQuestion);
             return step;
+        }
+
+        // 内容判断「无需追问」也留一条链记录，评分据此区分「答得完整」与「没抽中」
+        if (GateDecision.STOP_NO_NEED.equals(plan.gate)) {
+            saveChainRecord(sessionId, req.getQuestionId(), round, plan);
         }
 
         step.setNextAction(hasTimeLeft(session) ? ACTION_NEXT : ACTION_FINISHABLE);
@@ -555,6 +577,8 @@ public class InterviewFlowService {
             reportMapper.deleteById(report.getId());
         }
         followupRecordService.deleteBySession(sessionId);
+        followupChainService.deleteBySession(sessionId);
+        answerAudioService.deleteBySession(sessionId);
         messageMapper.delete(new LambdaQueryWrapper<InterviewMessage>()
                 .eq(InterviewMessage::getSessionId, sessionId));
         jdbc.update("DELETE FROM interview_module_preference WHERE session_id=?",sessionId);
@@ -864,24 +888,35 @@ public class InterviewFlowService {
         return difficulty;
     }
 
-    // ============================ 追问引擎（V2：DeepSeek 智能决策） ============================
+    // ============================ 追问引擎（V3：多层追问） ============================
 
-    private boolean shouldFollowUp(String answer) {
-        // V2: 所有回答都先进入追问流程，具体是规则兜底还是 DeepSeek 决策
-        // 由 generateFollowup() 内部处理。AI 判定无需追问时返回 null，此处跳过。
-        return true;
-    }
+    /**
+     * 先过闸门，再按方向生成。闸门不过就不调用大模型；生成失败回退题库追问。
+     */
+    private FollowupPlan planFollowup(InterviewSession session, Long sessionId, InterviewMessage parentMain,
+                                      SkillQuestion question, String abilityTag, String answer,
+                                      String questionContent, String refAnswer, int round, int askedLayers) {
+        int layer = askedLayers + 1;
+        int difficulty = (question != null && question.getDifficulty() != null) ? question.getDifficulty() : 2;
 
-    private FollowupResult generateFollowup(InterviewSession session, SkillQuestion question,
-                                             String abilityTag, String answer,
-                                             String questionContent, String refAnswer) {
-        // 回答 < 15 字：走规则兜底，不浪费 AI 调用
-        String text = answer == null ? "" : answer.trim();
-        if (text.length() < 15) {
-            return new FollowupResult(
-                    "你的回答比较简短，能否详细说说你的思路或做法？",
-                    "RULE", "回答过于简短，缺少具体细节");
+        List<InterviewFollowupChain> chainRows = followupChainService.listByRound(sessionId, round);
+        boolean uncoveredEmpty = false;
+        if (!chainRows.isEmpty()) {
+            Integer left = chainRows.get(chainRows.size() - 1).getUncoveredCount();
+            uncoveredEmpty = left != null && left == 0;
         }
+
+        GateDecision gate = followupGate.decide(sessionId, parentMain.getId(), layer, difficulty,
+                remainingSeconds(session), answer, uncoveredEmpty);
+
+        if (!gate.isAsk()) {
+            log.info("[追问闸门] sessionId={}, round={}, layer={}, gate={}, p={}",
+                    sessionId, round, layer, gate.getGate(), String.format("%.2f", gate.getProbability()));
+            return FollowupPlan.stop(layer, gate);
+        }
+
+        Set<FollowupDimension> asked = followupChainService.askedDimensions(sessionId, round);
+        FollowupDimension direction = followupDirectionPolicy.choose(layer, asked);
 
         try {
             FollowUpRequest fr = new FollowUpRequest();
@@ -889,29 +924,116 @@ public class InterviewFlowService {
             fr.setQuestion(questionContent);
             fr.setAnswer(answer);
             fr.setReferenceAnswer(refAnswer);
+            fr.setLayer(layer);
+            fr.setDimension(direction.name());
+            fr.setAskedDimensions(asked.isEmpty() ? "" : asked.stream().map(Enum::name).collect(Collectors.joining(",")));
+            fr.setChainText(buildChainText(sessionId, round));
 
             FollowUpResponse resp = followUpService.generate(fr);
-
-            // AI 判定不需要追问
-            if (resp == null) {
-                log.info("[面试追问] AI判定无需追问 sessionId={}, questionId={}",
-                        session.getId(), question != null ? question.getId() : null);
-                return null; // 信号：跳过追问，直接进入下一题
+            if (resp != null && resp.getFollowUpQuestion() != null && !resp.getFollowUpQuestion().isBlank()) {
+                FollowupDimension used = FollowupDimension.fromCode(resp.getDimension());
+                if (resp.isErrorDetected() && !asked.contains(FollowupDimension.CORRECT)) {
+                    used = FollowupDimension.CORRECT;
+                }
+                if (used == null) {
+                    used = direction;
+                }
+                log.info("[面试追问] sessionId={}, questionId={}, layer={}, dimension={}, source={}",
+                        sessionId, question != null ? question.getId() : null, layer, used, resp.getSource());
+                return FollowupPlan.ask(layer, gate, resp.getFollowUpQuestion().trim(), resp.getSource(),
+                        resp.getTriggerReason(), used, resp.getUncoveredCount());
             }
-
-            if (resp.getFollowUpQuestion() != null && !resp.getFollowUpQuestion().isBlank()) {
-                log.info("[面试追问] sessionId={}, questionId={}, source={}",
-                        session.getId(), question != null ? question.getId() : null, resp.getSource());
-                return new FollowupResult(resp.getFollowUpQuestion().trim(), resp.getSource(), resp.getTriggerReason());
-            }
-
-            log.warn("[面试追问] FollowUpService 返回空，回退题库兜底 sessionId={}", session.getId());
+            log.warn("[面试追问] 生成结果为空，回退题库兜底 sessionId={}", sessionId);
         } catch (Exception e) {
-            log.warn("[面试追问] FollowUpService 异常，回退题库兜底 sessionId={}, err={}",
-                    session.getId(), e.getMessage());
+            log.warn("[面试追问] 生成异常，回退题库兜底 sessionId={}, err={}", sessionId, e.getMessage());
         }
-        return new FollowupResult(buildFollowup(question, abilityTag), "RULE",
-                "FollowUpService异常或返回为空，使用题库兜底追问");
+
+        return FollowupPlan.ask(layer, gate, buildFollowup(question, abilityTag), "RULE",
+                "追问生成异常或返回为空，使用题库兜底追问", direction, -1);
+    }
+
+    /** 把本轮已发生的追问与作答压成提示词用的简短链路 */
+    private String buildChainText(Long sessionId, int round) {
+        List<InterviewMessage> msgs = messageMapper.selectList(new LambdaQueryWrapper<InterviewMessage>()
+                .eq(InterviewMessage::getSessionId, sessionId)
+                .eq(InterviewMessage::getRoundNo, round)
+                .orderByAsc(InterviewMessage::getId));
+        StringBuilder sb = new StringBuilder();
+        int layer = 0;
+        boolean pending = false;
+        for (InterviewMessage m : msgs) {
+            if (ROLE_INTERVIEWER.equals(m.getRole()) && MSG_FOLLOWUP.equals(m.getMsgType())) {
+                layer++;
+                sb.append("第").append(layer).append("层 问：").append(clipForPrompt(m.getContent(), 100)).append("\n");
+                pending = true;
+            } else if (ROLE_CANDIDATE.equals(m.getRole()) && MSG_ANSWER.equals(m.getMsgType()) && pending) {
+                sb.append("        答：").append(clipForPrompt(m.getContent(), 160)).append("\n");
+                pending = false;
+            }
+        }
+        return sb.toString();
+    }
+
+    private String clipForPrompt(String text, int max) {
+        String t = text == null ? "" : text.trim().replaceAll("\\s+", " ");
+        return t.length() <= max ? t : t.substring(0, max) + "…";
+    }
+
+    private void saveChainRecord(Long sessionId, Long questionId, int round, FollowupPlan plan) {
+        InterviewFollowupChain row = new InterviewFollowupChain();
+        row.setSessionId(sessionId);
+        row.setQuestionId(questionId);
+        row.setRoundNo(round);
+        row.setLayerNo(plan.layer);
+        row.setDimension(plan.dimension == null ? null : plan.dimension.name());
+        row.setGate(plan.gate);
+        row.setProbability(plan.probability);
+        row.setQuestion(plan.followUpQuestion);
+        row.setSource(plan.source);
+        row.setReason(plan.reason);
+        row.setUncoveredCount(plan.uncoveredCount);
+        followupChainService.saveSafely(row);
+    }
+
+    /** 单次追问的决策结果 */
+    private static class FollowupPlan {
+        final boolean ask;
+        final int layer;
+        final String gate;
+        final double probability;
+        final String followUpQuestion;
+        final String source;
+        final String reason;
+        final FollowupDimension dimension;
+        final int uncoveredCount;
+
+        private FollowupPlan(boolean ask, int layer, String gate, double probability, String followUpQuestion,
+                             String source, String reason, FollowupDimension dimension, int uncoveredCount) {
+            this.ask = ask;
+            this.layer = layer;
+            this.gate = gate;
+            this.probability = probability;
+            this.followUpQuestion = followUpQuestion;
+            this.source = source;
+            this.reason = reason;
+            this.dimension = dimension;
+            this.uncoveredCount = uncoveredCount;
+        }
+
+        static FollowupPlan stop(int layer, GateDecision gate) {
+            return new FollowupPlan(false, layer, gate.getGate(), gate.getProbability(),
+                    null, null, null, null, -1);
+        }
+
+        static FollowupPlan ask(int layer, GateDecision gate, String question, String source,
+                                String reason, FollowupDimension dimension, int uncoveredCount) {
+            return new FollowupPlan(true, layer, gate.getGate(), gate.getProbability(),
+                    question, source, reason, dimension, uncoveredCount);
+        }
+
+        FollowupResult toResult() {
+            return new FollowupResult(followUpQuestion, source, reason);
+        }
     }
 
     private void saveFollowupRecord(InterviewSession session, SkillQuestion question, AnswerRequest req,

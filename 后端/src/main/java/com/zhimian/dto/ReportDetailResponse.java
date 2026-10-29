@@ -38,5 +38,7 @@ public class ReportDetailResponse {
     private String profileLabel;
     /** 模块评分明细（新版才有） */
     private List<ModuleScoreView> moduleScores;
+    /** 语音：状态、整体分、逐题指标与音频 id */
+    private java.util.Map<String,Object> voice;
     private java.util.Map<String,Object> trainingContext;
 }

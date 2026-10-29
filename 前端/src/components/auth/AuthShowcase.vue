@@ -154,7 +154,7 @@ onBeforeUnmount(() => window.clearInterval(timer))
   height: 230px;
   overflow: hidden;
   border-radius: 22px;
-  background: rgba(255, 255, 255, 0.94);
+  background: color-mix(in srgb, var(--surface-elevated) 94%, transparent);
   box-shadow: 0 24px 60px rgba(13, 67, 51, 0.14);
 }
 
@@ -163,8 +163,8 @@ onBeforeUnmount(() => window.clearInterval(timer))
 .scene-head i, .video-status i { width: 7px; height: 7px; border-radius: 50%; background: #10b981; box-shadow: 0 0 0 4px rgba(16,185,129,.1); }
 .scene-head span { margin-left: auto; color: #7c978e; font-variant-numeric: tabular-nums; }
 .message { display: flex; align-items: flex-start; gap: 10px; margin-top: 23px; }
-.message p { max-width: 76%; margin: 0; padding: 12px 14px; border-radius: 13px; background: #f0f5f3; color: #405d54; font-size: 12px; line-height: 1.55; }
-.message b { display: grid; flex: 0 0 28px; height: 28px; place-items: center; border-radius: 9px; background: #dff5ec; color: #0d8e68; font-size: 10px; }
+.message p { max-width: 76%; margin: 0; padding: 12px 14px; border-radius: 13px; background: var(--surface-soft); color: #405d54; font-size: 12px; line-height: 1.55; }
+.message b { display: grid; flex: 0 0 28px; height: 28px; place-items: center; border-radius: 9px; background: var(--surface-soft); color: #0d8e68; font-size: 10px; }
 .message.mine { justify-content: flex-end; }
 .message.mine p { background: #0d8e68; color: white; }
 

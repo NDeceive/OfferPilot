@@ -162,10 +162,10 @@
         </div>
         <div class="radar-grid">
           <div class="radar-card glass-panel">
-            <h3><el-icon><Aim /></el-icon>五维能力雷达</h3>
+            <h3><el-icon><Aim /></el-icon>能力雷达</h3>
             <div ref="radarRef" class="radar-chart"></div>
           </div>
-          <div class="dimension-list">
+          <div class="dimension-list" v-if="!isNewReport">
             <div v-for="dim in report.dimensions" :key="dim.dimension" class="dimension-card">
               <div class="dimension-head">
                 <span class="dimension-name">{{ dim.dimension }}</span>
@@ -199,6 +199,38 @@
       <div class="qa-section" v-if="report?.sessionId">
         <div class="insight-card glass-panel">
           <h3><el-icon><ChatLineRound /></el-icon>面试问答记录（共 {{ qaRounds.length }} 题）</h3>
+          <div v-if="report?.voice" class="voice-summary">
+            <template v-if="report.voice.status === 'ANALYZED'">
+              <strong>表达表现</strong>
+              <span>综合 {{ report.voice.overall }} 分</span>
+              <span>已分析 {{ voiceRounds.length }} 题</span>
+              <label class="voice-retain">
+                保留
+                <select :value="report.voice.retention?.retainDays ?? 30" @change="changeRetention">
+                  <option :value="1">1 天</option>
+                  <option :value="7">1 周</option>
+                  <option :value="30">1 个月</option>
+                  <option :value="365">1 年</option>
+                  <option :value="0">永久</option>
+                </select>
+              </label>
+              <span class="voice-expire">{{ report.voice.retention?.expireAt ? ('到期 ' + report.voice.retention.expireAt.slice(0, 10)) : '永久保存' }}</span>
+              <button class="voice-delete" type="button" @click="deleteVoice">删除语音</button>
+              <em>受设备与环境影响，仅供参考</em>
+            </template>
+            <template v-else-if="report.voice.status === 'DELETED'">
+              <strong>表达表现</strong>
+              <span>本场语音已删除，面试记录与报告保留</span>
+            </template>
+            <template v-else-if="report.voice.status === 'DISABLED'">
+              <strong>表达表现</strong>
+              <span>本场未开启语音分析</span>
+            </template>
+            <template v-else>
+              <strong>表达表现</strong>
+              <span>语音录制失败，本次未参与表达分析</span>
+            </template>
+          </div>
           <div v-loading="qaLoading">
             <div v-if="qaRounds.length" class="qa-rounds">
               <el-collapse v-model="activeRounds">
@@ -224,16 +256,23 @@
                       <span class="round-msg-label">你的回答</span>
                       <p>{{ i === qaRounds.length - 1 ? '（此题已跳过，面试已结束）' : '（此题已跳过，直接进入下一题）' }}</p>
                     </div>
-                    <template v-if="r.followup">
+                    <template v-for="(fu, fi) in r.followups" :key="fu.id || fi">
                       <div class="round-msg interviewer followup">
-                        <span class="round-msg-label">追问</span>
-                        <p>{{ r.followup.content }}</p>
+                        <span class="round-msg-label">{{ r.followups.length > 1 ? '追问 ' + (fi + 1) : '追问' }}</span>
+                        <p>{{ fu.content }}</p>
                       </div>
-                      <div v-if="r.followupAnswer" class="round-msg candidate followup">
+                      <div v-if="r.followupAnswers[fi]" class="round-msg candidate followup">
                         <span class="round-msg-label">追问回答</span>
-                        <p>{{ r.followupAnswer.content }}</p>
+                        <p>{{ r.followupAnswers[fi].content }}</p>
                       </div>
                     </template>
+                    <div v-if="voiceAudio[r.roundNo]" class="round-voice">
+                      <span class="round-msg-label">原声回放</span>
+                      <audio :src="voiceAudio[r.roundNo]" controls preload="none"></audio>
+                      <small v-if="voiceOfRound(r.roundNo)">
+                        流畅 {{ Math.round(voiceOfRound(r.roundNo).fluency) }} · 音量 {{ Math.round(voiceOfRound(r.roundNo).volume) }} · 状态 {{ Math.round(voiceOfRound(r.roundNo).confidence) }}
+                      </small>
+                    </div>
                   </div>
                 </el-collapse-item>
               </el-collapse>
@@ -278,6 +317,8 @@ import {
   WarningFilled
 } from '@element-plus/icons-vue'
 import { getReportDetail, getInterviewRecords, exportReport, getSessionMessages } from '@/api'
+import { getApiBase } from '@/utils/apiBase'
+import request from '@/utils/request'
 import RadarChart from '@/components/ui/RadarChart.vue'
 
 const route = useRoute()
@@ -334,6 +375,51 @@ function moduleBarColor(score) {
 const qaMessages = ref([])
 const qaLoading = ref(false)
 const activeRounds = ref([])
+const voiceAudio = ref({})
+const voiceRounds = computed(() => report.value?.voice?.rounds || [])
+function voiceOfRound(roundNo) {
+  return voiceRounds.value.find(x => Number(x.roundNo) === Number(roundNo)) || null
+}
+async function deleteVoice() {
+  if (!window.confirm('删除后本场录音和语音分析都无法恢复，面试记录与报告会保留。确定删除？')) return
+  try {
+    await request.delete('/interview/' + report.value.sessionId + '/voice')
+    Object.values(voiceAudio.value).forEach(url => URL.revokeObjectURL(url))
+    voiceAudio.value = {}
+    report.value = {
+      ...report.value,
+      voice: { ...report.value.voice, status: 'DELETED', rounds: [], overall: null, retention: null },
+    }
+  } catch (e) {
+    window.alert('删除失败，请稍后重试')
+  }
+}
+
+async function changeRetention(event) {
+  const days = Number(event.target.value)
+  try {
+    const info = await request.post('/interview/' + report.value.sessionId + '/voice-retention', { days })
+    report.value = { ...report.value, voice: { ...report.value.voice, retention: info } }
+  } catch (e) {
+    // 失败就保持原值，别把界面改乱了
+    event.target.value = report.value?.voice?.retention?.retainDays ?? 30
+  }
+}
+
+async function loadVoiceAudio() {
+  for (const item of voiceRounds.value) {
+    if (!item.audioId || voiceAudio.value[item.roundNo]) continue
+    try {
+      const token = localStorage.getItem('token') || ''
+      const res = await fetch(getApiBase() + '/interview/audio/' + item.audioId, {
+        headers: token ? { Authorization: 'Bearer ' + token } : {},
+      })
+      if (!res.ok) continue
+      const blob = await res.blob()
+      voiceAudio.value = { ...voiceAudio.value, [item.roundNo]: URL.createObjectURL(blob) }
+    } catch (e) { /* 单题失败不影响其他题 */ }
+  }
+}
 
 // 将平铺消息按题目轮次分组
 const qaRounds = computed(() => {
@@ -347,18 +433,19 @@ const qaRounds = computed(() => {
         questionType: msg.questionType,
         question: msg,
         mainAnswer: null,
-        followup: null,
-        followupAnswer: null,
+        followups: [],
+        followupAnswers: [],
         hasFollowup: false
       }
       rounds.push(cur)
     } else if (cur) {
       if (msg.role === 'INTERVIEWER' && msg.msgType === 'FOLLOWUP') {
-        cur.followup = msg
+        cur.followups.push(msg)
         cur.hasFollowup = true
       } else if (msg.role === 'CANDIDATE' && msg.msgType === 'ANSWER') {
-        if (cur.followup && !cur.followupAnswer) {
-          cur.followupAnswer = msg
+        // 多层追问：一问一答按顺序对齐，第一段回答仍是主问回答
+        if (cur.followups.length && cur.followupAnswers.length < cur.followups.length) {
+          cur.followupAnswers.push(msg)
         } else if (!cur.mainAnswer) {
           cur.mainAnswer = msg
         }
@@ -504,6 +591,7 @@ const loadReport = async (reportId) => {
         qaLoading.value = false
       }
     }
+    loadVoiceAudio()
     await nextTick()
     renderRadar()
     window.addEventListener('resize', resizeChart)
@@ -794,6 +882,17 @@ onBeforeUnmount(() => {
 }
 
 /* 折叠项悬浮效果 */
+.voice-summary{display:flex;align-items:baseline;gap:14px;margin:10px 0 14px;padding:10px 14px;background:var(--surface-soft);border:1px solid var(--neutral-200);border-radius:10px;font-size:13px;color:var(--neutral-600)}
+.voice-summary strong{color:var(--neutral-800);font-weight:700}
+.voice-summary em{margin-left:auto;font-style:normal;font-size:12px;color:var(--neutral-500)}
+.voice-retain{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--neutral-500)}
+.voice-retain select{height:28px;padding:0 8px;border-radius:8px;border:1px solid var(--neutral-300);background:var(--surface-elevated);color:var(--neutral-700);font-size:12px}
+.voice-expire{font-size:12px;color:var(--neutral-500)}
+.voice-delete{padding:4px 10px;border-radius:8px;border:1px solid var(--color-error-bg);background:transparent;color:var(--color-error);font-size:12px;cursor:pointer}
+.voice-delete:hover{background:var(--color-error-bg)}
+.round-voice{margin-top:10px;padding-top:10px;border-top:1px dashed var(--neutral-200)}
+.round-voice audio{width:100%;height:36px;margin-top:6px}
+.round-voice small{display:block;margin-top:6px;color:var(--neutral-500);font-size:12px}
 .qa-rounds :deep(.el-collapse-item__header) {
   cursor: pointer;
   padding: 12px 16px;

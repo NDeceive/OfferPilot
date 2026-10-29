@@ -306,7 +306,7 @@ onUnmounted(() => {
   left: 0;
   right: 0;
   height: var(--nav-height);
-  background: rgba(250, 250, 250, 0.82);
+  background: color-mix(in srgb, var(--surface-primary) 82%, transparent);
   backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
   border-bottom: 1px solid var(--neutral-200);
@@ -652,16 +652,16 @@ onUnmounted(() => {
 .enterprise-shell .brand-en { font-size:12px;font-weight:600;letter-spacing:.08em;color:var(--neutral-500); }
 
 /* Teacher surface overrides only; student layout remains unchanged. */
-.teacher-shell .topnav { background:#fff;backdrop-filter:none; }
+.teacher-shell .topnav { background:var(--surface-elevated);backdrop-filter:none; }
 .teacher-shell .topnav-inner { max-width:1920px;padding-inline:clamp(28px,3.75vw,72px); }
-.teacher-shell .main-content { max-width:none;padding-inline:clamp(28px,3.75vw,72px);background:#f8f9f8; }
+.teacher-shell .main-content { max-width:none;padding-inline:clamp(28px,3.75vw,72px);background:var(--surface-soft); }
 .teacher-shell .nav-links { gap:clamp(18px,2.7vw,48px); }
 .teacher-shell .nav-link { font-size:15px; }
 .teacher-shell .brand-cn { font-size:22px; }
 .teacher-shell .brand-en { font-size:12px; }
-.teacher-shell .nav-link.active { background:#e1f3e9;color:#087f60; }
+.teacher-shell .nav-link.active { background:var(--surface-soft);color:#087f60; }
 .teacher-shell .nav-link.active::after { content:none; }
-.class-insights-shell .main-content{background:#fff}
-.training-task-shell .main-content{background:#fff}
-.teacher-shell .nav-link:hover{background:#f0f7f3;color:#087f60}
+.class-insights-shell .main-content{background:var(--surface-elevated)}
+.training-task-shell .main-content{background:var(--surface-elevated)}
+.teacher-shell .nav-link:hover{background:var(--surface-soft);color:#087f60}
 </style>

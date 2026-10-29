@@ -59,6 +59,10 @@ public class ReportService {
     private final JobPositionMapper jobMapper;
     private final InterviewModuleScoreMapper moduleScoreMapper;
     private final ScoreModuleMapper scoreModuleMapper;
+    private final FollowupScoreCalculator followupScoreCalculator;
+    private final VoiceAnalysisService voiceAnalysisService;
+    private final AnswerAudioService answerAudioService;
+    private final VoiceRetentionService voiceRetentionService;
 
     private static final ObjectMapper JSON = new ObjectMapper();
 
@@ -118,7 +122,7 @@ public class ReportService {
         scores.put(DIM_PROJECT, clamp(scoreProject(m).doubleValue() * quality));
         scores.put(DIM_LOGIC, clamp(scoreLogic(m).doubleValue() * quality));
         scores.put(DIM_MATCH, clamp(scoreMatch(m).doubleValue() * quality));
-        scores.put(DIM_FOLLOWUP, clamp(scoreFollowup(m).doubleValue() * quality));
+        scores.put(DIM_FOLLOWUP, clamp(followupScoreCalculator.score(session.getId(), messages) * quality));
 
         BigDecimal total = weightedTotal(scores);
 
@@ -224,6 +228,7 @@ public class ReportService {
         resp.setSuggestions(fromJson(report.getSuggestions()));
         resp.setWeakTags(report.getWeakTags());
         resp.setDimensions(dimViews);
+        resp.setVoice(voiceSummary(report.getSessionId()));
 
         // 评分系统改造：加载模块评分明细
         resp.setOverallMatchScore(report.getOverallMatchScore());
@@ -787,6 +792,41 @@ public class ReportService {
             log.warn("报告文本序列化失败", e);
             return "[]";
         }
+    }
+
+    /** 报告页要的语音数据：状态 + 逐题指标 + 音频 id */
+    private java.util.Map<String,Object> voiceSummary(Long sessionId) {
+        java.util.Map<String,Object> out = new java.util.LinkedHashMap<>();
+        try {
+            com.zhimian.entity.InterviewVoiceSession state = voiceAnalysisService.sessionState(sessionId);
+            out.put("status", state == null || state.getStatus() == null ? "DISABLED" : state.getStatus());
+            out.put("failureReason", state == null ? null : state.getFailureReason());
+            double overall = voiceAnalysisService.overallScore(sessionId);
+            out.put("overall", overall < 0 ? null : Math.round(overall * 1000) / 10.0);
+
+            java.util.Map<Integer, Long> audioIds = new java.util.HashMap<>();
+            for (com.zhimian.entity.InterviewAnswerAudio a : answerAudioService.listBySession(sessionId)) {
+                if ("OK".equals(a.getStatus())) audioIds.put(a.getRoundNo(), a.getId());
+            }
+            java.util.List<java.util.Map<String,Object>> rounds = new java.util.ArrayList<>();
+            for (com.zhimian.entity.InterviewVoiceAnalysis r : voiceAnalysisService.results(sessionId)) {
+                java.util.Map<String,Object> item = new java.util.LinkedHashMap<>();
+                item.put("roundNo", r.getRoundNo());
+                item.put("audioId", audioIds.get(r.getRoundNo()));
+                item.put("fluency", r.getFluency());
+                item.put("volume", r.getVolumeScore());
+                item.put("confidence", r.getConfidenceEst());
+                item.put("metrics", r.getMetricsJson());
+                rounds.add(item);
+            }
+            out.put("rounds", rounds);
+            out.put("retention", voiceRetentionService.info(sessionId));
+        } catch (Exception e) {
+            log.warn("语音摘要读取失败 sessionId={}, err={}", sessionId, e.getMessage());
+            out.put("status", "FAILED");
+            out.put("rounds", java.util.List.of());
+        }
+        return out;
     }
 
     private List<String> fromJson(String json) {

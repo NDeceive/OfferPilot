@@ -233,8 +233,14 @@ public class DashboardService {
 
     private static long actualDuration(InterviewSession session) {
         if (session.getStartTime() == null) return 0;
-        LocalDateTime end = session.getEndTime() == null ? LocalDateTime.now() : session.getEndTime();
-        return Math.max(0, Duration.between(session.getStartTime(), end).getSeconds());
+        boolean ongoing = session.getEndTime() == null;
+        LocalDateTime end = ongoing ? LocalDateTime.now() : session.getEndTime();
+        long seconds = Math.max(0, Duration.between(session.getStartTime(), end).getSeconds());
+        // 没结束的会话别按“现在”一直涨：按本场选的时长封顶
+        if (ongoing && session.getDurationSeconds() != null && session.getDurationSeconds() > 0) {
+            seconds = Math.min(seconds, session.getDurationSeconds());
+        }
+        return seconds;
     }
 
     private static double round1(double value) {

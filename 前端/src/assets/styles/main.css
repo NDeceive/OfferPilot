@@ -45,6 +45,7 @@
   --surface-mint: #f3faf7;
   --surface-elevated: #ffffff;
   --surface-sunken: #f4f4f5;
+  --surface-soft: #f2f4f2;
   --surface-overlay: rgba(9, 9, 11, 0.5);
 
   /* Typography */
@@ -286,3 +287,84 @@ img {
   background: var(--accent-200);
   color: var(--accent-900);
 }
+
+/* ============================================
+   Dark Theme
+   只覆盖设计令牌，组件按 var() 自动跟随。
+   ============================================ */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  /* Emerald 强调色：深色下整体提亮，保证可读性 */
+  --accent-50: #06231a;
+  --accent-100: #0a3628;
+  --accent-200: #0f4c39;
+  --accent-300: #14614a;
+  --accent-400: #22c58f;
+  --accent-500: #2dd4a0;
+  --accent-600: #34d399;
+  --accent-700: #6ee7b7;
+  --accent-800: #a7f3d0;
+  --accent-900: #d1fae5;
+
+  /* Zinc 中性色：整条色阶翻转 */
+  --neutral-50: #17181c;
+  --neutral-100: #1e1f24;
+  --neutral-200: #2a2c33;
+  --neutral-300: #3a3d46;
+  --neutral-400: #6b6f7b;
+  --neutral-500: #9aa0ac;
+  --neutral-600: #b6bcc7;
+  --neutral-700: #d0d5dd;
+  --neutral-800: #e6e9ef;
+  --neutral-900: #f5f7fa;
+  --neutral-950: #ffffff;
+
+  /* 语义色 */
+  --color-success: #2dd4a0;
+  --color-success-bg: #0b2b22;
+  --color-warning: #fbbf24;
+  --color-warning-bg: #2b2210;
+  --color-error: #f87171;
+  --color-error-bg: #2b1416;
+  --color-info: #60a5fa;
+  --color-info-bg: #10203a;
+
+  /* 表面 */
+  --surface-primary: #0e1013;
+  --surface-mint: #101a16;
+  --surface-elevated: #171a1f;
+  --surface-sunken: #0a0c0f;
+  --surface-soft: #1b1e23;
+  --surface-overlay: rgba(0, 0, 0, 0.68);
+
+  /* 阴影：深色下用更实的黑 */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5), 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 24px 64px rgba(0, 0, 0, 0.55);
+  --shadow-accent: 0 3px 10px rgba(0, 0, 0, 0.4);
+  --shadow-accent-lg: 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+
+:root[data-theme='dark'] body {
+  background: var(--surface-primary);
+  color: var(--neutral-800);
+}
+
+:root[data-theme='dark'] ::selection {
+  background: var(--accent-200);
+  color: var(--accent-900);
+}
+
+:root[data-theme='dark'] ::-webkit-scrollbar-thumb {
+  background: var(--neutral-300);
+}
+
+/* 主题切换时给背景与文字一点过渡，避免硬跳 */
+body {
+  transition: background-color var(--duration-normal) var(--ease-out-expo),
+              color var(--duration-normal) var(--ease-out-expo);
+}
+

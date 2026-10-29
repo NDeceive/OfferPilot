@@ -87,9 +87,51 @@ const statusText = computed(() => {
   return '点击开启麦克风'
 })
 
+// 浏览器自带语音识别：能用就先用它，零部署、不出网、不花额度
+const speechSupported = typeof window !== 'undefined'
+  && !!(window.SpeechRecognition || window.webkitSpeechRecognition)
+let recognizer = null
+let speechDraft = ''
+
+function startSpeech() {
+  if (!speechSupported || props.paused) return
+  const Ctor = window.SpeechRecognition || window.webkitSpeechRecognition
+  stopSpeech()
+  speechDraft = ''
+  recognizer = new Ctor()
+  recognizer.lang = 'zh-CN'
+  recognizer.continuous = true
+  recognizer.interimResults = false
+  recognizer.onresult = (event) => {
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      if (event.results[i].isFinal) speechDraft += event.results[i][0].transcript
+    }
+  }
+  recognizer.onerror = () => { recognizer = null }  // 出错就退回上传识别
+  try { recognizer.start() } catch (e) { recognizer = null }
+}
+
+function stopSpeech() {
+  if (!recognizer) return
+  try { recognizer.stop() } catch (e) { /* 已经停了 */ }
+  recognizer = null
+}
+
+watch(() => isMicOn.value, (on) => { on ? startSpeech() : stopSpeech() })
+watch(() => props.paused, (p) => { p ? stopSpeech() : (isMicOn.value && startSpeech()) })
+
 function queueTranscription(blob, duration) {
   if (!props.sessionId || props.paused) return
   const currentGeneration = generation
+  if (speechSupported) {
+    const text = speechDraft.trim()
+    speechDraft = ''
+    if (currentGeneration === generation) {
+      if (text) emit('transcript', text)
+      else recognitionError.value = '没有识别到内容，靠近麦克风再说一遍'
+    }
+    return
+  }
   pendingCount.value++
   emit('processing', true)
   recognitionError.value = ''

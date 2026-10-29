@@ -54,6 +54,7 @@ public class TeacherDashboardService {
     private final InterviewReportMapper reportMapper;
     private final JobPositionMapper jobPositionMapper;
     private final InterviewFollowupRecordMapper followupRecordMapper;
+    private final com.zhimian.mapper.InterviewFollowupChainMapper followupChainMapper;
     private final TeachingService teachingService;
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -85,12 +86,16 @@ public class TeacherDashboardService {
         Set<Long> validReportIds=sessionIds.isEmpty()?Set.of():validReportIds();
         List<InterviewFollowupRecord> followups=sessionIds.isEmpty()?List.of():followupRecordMapper.selectList(
                 new LambdaQueryWrapper<InterviewFollowupRecord>().in(InterviewFollowupRecord::getSessionId,sessionIds));
+        List<com.zhimian.entity.InterviewFollowupChain> chains=sessionIds.isEmpty()?List.of():followupChainMapper.selectList(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.zhimian.entity.InterviewFollowupChain>()
+                        .in(com.zhimian.entity.InterviewFollowupChain::getSessionId, sessionIds)
+                        .eq(com.zhimian.entity.InterviewFollowupChain::getGate, "ASK"));
         List<Long> jobIds=sessions.stream().map(InterviewSession::getJobId).filter(java.util.Objects::nonNull).distinct().toList();
         List<JobPosition> jobs=jobIds.isEmpty()?List.of():jobPositionMapper.selectBatchIds(jobIds);
-        List<TeacherWeaknessItem> weaknesses=buildWeaknessDistribution(followups);
+        List<TeacherWeaknessItem> weaknesses=buildWeaknessDistribution(followups, chains);
 
         TeacherDashboardOverviewResponse resp = new TeacherDashboardOverviewResponse();
-        resp.setSummary(buildSummary(students, reports, validReportIds, followups));
+        resp.setSummary(buildSummary(students, reports, validReportIds, followups, chains));
         resp.setTrainingTrend(buildTrend(sessions));
         resp.setWeaknessDistribution(weaknesses);
         resp.setStudentTrainingList(buildStudentList(students, sessions, reports, jobs, validReportIds));
@@ -107,7 +112,8 @@ public class TeacherDashboardService {
     private TeacherDashboardSummary buildSummary(List<SysUser> students,
                                                  List<InterviewReport> reports,
                                                  Set<Long> validReportIds,
-                                                 List<InterviewFollowupRecord> followups) {
+                                                 List<InterviewFollowupRecord> followups,
+                                                 List<com.zhimian.entity.InterviewFollowupChain> chains) {
         Set<Long> studentIds = new HashSet<>();
         for (SysUser s : students) {
             studentIds.add(s.getId());
@@ -133,8 +139,10 @@ public class TeacherDashboardService {
             }
         }
 
-        long aiCount = followups.stream().filter(r -> "AI".equals(r.getSource())).count();
-        long ruleCount = followups.stream().filter(r -> "RULE".equals(r.getSource())).count();
+        long aiCount = followups.stream().filter(r -> "AI".equals(r.getSource())).count()
+                + chains.stream().filter(c -> "AI".equals(c.getSource())).count();
+        long ruleCount = followups.stream().filter(r -> "RULE".equals(r.getSource())).count()
+                + chains.stream().filter(c -> "RULE".equals(c.getSource())).count();
 
         TeacherDashboardSummary summary = new TeacherDashboardSummary();
         summary.setStudentTotal(studentTotal);
@@ -196,7 +204,8 @@ public class TeacherDashboardService {
      * 现有数据没有与这四类一一对应的字段，因此采用关键词映射做近似还原；
      * 当没有任何可归类的记录时返回空列表。
      */
-    private List<TeacherWeaknessItem> buildWeaknessDistribution(List<InterviewFollowupRecord> records) {
+    private List<TeacherWeaknessItem> buildWeaknessDistribution(List<InterviewFollowupRecord> records,
+                                                               List<com.zhimian.entity.InterviewFollowupChain> chains) {
 
         Map<String, Integer> counts = new LinkedHashMap<>();
         for (String name : WEAKNESS_NAMES) {
@@ -208,6 +217,17 @@ public class TeacherDashboardService {
             String text = ((r.getTriggerReason() == null ? "" : r.getTriggerReason()) + " "
                     + (r.getAbilityTag() == null ? "" : r.getAbilityTag()));
             String bucket = classifyWeakness(text);
+            if (bucket != null) {
+                counts.merge(bucket, 1, Integer::sum);
+                total++;
+            }
+        }
+
+        // 老表只记首层，二三层从追问链补进来，避免薄弱项被低估
+        for (com.zhimian.entity.InterviewFollowupChain c : chains) {
+            if (c.getLayerNo() != null && c.getLayerNo() < 2) continue;
+            String bucket = classifyWeakness(c.getReason());
+            if (bucket == null) bucket = bucketOfDimension(c.getDimension());
             if (bucket != null) {
                 counts.merge(bucket, 1, Integer::sum);
                 total++;
@@ -228,6 +248,17 @@ public class TeacherDashboardService {
             list.add(item);
         }
         return list;
+    }
+
+    /** 追问方向落到四类薄弱项：机制/边界/权衡算技术，澄清/纠错算表达，迁移算逻辑。 */
+    private String bucketOfDimension(String dimension) {
+        if (dimension == null) return null;
+        return switch (dimension.toUpperCase()) {
+            case "MECHANISM", "BOUNDARY", "TRADEOFF" -> W_TECH;
+            case "CLARIFY", "CORRECT" -> W_PROJECT;
+            case "TRANSFER" -> W_LOGIC;
+            default -> null;
+        };
     }
 
     /** 关键词归类到四类薄弱项之一；无法归类返回 null。 */

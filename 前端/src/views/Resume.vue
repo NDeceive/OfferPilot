@@ -269,7 +269,7 @@ onMounted(async () => {
 
 .context-strip div {
   padding: 16px 18px;
-  background: rgba(255, 255, 255, 0.86);
+  background: color-mix(in srgb, var(--surface-elevated) 86%, transparent);
   border: 1px solid rgba(220, 230, 242, 0.88);
   border-radius: var(--radius);
   box-shadow: var(--shadow-sm);
@@ -434,7 +434,7 @@ onMounted(async () => {
   grid-template-columns: 30px 1fr;
   gap: 10px;
   padding: 12px;
-  background: rgba(248, 251, 255, 0.95);
+  background: color-mix(in srgb, var(--surface-elevated) 95%, transparent);
   border: 1px solid rgba(220, 230, 242, 0.9);
   border-radius: var(--radius);
 }
@@ -464,7 +464,7 @@ onMounted(async () => {
   left: 0;
   z-index: 15;
   padding: 14px 24px;
-  background: rgba(255, 255, 255, 0.9);
+  background: color-mix(in srgb, var(--surface-elevated) 90%, transparent);
   border-top: 1px solid rgba(220, 230, 242, 0.95);
   box-shadow: 0 -12px 28px rgba(37, 99, 235, 0.08);
   backdrop-filter: blur(14px);

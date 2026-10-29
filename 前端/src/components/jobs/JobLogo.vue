@@ -138,7 +138,7 @@ const officialSrc = computed(() => officialIcons[props.iconKey] || '')
   place-items: center;
   flex: 0 0 auto;
   border-radius: 16px;
-  background: #f2f7f4;
+  background: var(--surface-soft);
   color: #235c4b;
 }
 
@@ -161,11 +161,11 @@ const officialSrc = computed(() => officialIcons[props.iconKey] || '')
   stroke: #18a875;
 }
 
-.job-logo--blue { background: #eef5ff; color: #315f9f; }
-.job-logo--cyan { background: #edf9fa; color: #267781; }
-.job-logo--violet { background: #f5f0ff; color: #6952a4; }
-.job-logo--orange { background: #fff5e8; color: #9b632c; }
-.job-logo--amber { background: #fff7e6; color: #9a6a20; }
-.job-logo--green { background: #eef8f1; color: #33704c; }
-.job-logo--neutral { background: #f2f3f4; color: #25282b; }
+.job-logo--blue { background: var(--surface-soft); color: #315f9f; }
+.job-logo--cyan { background: var(--surface-soft); color: #267781; }
+.job-logo--violet { background: var(--surface-soft); color: #6952a4; }
+.job-logo--orange { background: var(--surface-soft); color: #9b632c; }
+.job-logo--amber { background: var(--surface-soft); color: #9a6a20; }
+.job-logo--green { background: var(--surface-soft); color: #33704c; }
+.job-logo--neutral { background: var(--surface-soft); color: #25282b; }
 </style>

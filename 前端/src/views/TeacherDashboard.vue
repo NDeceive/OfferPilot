@@ -499,7 +499,7 @@ onBeforeUnmount(() => {
   flex-direction: column;
   gap: 16px;
   padding: 24px;
-  background: #fff;
+  background: var(--surface-elevated);
   border: 1px solid rgba(215, 225, 241, 0.92);
   border-radius: 16px;
   box-shadow: 0 8px 24px rgba(35, 83, 149, 0.06);
@@ -576,7 +576,7 @@ onBeforeUnmount(() => {
 
 .weakness-bar {
   height: 12px;
-  background: #f0f3f8;
+  background: var(--surface-soft);
   border-radius: 999px;
   overflow: hidden;
 }
@@ -598,7 +598,7 @@ onBeforeUnmount(() => {
   flex-direction: column;
   gap: 16px;
   padding: 24px;
-  background: #fff;
+  background: var(--surface-elevated);
   border: 1px solid rgba(215, 225, 241, 0.92);
   border-radius: 16px;
   box-shadow: 0 8px 24px rgba(35, 83, 149, 0.06);
