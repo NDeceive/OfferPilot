@@ -2725,8 +2725,77 @@ function returnToPreparation(useVersion = false) {
     transition: none !important;
   }
 }
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .resume-ai-status {
+    background: #f1faf6
+}
+:root:not([data-theme="dark"]) .resume-ai-status details p {
+    background: white
+}
+:root:not([data-theme="dark"]) .panel {
+    background: white
+}
+:root:not([data-theme="dark"]) .quiet {
+    background: white
+}
+:root:not([data-theme="dark"]) .quiet:hover:not(:disabled) {
+    background: #f1faf6
+}
+:root:not([data-theme="dark"]) .file-source {
+    background: #f8faf9
+}
+:root:not([data-theme="dark"]) .info {
+    background: #f5f8fa
+}
+:root:not([data-theme="dark"]) .more-details summary small {
+    background: #eaf7f0
+}
+:root:not([data-theme="dark"]) .document-symbol {
+    background: #f3f8fb
+}
+:root:not([data-theme="dark"]) .status {
+    background: #fff7e9
+}
+:root:not([data-theme="dark"]) .status.confirmed {
+    background: #e6f8ee
+}
+:root:not([data-theme="dark"]) .section-tabs {
+    background: #f5f8f7
+}
+:root:not([data-theme="dark"]) .section-tabs button.active {
+    background: white
+}
+:root:not([data-theme="dark"]) .version-card {
+    background: white
+}
+:root:not([data-theme="dark"]) .version-card.active {
+    background: #f1fbf6
+}
+:root:not([data-theme="dark"]) .document-canvas {
+    background: #eef3f1
+}
+:root:not([data-theme="dark"]) .a4-paper {
+    background: white
+}
+:root:not([data-theme="dark"]) .notice {
+    background: #fff8e6
+}
+:root:not([data-theme="dark"]) .notice--error {
+    background: #fff0ee
+}
+:root:not([data-theme="dark"]) .review-dialog {
+    background: white
+}
 </style>
 
 <style scoped>
 .analysis-dialog{margin:auto;width:min(1100px,calc(100vw - 32px));max-height:90dvh;border:1px solid #dce7e1;border-radius:12px;padding:24px;overflow:auto}.analysis-dialog::backdrop{background:rgba(18,37,28,.32)}.analysis-close{display:block;margin:0 0 16px auto}.review-dialog pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:220px;overflow:auto;background:var(--surface-soft);padding:12px;font:inherit}@media(max-width:760px){.analysis-dialog{padding:16px}}
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .review-dialog pre {
+    background: #f5f8f6
+}
 </style>

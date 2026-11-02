@@ -1,4 +1,4 @@
-﻿param([switch]$SmokeTest)
+﻿param([switch]$SmokeTest, [switch]$NoBrowser, [switch]$ExternalServiceStarted)
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
@@ -192,8 +192,8 @@ try {
     if (-not (Test-WebReady "$url/api/dashboard/overview" -Backend)) { throw '网页已启动，但无法连接后端。请查看启动日志。' }
     Write-Host "网页与已启用的服务均已就绪：$url" -ForegroundColor Green
     if (-not $SmokeTest) {
-        Start-Process $url
-        if ($started.Count -gt 0) {
+        if (-not $NoBrowser) { Start-Process $url }
+        if ($started.Count -gt 0 -or $ExternalServiceStarted) {
             Write-Host '使用期间请保留此窗口。'
             Read-Host '结束使用时按回车，停止本次启动的服务' | Out-Null
         }

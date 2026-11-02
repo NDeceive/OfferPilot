@@ -499,4 +499,16 @@ onMounted(async () => {
     width: 100%;
   }
 }
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .context-strip div {
+    background: rgba(255, 255, 255, 0.86)
+}
+:root:not([data-theme="dark"]) .project-item {
+    background: rgba(248, 251, 255, 0.95)
+}
+:root:not([data-theme="dark"]) .action-bar {
+    background: rgba(255, 255, 255, 0.9)
+}
 </style>

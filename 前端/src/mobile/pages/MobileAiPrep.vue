@@ -1050,4 +1050,28 @@ onUnmounted(() => {
 @media (prefers-reduced-motion: reduce) {
   .mdots i, .mcaret { animation: none; }
 }
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .mchat__bar {
+    background: rgba(255, 255, 255, .94)
+}
+:root:not([data-theme="dark"]) .mconfirm__no {
+    background: rgba(255,255,255,.8)
+}
+:root:not([data-theme="dark"]) .mjob.is-off {
+    background: #f4f4f1
+}
+:root:not([data-theme="dark"]) .mskill {
+    background: rgba(255,255,255,.8)
+}
+:root:not([data-theme="dark"]) .mchat__composer {
+    background: rgba(255, 255, 255, .96)
+}
+:root:not([data-theme="dark"]) .mchat__composer input {
+    background: #f2f4f0
+}
+:root:not([data-theme="dark"]) .mchat__composer input:focus {
+    background: #fff
+}
 </style>

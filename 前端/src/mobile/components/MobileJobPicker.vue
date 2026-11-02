@@ -162,4 +162,13 @@ const readyCount = computed(() => list.value.filter(isReadyJob).length)
 .mjob-card__mark { flex: 0 0 auto; color: var(--m-text-tertiary); font-size: 17px; font-weight: 700; }
 .mjob-card.is-selected .mjob-card__mark { color: var(--m-primary); font-size: 19px; }
 .mjob-card.is-off .mjob-card__mark { padding: 3px 9px; background: var(--m-border); border-radius: 999px; font-size: 11px; }
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .mjob-card.is-off {
+    background: #f5f6f3
+}
+:root:not([data-theme="dark"]) .mjob-card.is-selected .mjob-card__tags em {
+    background: rgba(255,255,255,.75)
+}
 </style>

@@ -12,6 +12,7 @@ import java.util.List;
  */
 @Data
 public class ReportDetailResponse {
+    private java.util.Map<String,Object> interviewPlan;
     private Long reportId;
     private Long sessionId;
     private java.util.Map<String, Object> expressions;

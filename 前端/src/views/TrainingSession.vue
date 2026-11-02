@@ -373,4 +373,51 @@ onBeforeUnmount(() => { disposed = true; capturePosition(); if (questions.value.
 @media(max-width:600px){.practice-page{width:calc(100% - 20px)}.practice-header{gap:8px;flex-wrap:wrap}.heading h1{font-size:18px}.heading p{font-size:12px}.practice-header>button:last-child{padding:8px;font-size:12px}.progress{width:100%;display:flex;justify-content:space-between;order:4}.question-content{padding:16px 18px}.answer-editor textarea{padding:18px}.practice-footer{gap:6px;flex-wrap:wrap}.practice-footer>button{font-size:12px;padding:6px 8px}.practice-footer nav{gap:4px}.practice-footer nav button{padding:6px 8px;font-size:12px}.answer-actions{width:100%;justify-content:flex-end}.answer-actions .primary{min-width:120px}.answer-toolbar{padding:4px 10px}.answer-toolbar strong{font-size:13px}}
 .objective-prompt{display:none}
 @media(max-width:1050px){.objective-prompt{display:block;clear:both;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.7;margin:0 0 20px}}
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .objective-options label.selected {
+    background: #edf8f2
+}
+:root:not([data-theme="dark"]) .objective-options:not(:disabled) label:hover {
+    background: #f1f6f3
+}
+:root:not([data-theme="dark"]) .practice-page button {
+    background: #fff
+}
+:root:not([data-theme="dark"]) .practice-page button:hover:not(:disabled) {
+    background: #edf8f2
+}
+:root:not([data-theme="dark"]) .question-pane, :root:not([data-theme="dark"]) .answer-pane {
+    background: white
+}
+:root:not([data-theme="dark"]) .question-meta>span, :root:not([data-theme="dark"]) .tags span {
+    background: #f1f6f3
+}
+:root:not([data-theme="dark"]) .practice-page pre {
+    background: #f4f7f5
+}
+:root:not([data-theme="dark"]) .answer-editor textarea {
+    background: white
+}
+:root:not([data-theme="dark"]) .result-resizer {
+    background: #f3f7f4
+}
+:root:not([data-theme="dark"]) .result-resizer:hover {
+    background: #d4eddf
+}
+:root:not([data-theme="dark"]) .save-error {
+    background: #fff0ee
+}
+:root:not([data-theme="dark"]) .directory-item[aria-current=step] {
+    background: #e9f8ef
+}
+:root:not([data-theme="dark"]) .compact-height .practice-footer {
+    background: #f8faf9
+}
+@media (max-width:1050px) {
+    :root:not([data-theme="dark"]) .mobile-tabs button[aria-pressed=true] {
+        background: #e9f8ef
+    }
+}
 </style>

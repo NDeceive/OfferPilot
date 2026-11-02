@@ -61,3 +61,72 @@
 
 .training-dialog.teacher-drawer-overlay.centered-modal .teacher-drawer>header{position:static;padding:20px 24px;margin:0;top:auto;background:var(--surface-elevated)}
 @media(max-width:600px){.training-dialog.teacher-drawer-overlay.centered-modal .teacher-drawer>header{padding:18px}}
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .training-module {
+    background: #fff
+}
+:root:not([data-theme="dark"]) .training-module button, :root:not([data-theme="dark"]) .training-module .secondary, :root:not([data-theme="dark"]) .training-module .primary, :root:not([data-theme="dark"]) .training-dialog button {
+    background: #fff
+}
+:root:not([data-theme="dark"]) .training-module button:hover, :root:not([data-theme="dark"]) .training-dialog button:hover {
+    background: #f5f7f6
+}
+:root:not([data-theme="dark"]) .training-module :is(input:not([type=checkbox]):not([type=radio]),select,textarea), :root:not([data-theme="dark"]) .training-dialog :is(input:not([type=checkbox]):not([type=radio]),select,textarea) {
+    background: #fff
+}
+:root:not([data-theme="dark"]) .progress-track {
+    background: #edf1ef
+}
+:root:not([data-theme="dark"]) .lifecycle {
+    background: #f3f4f3
+}
+:root:not([data-theme="dark"]) .lifecycle.ACTIVE {
+    background: #effaf5
+}
+:root:not([data-theme="dark"]) .lifecycle.SCHEDULED {
+    background: #faf5ed
+}
+:root:not([data-theme="dark"]) .error-message, :root:not([data-theme="dark"]) .success {
+    background: #fcf4f2
+}
+:root:not([data-theme="dark"]) .success {
+    background: #f0faf6
+}
+:root:not([data-theme="dark"]) .context-note, :root:not([data-theme="dark"]) .review-banner {
+    background: #f3faf7
+}
+:root:not([data-theme="dark"]) .wizard-steps span {
+    background: #f1f3f2
+}
+:root:not([data-theme="dark"]) .wizard-steps .finished span {
+    background: #e5f6ed
+}
+:root:not([data-theme="dark"]) .selection-summary {
+    background: #f7faf8
+}
+:root:not([data-theme="dark"]) .wizard-footer {
+    background: white
+}
+:root:not([data-theme="dark"]) .training-module :is(.header-actions,.table-actions) details>div {
+    background: white
+}
+:root:not([data-theme="dark"]) .training-module th, :root:not([data-theme="dark"]) .training-dialog th {
+    background: #fafcfb
+}
+:root:not([data-theme="dark"]) .training-dialog .training-dialog-footer {
+    background: white
+}
+:root:not([data-theme="dark"]) .advanced-filters {
+    background: #fafcfb
+}
+:root:not([data-theme="dark"]) .selection-actions {
+    background: #f5faf7
+}
+:root:not([data-theme="dark"]) .training-dialog .training-dialog-body :is(input:not([type=checkbox]),select,textarea) {
+    background: white
+}
+:root:not([data-theme="dark"]) .training-dialog.teacher-drawer-overlay.centered-modal .teacher-drawer>header {
+    background: white
+}

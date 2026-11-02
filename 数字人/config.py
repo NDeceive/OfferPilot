@@ -45,6 +45,14 @@ def parse_args():
     parser.add_argument('--batch_size', type=int, default=16, help="infer batch")
     parser.add_argument('--modelres', type=int, default=192)
     parser.add_argument('--modelfile', type=str, default='')
+    parser.add_argument('--face_composite', choices=['full', 'mouth'], default='full',
+                        help='Opt-in mouth-only blending for candidate avatars')
+    parser.add_argument('--avatar_loop', choices=['mirror', 'forward'], default='mirror',
+                        help='Wav2Lip base-frame playback; forward does not reverse source motion')
+    parser.add_argument('--audio_silence_threshold', type=float, default=0,
+                        help='Optional RMS gate for quiet input chunks; zero keeps legacy behavior')
+    parser.add_argument('--video_bitrate', type=int, default=0,
+                        help='Optional WebRTC video bitrate in bits/sec; zero keeps codec defaults')
 
     # ─── 自定义动作和多形象 ────────────────────────────────────────────
     parser.add_argument('--customvideo_config', type=str, default='',
@@ -68,6 +76,8 @@ def parse_args():
                         help="web listen port")
 
     opt = parser.parse_args()
+    if opt.video_bitrate and not 500000 <= opt.video_bitrate <= 12000000:
+        parser.error('--video_bitrate must be zero or between 500000 and 12000000')
 
     # ─── 后处理 ────────────────────────────────────────────────────────
     opt.customopt = []

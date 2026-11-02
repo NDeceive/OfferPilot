@@ -13,3 +13,42 @@
 .class-detail-window .teacher-drawer button:disabled{opacity:.5;cursor:not-allowed}
 @media(max-width:600px){.class-detail-window.teacher-drawer-overlay{padding:12px}.class-detail-window .teacher-drawer{padding:20px;max-height:calc(100dvh - 24px)}}
 .class-edit-window.class-detail-window.teacher-drawer-overlay.centered-modal .teacher-drawer,.class-confirm-window.class-detail-window.teacher-drawer-overlay.centered-modal .teacher-drawer{width:min(520px,100%)}
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .cm-hero {
+    background: #edf8f2
+}
+:root:not([data-theme="dark"]) .cm-facts {
+    background: white
+}
+:root:not([data-theme="dark"]) .cm-facts button:hover {
+    background: #ecfdf5
+}
+:root:not([data-theme="dark"]) .cm-panel {
+    background: white
+}
+:root:not([data-theme="dark"]) .cm-tabs button[aria-pressed=true] {
+    background: #ecfdf5
+}
+:root:not([data-theme="dark"]) .cm-table-scroll th {
+    background: #fafafa
+}
+:root:not([data-theme="dark"]) .cm-tag {
+    background: #ecfdf5
+}
+:root:not([data-theme="dark"]) .cm-warning {
+    background: #fffbeb
+}
+:root:not([data-theme="dark"]) .cm-invite {
+    background: #f7fcf9
+}
+:root:not([data-theme="dark"]) .cm-feedback, :root:not([data-theme="dark"]) .cm-action-error {
+    background: #ecfdf5
+}
+:root:not([data-theme="dark"]) .cm-action-error {
+    background: #fef2f2
+}
+:root:not([data-theme="dark"]) .class-detail-window .teacher-drawer button.danger {
+    background: #fff
+}

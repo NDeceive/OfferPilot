@@ -34,9 +34,10 @@ public class FollowUpPromptBuilder {
                 - 只问一个问题，一句话，不超过 60 字，直接是问句，不加称呼和前缀。
                 - 若本轮回答存在事实性错误，把 errorDetected 置为 true，并针对该错误提问。
                 - 判断实质，不纠结措辞、错别字或表达格式；参考答案不是逐字对照模板。
+                - uncoveredPoints 列出整轮问答仍未覆盖、值得验证的关键点；已经覆盖完整时返回空数组，供下一层停止判断使用。
 
                 只输出以下 JSON，不加 Markdown 标记或额外说明：
-                {"followUpQuestion":"具体追问问题","dimension":"CLARIFY","reason":"选择此追问的依据","errorDetected":false}
+                {"followUpQuestion":"具体追问问题","dimension":"CLARIFY","reason":"选择此追问的依据","errorDetected":false,"uncoveredPoints":[]}
                 """.formatted(depth, direction, asked);
     }
 

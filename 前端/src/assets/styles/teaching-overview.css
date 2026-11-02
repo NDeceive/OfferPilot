@@ -106,3 +106,63 @@
 @media(min-width:701px) and (max-width:1200px){.teaching-overview .workbench-welcome .welcome-copy{max-width:100%}.teaching-overview .workbench-welcome .welcome-copy>p{max-width:65ch}.welcome-footer{max-width:560px}}
 @media(max-width:700px){.teaching-overview .workbench-welcome h2{font-size:30px}.teaching-overview .workbench-welcome .welcome-copy>p{font-size:15px}.welcome-footer{gap:12px}.welcome-status>strong{font-size:24px}}
 .backlog-filter{display:flex;align-items:center;gap:12px;font-size:14px;margin-bottom:16px}.backlog-filter select{flex:1;min-width:0}.backlog-students{max-height:580px;overflow-y:auto;overscroll-behavior:contain;padding-right:8px}.backlog-student{padding:20px 0;border-bottom:1px solid #edf1ed}.backlog-student:first-child{padding-top:8px}.backlog-student:last-child{border-bottom:0}.backlog-student-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:14px}.backlog-student-heading>a{font-weight:600;color:#27272a}.backlog-student-heading>span{padding:6px 10px;border-radius:8px;background:var(--surface-soft);font-size:13px;white-space:nowrap}.backlog-student-heading>.backlog-heavy{color:#92400e;background:var(--surface-soft)}.backlog-student>p{font-size:13px;color:#52525b;margin:12px 0}.backlog-student ul{list-style:none;padding:0;margin:0}.backlog-student li{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:8px 0;font-size:13px;line-height:1.7}.backlog-student li>a{min-width:0;color:#047857}.backlog-student li>span{flex-shrink:0;color:#52525b}.teaching-overview .backlog-late{color:#b45309}.backlog-student li>.backlog-late{color:#b45309}
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .overview-metrics {
+    background: white
+}
+:root:not([data-theme="dark"]) .overview-ability .bar-track {
+    background: #f0f3f1
+}
+:root:not([data-theme="dark"]) .overview-stack {
+    background: #f0f3f1
+}
+:root:not([data-theme="dark"]) .overview-todos {
+    background: #f3f7f4
+}
+:root:not([data-theme="dark"]) .overview-class-bar .bar-track {
+    background: #f0f3f1
+}
+:root:not([data-theme="dark"]) .overview-workbench {
+    background: white
+}
+:root:not([data-theme="dark"]) .workbench-main {
+    background: #f0faf5
+}
+:root:not([data-theme="dark"]) .teaching-overview .welcome-action {
+    background: white
+}
+:root:not([data-theme="dark"]) .welcome-action:hover {
+    background: #e6f7ef
+}
+:root:not([data-theme="dark"]) .next-task-status {
+    background: #ecfdf5
+}
+:root:not([data-theme="dark"]) .followup-symbol {
+    background: #ecfdf5
+}
+:root:not([data-theme="dark"]) .overview-task-table th {
+    background: #fafafa
+}
+:root:not([data-theme="dark"]) .attention-avatar {
+    background: #edf7f3
+}
+:root:not([data-theme="dark"]) .attention-clear {
+    background: #ecfdf5
+}
+:root:not([data-theme="dark"]) .teaching-overview .overview-filter-bar {
+    background: white
+}
+:root:not([data-theme="dark"]) .teaching-overview .overview-summary-list {
+    background: white
+}
+:root:not([data-theme="dark"]) .teaching-overview .overview-guidance {
+    background: #f8fbf9
+}
+:root:not([data-theme="dark"]) .backlog-student-heading>span {
+    background: #f4f4f5
+}
+:root:not([data-theme="dark"]) .backlog-student-heading>.backlog-heavy {
+    background: #fffbeb
+}

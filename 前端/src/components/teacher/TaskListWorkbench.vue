@@ -47,4 +47,55 @@ function date(value){if(!value)return '未设置';return new Date(/[Z+]/.test(va
 @media(max-width:600px){.task-list-heading{align-items:flex-start;flex-wrap:wrap;gap:12px}.task-list-heading h2{font-size:25px}.task-class-cover{padding:22px}.task-class-cover h3{font-size:20px}.task-class-cover h3,.task-class-cover p{max-width:calc(100% - 65px)}.task-class-cover .task-decoration{width:65px;height:65px;right:14px;top:40px}.task-class-body{padding:22px}.task-class-facts{gap:16px}.task-class-facts span+span{padding-left:16px}.task-class-facts b{font-size:23px}.task-workbench-tools label{min-width:0;flex:1 1 40%}.task-workbench-tools label:first-child{flex:1 1 100%}.class-task-completion{display:flex;flex-direction:column;padding:18px;gap:18px}.class-completion-heading>div{order:1}.class-completion-rate{align-self:start;order:0;font-size:34px}.class-completion-distribution{order:2;width:100%}.class-completion-heading label{order:3;width:100%}.class-task-completion>p{order:4}.class-task-completion>small{order:5}.task-entry{grid-template-columns:1fr;padding:20px;gap:14px}.task-entry-action{justify-self:start;justify-content:start}.task-decoration{width:44px;height:44px}.task-workbench-tabs button{padding:9px 12px}.task-class-bottom small{font-size:11px}}
 .class-directory-tools{display:flex;align-items:end;justify-content:space-between;gap:20px;margin:20px 0}.class-directory-tools label{display:grid;gap:7px;font-size:12px;color:#63766d;width:min(100%,380px)}.class-layout-toggle{display:flex;gap:4px;padding:4px;border:1px solid #dce6df;border-radius:9px;background:var(--surface-elevated)}.class-layout-toggle button{background:transparent;border:0;border-radius:6px;padding:9px 14px;min-height:44px;color:#63766d;white-space:nowrap}.class-layout-toggle button[aria-pressed=true]{background:var(--surface-soft);color:#087f60;font-weight:600}.task-class-grid.compact-list{grid-template-columns:1fr;gap:0;background:var(--surface-elevated);border:1px solid #e1eae4;border-radius:14px;overflow:hidden}.compact-list .task-class-entry{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);border:0;border-bottom:1px solid #edf1ee;border-radius:0;align-items:center}.compact-list .task-class-entry:last-child{border-bottom:0}.compact-list .task-class-entry:hover{background:var(--surface-soft)}.compact-list .task-class-cover{background:transparent;min-height:0;padding:20px 24px}.compact-list .task-class-cover:after,.compact-list .task-class-cover .task-decoration,.compact-list .task-class-cover p{display:none}.compact-list .task-class-cover h3{max-width:none;font-size:17px;margin:5px 0}.compact-list .task-class-body{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:20px 24px 20px 0}.compact-list .task-class-facts{margin:0;gap:16px}.compact-list .task-class-facts span+span{padding-left:16px}.compact-list .task-class-facts b{font-size:21px}.compact-list .task-class-bottom{padding:0;border:0;gap:24px}.compact-list .task-class-bottom strong{font-size:21px}.compact-list .task-class-enter{background:transparent;border:0;padding:10px 0}@media(max-width:1000px){.compact-list .task-class-entry{grid-template-columns:minmax(0,1fr)}.compact-list .task-class-body{padding:0 24px 20px}}@media(max-width:600px){.class-directory-tools{align-items:stretch;flex-direction:column;gap:12px}.class-directory-tools label{width:100%}.class-layout-toggle{align-self:start}.compact-list .task-class-body{flex-wrap:wrap;gap:18px;padding:0 18px 18px}.compact-list .task-class-cover{padding:18px}.compact-list .task-class-bottom{width:100%;justify-content:space-between}.compact-list .task-class-facts{gap:18px}}
 .compact-list .task-class-entry{grid-template-columns:minmax(180px,1fr) minmax(0,2fr);padding:14px 20px;gap:20px}.compact-list .task-class-cover{padding:0;min-height:0}.compact-list .task-class-cover h3{font-size:16px;line-height:1.5;margin:0}.compact-list .task-class-cover>span:first-child{display:block;font-size:12px;margin-top:3px}.compact-list .task-class-body{padding:0;gap:24px}.compact-list .task-class-facts{gap:24px;flex-shrink:0}.compact-list .task-class-facts span{display:flex;flex-direction:column;gap:2px;font-size:11px;line-height:1.5}.compact-list .task-class-facts span+span{border:0;padding:0}.compact-list .task-class-facts b{font-size:20px;line-height:1.4}.compact-list .task-class-bottom{gap:24px}.compact-list .task-class-bottom strong{font-size:20px;line-height:1.4}.compact-list .task-class-bottom small{font-size:11px;line-height:1.5;margin-top:2px}.compact-list .task-class-enter{background:#10b981;border:1px solid #10b981;color:white;border-radius:8px;min-height:40px;padding:8px 12px;font-size:12px;white-space:nowrap}.compact-list .task-class-entry:hover .task-class-enter{background:#059669;border-color:#059669}@media(max-width:1000px){.compact-list .task-class-entry{grid-template-columns:minmax(0,1fr);gap:12px}.compact-list .task-class-body{padding:0}.compact-list .task-class-cover h3{margin:3px 0}}@media(max-width:600px){.compact-list .task-class-entry{padding:14px 16px;gap:10px}.compact-list .task-class-body{gap:12px}.compact-list .task-class-facts{gap:24px}.compact-list .task-class-bottom{gap:12px}.compact-list .task-class-enter{min-height:44px}}
-.task-workbench .task-list-heading{margin-bottom:20px}.task-workbench .task-directory-heading{justify-content:flex-start;gap:12px}.task-workbench .task-directory-heading h3{font-size:16px}.task-workbench .task-directory-heading span{font-size:13px}.task-workbench .class-directory-tools{margin:12px 0 20px;align-items:center}.task-search-label{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}.task-workbench .class-layout-toggle button{min-height:44px;padding:6px 12px}</style>
+.task-workbench .task-list-heading{margin-bottom:20px}.task-workbench .task-directory-heading{justify-content:flex-start;gap:12px}.task-workbench .task-directory-heading h3{font-size:16px}.task-workbench .task-directory-heading span{font-size:13px}.task-workbench .class-directory-tools{margin:12px 0 20px;align-items:center}.task-search-label{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}.task-workbench .class-layout-toggle button{min-height:44px;padding:6px 12px}
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .task-class-entry {
+    background: white
+}
+:root:not([data-theme="dark"]) .task-class-cover {
+    background: #eaf7f0
+}
+:root:not([data-theme="dark"]) .class-tone-1 .task-class-cover {
+    background: #eef5fb
+}
+:root:not([data-theme="dark"]) .class-tone-2 .task-class-cover {
+    background: #fcf5eb
+}
+:root:not([data-theme="dark"]) .task-class-enter {
+    background: #f0f9f4
+}
+:root:not([data-theme="dark"]) .class-task-completion {
+    background: white
+}
+:root:not([data-theme="dark"]) .class-completion-bar {
+    background: #edf1ee
+}
+:root:not([data-theme="dark"]) .task-workbench :is(input,select) {
+    background: white
+}
+:root:not([data-theme="dark"]) .task-workbench-tabs button[aria-pressed=true] {
+    background: #e1f3e9
+}
+:root:not([data-theme="dark"]) .task-workbench-list {
+    background: white
+}
+:root:not([data-theme="dark"]) .task-entry:hover {
+    background: #fcfefd
+}
+:root:not([data-theme="dark"]) .task-workbench-empty {
+    background: white
+}
+:root:not([data-theme="dark"]) .class-layout-toggle {
+    background: white
+}
+:root:not([data-theme="dark"]) .class-layout-toggle button[aria-pressed=true] {
+    background: #e1f3e9
+}
+:root:not([data-theme="dark"]) .task-class-grid.compact-list {
+    background: white
+}
+:root:not([data-theme="dark"]) .compact-list .task-class-entry:hover {
+    background: #fcfefd
+}
+</style>

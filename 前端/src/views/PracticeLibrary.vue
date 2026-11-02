@@ -93,4 +93,55 @@ onBeforeUnmount(() => { disposed = true; requestId++ })
 @media(max-width:1100px){.record{grid-template-columns:30px minmax(0,1fr);gap:8px 14px}.record-number{grid-row:1/3}.actions{grid-column:2;gap:16px}.record{padding-block:12px}}
 @media(max-width:767px){.library-shell :deep(.mobile-pagebar){display:flex;align-items:center;justify-content:space-between;min-height:90px}.library-shell :deep(.mobile-teaching-links){display:flex;gap:16px;padding:0 20px 16px}.library-shell :deep(.mobile-teaching-links a){display:inline-flex;align-items:center;min-height:44px}.personal-practice{padding:0 0 30px}.return-link{min-height:44px;margin-bottom:8px}.library-heading{align-items:flex-start;flex-direction:column;gap:4px;margin:0 0 16px}.library-toolbar{gap:10px}.filter{gap:8px}.filter select{min-width:130px;max-width:160px}.record{padding:14px 12px;gap:8px 10px}.actions{gap:8px 16px}.pagination{gap:10px;font-size:12px}.pagination button{padding:8px 12px}.list-state{padding:24px 16px}}
 @media(prefers-reduced-motion:reduce){.personal-practice button,.tabs a{transition:none}}
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .tabs a {
+    background: white
+}
+:root:not([data-theme="dark"]) .tabs a:hover {
+    background: #f3faf7
+}
+:root:not([data-theme="dark"]) .note {
+    background: #edf7f2
+}
+:root:not([data-theme="dark"]) .record-list {
+    background: white
+}
+:root:not([data-theme="dark"]) .record:hover {
+    background: #f1faf6
+}
+:root:not([data-theme="dark"]) .record-number {
+    background: #f0f3f1
+}
+:root:not([data-theme="dark"]) .status-mark, :root:not([data-theme="dark"]) .review-mark, :root:not([data-theme="dark"]) .favorite-mark {
+    background: #f0f3f1
+}
+:root:not([data-theme="dark"]) .status-mark.ongoing {
+    background: #edf3f0
+}
+:root:not([data-theme="dark"]) .status-mark.failed, :root:not([data-theme="dark"]) .status-mark.system {
+    background: #fff0f1
+}
+:root:not([data-theme="dark"]) .status-mark.self {
+    background: #fff7e9
+}
+:root:not([data-theme="dark"]) .review-mark {
+    background: #edf3f0
+}
+:root:not([data-theme="dark"]) .record progress {
+    background: #e5ebe7
+}
+:root:not([data-theme="dark"]) .record progress::-webkit-progress-bar {
+    background: #e5ebe7
+}
+:root:not([data-theme="dark"]) .personal-practice button {
+    background: white
+}
+:root:not([data-theme="dark"]) .personal-practice button:hover {
+    background: #f3faf7
+}
+:root:not([data-theme="dark"]) .action-error {
+    background: #fff0f1
+}
 </style>

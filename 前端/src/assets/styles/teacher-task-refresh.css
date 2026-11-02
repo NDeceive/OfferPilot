@@ -6,3 +6,21 @@
 @media(max-width:380px){.training-task-shell:has(.surface-tasks) .topnav .brand-logo-image{width:110px}.training-task-shell:has(.surface-tasks) .topnav-inner{gap:8px}}
 
 .training-task-shell:has(.task-workbench){background:var(--surface-soft);min-height:100vh}.teaching-portal.surface-tasks:has(.task-workbench){max-width:1250px;margin:0 auto;padding:34px 28px 56px}.task-workbench .task-entry-name h3 a{color:#304839}.task-workbench .task-entry-name h3 a:hover{color:#087f60}@media(max-width:600px){.teaching-portal.surface-tasks:has(.task-workbench){padding:22px 18px}}
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .surface-tasks .table-scroll {
+    background: white
+}
+:root:not([data-theme="dark"]) .surface-tasks .task-form {
+    background: white
+}
+:root:not([data-theme="dark"]) .surface-tasks .live-detail {
+    background: white
+}
+:root:not([data-theme="dark"]) .surface-tasks .task-management-charts .live-panel {
+    background: white
+}
+:root:not([data-theme="dark"]) .training-task-shell:has(.task-workbench) {
+    background: #f6f8f7
+}

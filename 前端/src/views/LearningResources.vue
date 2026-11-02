@@ -234,4 +234,46 @@ async function startTraining() {
 @media(max-width:720px){.learning-page{width:calc(100vw - 24px);padding-top:12px}.page-head{align-items:start}.role-count{display:none}.context-bar{grid-template-columns:42px 1fr}.context-bar nav{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr}.context-bar nav button{grid-column:1/-1}.role-picker{grid-template-columns:1fr}.family-list{grid-template-columns:repeat(2,1fr);border-right:0}.role-grid,.topic-grid,.summary-column,.library-links,.training-options{grid-template-columns:1fr}.training-options>div{align-items:flex-start;flex-direction:column}}
 .start-button:not(:disabled):hover,.context-bar button:hover{background:var(--accent-600)}
 .start-button:focus-visible,.context-bar button:focus-visible{outline:2px solid var(--accent-700);outline-offset:3px}
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .catalog-status button {
+    background: white
+}
+:root:not([data-theme="dark"]) .role-count {
+    background: #fff
+}
+:root:not([data-theme="dark"]) .context-bar a, :root:not([data-theme="dark"]) .context-bar button {
+    background: #fff
+}
+:root:not([data-theme="dark"]) .builder-panel, :root:not([data-theme="dark"]) .summary-card, :root:not([data-theme="dark"]) .resume-card {
+    background: #fff
+}
+:root:not([data-theme="dark"]) .family-list button.active {
+    background: #eaf8f2
+}
+:root:not([data-theme="dark"]) .role-grid button, :root:not([data-theme="dark"]) .topic-grid button {
+    background: #fff
+}
+:root:not([data-theme="dark"]) .role-grid button.selected, :root:not([data-theme="dark"]) .topic-grid button.selected {
+    background: #f5fcf9
+}
+:root:not([data-theme="dark"]) .company-list button, :root:not([data-theme="dark"]) .segmented button, :root:not([data-theme="dark"]) .settings-panel button {
+    background: #fff
+}
+:root:not([data-theme="dark"]) .company-list button.selected, :root:not([data-theme="dark"]) .segmented button.active, :root:not([data-theme="dark"]) .settings-panel button.active {
+    background: #eaf8f2
+}
+:root:not([data-theme="dark"]) .training-options {
+    background: #f7faf8
+}
+:root:not([data-theme="dark"]) .summary-card em {
+    background: #fff1dd
+}
+:root:not([data-theme="dark"]) .settings-button {
+    background: #fff
+}
+:root:not([data-theme="dark"]) .library-links a {
+    background: #fff
+}
 </style>

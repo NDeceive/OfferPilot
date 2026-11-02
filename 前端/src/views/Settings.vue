@@ -1201,4 +1201,10 @@ onMounted(() => {
   .theme-options { flex-direction: column; }
   .export-row { flex-direction: column; }
 }
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .toggle-knob {
+    background: white
+}
 </style>

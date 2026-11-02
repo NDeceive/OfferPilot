@@ -5,7 +5,7 @@
     <div class="voice-footer">
       <div class="mic-copy">
         <span class="mic-status">{{ statusText }}</span>
-        <span class="voice-only-hint">语音文字显示在上方，可滚轮翻阅</span>
+        <span class="voice-only-hint">{{ recognitionMode }} · 语音文字显示在上方，可滚轮翻阅</span>
       </div>
 
       <div class="voice-actions">
@@ -44,7 +44,7 @@
 </template>
 
 <script setup>
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
 import { transcribeSpeech } from '../../api'
 import { useMicrophone } from '../../composables/useMicrophone'
 
@@ -62,6 +62,12 @@ const recognitionError = ref('')
 let uploadQueue = Promise.resolve()
 let generation = 0
 const submitRequested = ref(false)
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+const recognitionMode = SpeechRecognition ? '浏览器语音识别' : '智谱语音识别（当前浏览器不支持）'
+let recognizer = null
+let speechStop = null
+let speechStopTimer = null
+let resolveSpeechStop = null
 
 const {
   status,
@@ -71,7 +77,7 @@ const {
   isMicOn,
   isRequesting,
   toggleMicrophone,
-  muteMicrophone,
+  muteMicrophone: muteDevice,
   stopMicrophone: stopDevice,
 } = useMicrophone({ onSegment: queueTranscription, onAnswerEnd: requestAutoSubmit })
 
@@ -79,7 +85,7 @@ const errorMessage = computed(() => recognitionError.value || deviceError.value)
 const statusText = computed(() => {
   if (props.paused) return '面试已暂停，继续后可重新开启麦克风'
   if (isRequesting.value) return '正在申请麦克风权限...'
-  if (submitRequested.value && pendingCount.value > 0) return '正在等待识别完成后提交...'
+  if (submitRequested.value) return '正在等待识别完成后提交...'
   if (pendingCount.value > 0) return '正在识别语音...'
   if (isSpeaking.value) return '正在讲话，停顿 7 秒后自动提交'
   if (isMicOn.value) return '麦克风已开启，回答后停顿 7 秒自动提交'
@@ -87,58 +93,98 @@ const statusText = computed(() => {
   return '点击开启麦克风'
 })
 
-// 浏览器自带语音识别：能用就先用它，零部署、不出网、不花额度
-const speechSupported = typeof window !== 'undefined'
-  && !!(window.SpeechRecognition || window.webkitSpeechRecognition)
-let recognizer = null
-let speechDraft = ''
-
 function startSpeech() {
-  if (!speechSupported || props.paused) return
-  const Ctor = window.SpeechRecognition || window.webkitSpeechRecognition
-  stopSpeech()
-  speechDraft = ''
-  recognizer = new Ctor()
-  recognizer.lang = 'zh-CN'
-  recognizer.continuous = true
-  recognizer.interimResults = false
-  recognizer.onresult = (event) => {
+  if (!SpeechRecognition || recognizer || props.paused || recognitionError.value) return
+  const currentGeneration = generation
+  const current = new SpeechRecognition()
+  recognizer = current
+  current.lang = 'zh-CN'
+  current.continuous = true
+  current.interimResults = false
+  current.onresult = event => {
+    if (currentGeneration !== generation || recognizer !== current) return
     for (let i = event.resultIndex; i < event.results.length; i++) {
-      if (event.results[i].isFinal) speechDraft += event.results[i][0].transcript
+      if (event.results[i].isFinal && event.results[i][0].transcript.trim()) {
+        emit('transcript', event.results[i][0].transcript)
+      }
     }
   }
-  recognizer.onerror = () => { recognizer = null }  // 出错就退回上传识别
-  try { recognizer.start() } catch (e) { recognizer = null }
+  current.onerror = event => {
+    if (currentGeneration !== generation || recognizer !== current || event.error === 'no-speech') return
+    const messages = {
+      'not-allowed': '浏览器语音识别权限被拒绝，请允许麦克风权限后重新开麦。',
+      'service-not-allowed': '当前浏览器不允许语音识别，请检查浏览器设置。',
+      network: '浏览器语音识别服务连接失败，请检查网络后重新开麦。',
+      'audio-capture': '浏览器无法获取麦克风音频，请检查设备后重新开麦。',
+    }
+    recognitionError.value = messages[event.error] || '浏览器语音识别失败，请重新开麦。'
+    submitRequested.value = false
+    muteDevice({ flush: false })
+  }
+  current.onend = () => {
+    if (recognizer !== current) return
+    recognizer = null
+    clearTimeout(speechStopTimer)
+    const resolve = resolveSpeechStop
+    resolveSpeechStop = null
+    speechStop = null
+    resolve?.()
+    if (currentGeneration === generation && isMicOn.value && !recognitionError.value) startSpeech()
+  }
+  try { current.start() } catch {
+    recognizer = null
+    recognitionError.value = '浏览器语音识别启动失败，请重新开麦。'
+    muteDevice({ flush: false })
+  }
 }
 
 function stopSpeech() {
-  if (!recognizer) return
-  try { recognizer.stop() } catch (e) { /* 已经停了 */ }
-  recognizer = null
+  if (speechStop) return speechStop
+  if (!recognizer) return Promise.resolve()
+  const current = recognizer
+  speechStop = new Promise(resolve => { resolveSpeechStop = resolve })
+  const pending = speechStop
+  // stop() may deliver its final result asynchronously; wait for onend before submitting.
+  speechStopTimer = setTimeout(() => {
+    recognitionError.value = '浏览器语音识别未能及时结束，请重新开麦后再试。'
+    cancelSpeech()
+  }, 5000)
+  try { current.stop() } catch {
+    recognitionError.value = '浏览器语音识别未能正常结束，请重新开麦。'
+    cancelSpeech()
+  }
+  return pending
 }
 
-watch(() => isMicOn.value, (on) => { on ? startSpeech() : stopSpeech() })
-watch(() => props.paused, (p) => { p ? stopSpeech() : (isMicOn.value && startSpeech()) })
+function cancelSpeech() {
+  const current = recognizer
+  recognizer = null
+  clearTimeout(speechStopTimer)
+  resolveSpeechStop?.()
+  resolveSpeechStop = null
+  speechStop = null
+  try { current?.abort() } catch { /* Already disconnected. */ }
+}
+
+function muteMicrophone(options) {
+  muteDevice(options)
+  return stopSpeech()
+}
+
+watch(isMicOn, on => { if (on) startSpeech(); else stopSpeech() }, { flush: 'sync' })
 
 function queueTranscription(blob, duration) {
   if (!props.sessionId || props.paused) return
+  if (SpeechRecognition) return
   const currentGeneration = generation
-  if (speechSupported) {
-    const text = speechDraft.trim()
-    speechDraft = ''
-    if (currentGeneration === generation) {
-      if (text) emit('transcript', text)
-      else recognitionError.value = '没有识别到内容，靠近麦克风再说一遍'
-    }
-    return
-  }
   pendingCount.value++
   emit('processing', true)
-  recognitionError.value = ''
   uploadQueue = uploadQueue
     .then(async () => {
       const result = await transcribeSpeech(blob, props.sessionId, duration)
-      if (currentGeneration === generation && result?.text) emit('transcript', result.text)
+      if (currentGeneration !== generation) return
+      if (!result?.text?.trim()) throw new Error('没有识别到该段语音，请重新录音后提交。')
+      emit('transcript', result.text)
     })
     .catch((error) => {
       if (currentGeneration === generation) {
@@ -162,10 +208,20 @@ function queueTranscription(blob, duration) {
     })
 }
 
-function requestSubmit() {
-  if (props.disabled || submitRequested.value) return
+async function requestSubmit() {
+  if (props.disabled || submitRequested.value || recognitionError.value) return
+  const currentGeneration = generation
   submitRequested.value = true
-  if (isMicOn.value) muteMicrophone()
+  if (SpeechRecognition) emit('processing', true)
+  if (isMicOn.value) muteDevice()
+  if (SpeechRecognition) {
+    await stopSpeech()
+    if (currentGeneration !== generation) return
+    emit('processing', false)
+    await nextTick()
+    if (currentGeneration !== generation) return
+    if (recognitionError.value) { submitRequested.value = false; return }
+  }
   if (pendingCount.value === 0) {
     submitRequested.value = false
     if (props.transcript.trim()) emit('submit')
@@ -182,7 +238,9 @@ function requestAutoSubmit() {
   requestSubmit()
 }
 
-function handleToggleMicrophone() {
+async function handleToggleMicrophone() {
+  if (speechStop) await speechStop
+  if (props.disabled || props.paused) return
   if (!isMicOn.value) recognitionError.value = ''
   toggleMicrophone()
 }
@@ -190,6 +248,7 @@ function handleToggleMicrophone() {
 async function requestSkip() {
   if (props.disabled || props.paused) return
   generation++
+  cancelSpeech()
   submitRequested.value = false
   pendingCount.value = 0
   emit('processing', false)
@@ -199,6 +258,7 @@ async function requestSkip() {
 
 async function stopMicrophone() {
   generation++
+  cancelSpeech()
   submitRequested.value = false
   pendingCount.value = 0
   emit('processing', false)
@@ -207,6 +267,7 @@ async function stopMicrophone() {
 
 defineExpose({ stopMicrophone, muteMicrophone })
 watch(() => props.paused, paused => { if (paused) stopMicrophone() })
+onUnmounted(() => { generation++; cancelSpeech() })
 </script>
 
 <style scoped>

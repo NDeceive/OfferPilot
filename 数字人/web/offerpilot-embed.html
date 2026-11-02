@@ -317,6 +317,7 @@
                     text: payload.text,
                     type: 'echo',
                     interrupt: true,
+                    speech_id: payload.key || '',
                     sessionid: sessionId
                 })
             });
@@ -446,11 +447,34 @@
                 if (!text) {
                     return;
                 }
+                let completed = false;
                 try {
                     await speak({ key: data.key || '', text });
+                    if (data.waitForEnd && isConnected) {
+                        const deadline = Date.now() + 18000;
+                        while (isConnected && Date.now() < deadline) {
+                            await new Promise(resolve => setTimeout(resolve, 400));
+                            const response = await fetch('/is_speaking', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ sessionid: sessionId, speech_id: data.key }),
+                                signal: AbortSignal.timeout(2000)
+                            });
+                            const status = await response.json();
+                            if (status.code !== 0) break;
+                            if (status.data?.completed === true) {
+                                // Allow the receiver's jitter buffer to play the final audio packets.
+                                await new Promise(resolve => setTimeout(resolve, 1200));
+                                completed = true;
+                                break;
+                            }
+                        }
+                    }
                 } catch (error) {
                     console.error(error);
                     updateStatus('播报失败', 'error');
+                } finally {
+                    if (data.waitForEnd) notifyParent('offerpilot.embed.speechEnded', { key: data.key, completed });
                 }
             }
 

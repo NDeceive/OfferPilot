@@ -76,6 +76,25 @@ public class AnswerAudioService {
         return rows.isEmpty() ? null : rows.get(0);
     }
 
+    /** Validate the acknowledged recording before allowing the introduction to advance. */
+    public void requireValidIntroduction(long sessionId,int roundNo,Long questionId,Long audioId) {
+        var row=findByRound(sessionId,roundNo);
+        if(audioId==null || row==null || !audioId.equals(row.getId()) || !java.util.Objects.equals(questionId,row.getQuestionId()) || !"OK".equals(row.getStatus()))
+            throw new BizException("自我介绍需要录音保存成功后再提交，请重新录音");
+        try(var input=javax.sound.sampled.AudioSystem.getAudioInputStream(pathOf(row).toFile())) {
+            var format=input.getFormat();double duration=input.getFrameLength()/format.getFrameRate();
+            if(!javax.sound.sampled.AudioFormat.Encoding.PCM_SIGNED.equals(format.getEncoding()) || format.getSampleSizeInBits()!=16
+                    || format.getChannels()!=1 || format.isBigEndian() || format.getSampleRate()<8000 || format.getSampleRate()>48000
+                    || duration<0.3 || duration>600 || Files.size(pathOf(row))>20L*1024*1024)
+                throw new BizException("自我介绍录音无效，请重新录音");
+            byte[] pcm=input.readAllBytes();
+            if(pcm.length!=input.getFrameLength()*format.getFrameSize())throw new BizException("录音文件不完整，请重新录音");
+            int low=32767,high=-32768;
+            for(int i=0;i+1<pcm.length;i+=2){int sample=(short)((pcm[i]&255)|(pcm[i+1]<<8));low=Math.min(low,sample);high=Math.max(high,sample);}
+            if(high-low<4)throw new BizException("没有检测到有效录音，请检查麦克风");
+        }catch(BizException e){throw e;}catch(Exception e){throw new BizException("录音文件不存在或格式无效，请重新录音");}
+    }
+
     public List<InterviewAnswerAudio> listBySession(Long sessionId) {
         return audioMapper.selectList(new LambdaQueryWrapper<InterviewAnswerAudio>()
                 .eq(InterviewAnswerAudio::getSessionId, sessionId)

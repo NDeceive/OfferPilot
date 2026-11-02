@@ -92,4 +92,13 @@ function download(){try{const all=exportScope.value==='scope',full=exportScope.v
 </script>
 <style scoped>
 .live-analytics{padding:0;max-width:none}.live-analytics .analytics-header{margin:0 0 24px}.live-analytics .analytics-tabs button{border:0;border-bottom:2px solid transparent;border-radius:0;background:none;padding:14px 8px;min-width:0;color:#52525b}.live-analytics .analytics-tabs button.active{border-bottom-color:#10b981;color:#047857}.analytics-grid>section{background:var(--surface-elevated);border-radius:12px}.analytics-data-note{font-size:13px;padding:12px 16px;background:var(--surface-soft);margin-bottom:24px!important}.analytics-class-picker fieldset{max-width:calc(100vw - 48px)}.analysis-definitions dt{font-weight:600;margin:24px 0 8px}.analysis-definitions dd{margin:0;line-height:1.8;color:#52525b}.analytics-export-form input[type=checkbox]{min-height:20px;width:20px}.analytics-bar-row{grid-template-columns:minmax(80px,1fr) minmax(40px,2fr) auto}.analytics-bar-row>a,.analytics-bar-row>button{overflow-wrap:anywhere;min-width:0}
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .analytics-grid>section {
+    background: white
+}
+:root:not([data-theme="dark"]) .analytics-data-note {
+    background: #f0f5f1
+}
 </style>

@@ -544,4 +544,10 @@ async function openAdvice(row) {
   .found-card { flex-direction: column; align-items: stretch; }
   .meeting-row { flex-direction: column; align-items: stretch; gap: var(--space-3); }
 }
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .preview-note {
+    background: #fef7e6
+}
 </style>

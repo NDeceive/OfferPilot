@@ -195,7 +195,7 @@
 :root[data-theme='dark'] .camera-consent { color: var(--neutral-800) !important; }
 :root[data-theme='dark'] .camera-consent__icon { color: var(--neutral-600) !important; }
 :root[data-theme='dark'] .camera-consent p { color: var(--neutral-600) !important; }
-:root[data-theme='dark'] .camera-consent button { color: var(--neutral-800) !important; }
+:root[data-theme='dark'] .camera-consent button:not(.btn--primary) { color: var(--neutral-800) !important; }
 :root[data-theme='dark'] .job-logo { color: var(--neutral-600) !important; }
 :root[data-theme='dark'] .job-logo--blue { color: var(--neutral-600) !important; }
 :root[data-theme='dark'] .job-logo--cyan { color: var(--neutral-600) !important; }
@@ -226,8 +226,8 @@
 :root[data-theme='dark'] .avatar-error { color: var(--neutral-800) !important; }
 :root[data-theme='dark'] .analysis { color: var(--neutral-800) !important; }
 :root[data-theme='dark'] .analysis__eyebrow { color: var(--neutral-600) !important; }
-:root[data-theme='dark'] .analysis button { color: var(--neutral-600) !important; }
-:root[data-theme='dark'] .analysis .analysis__primary { color: #ffffff !important; background: var(--accent-600, #059669) !important; }
+:root[data-theme='dark'] .analysis button:not(.btn--primary) { color: var(--neutral-600) !important; }
+:root[data-theme='dark'] .analysis .analysis__primary:not(.btn--primary) { color: #ffffff !important; background: var(--accent-600, #059669) !important; }
 :root[data-theme='dark'] .analysis__error { color: var(--neutral-600) !important; }
 :root[data-theme='dark'] .analysis__notice--warning { color: var(--neutral-800) !important; }
 :root[data-theme='dark'] .analysis__notice--warning p { color: var(--neutral-600) !important; }

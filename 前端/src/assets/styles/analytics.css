@@ -28,3 +28,39 @@
 .live-analytics .analytics-class-popover footer button{font-size:13px;padding:8px 12px;border-radius:6px}
 .live-analytics .analytics-class-popover footer button:last-child{background:#10b981;border-color:#10b981;color:#102e22}
 @media(max-width:600px){.live-analytics .analytics-class-picker{width:100%;min-width:0}.analytics-class-popover{width:100%;max-width:none}}
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .analytics-page button, :root:not([data-theme="dark"]) .analytics-page input, :root:not([data-theme="dark"]) .analytics-page select {
+    background: white
+}
+:root:not([data-theme="dark"]) .analytics-page button:hover {
+    background: #ecfdf5
+}
+:root:not([data-theme="dark"]) .analytics-class-picker fieldset {
+    background: white
+}
+:root:not([data-theme="dark"]) .analytics-empty {
+    background: #f7faf8
+}
+:root:not([data-theme="dark"]) .analytics-page th {
+    background: #f6f9f7
+}
+:root:not([data-theme="dark"]) .analytics-track {
+    background: #eff4f1
+}
+:root:not([data-theme="dark"]) .analytics-stack {
+    background: #eff4f1
+}
+:root:not([data-theme="dark"]) .live-analytics .analytics-class-picker>summary {
+    background: white
+}
+:root:not([data-theme="dark"]) .analytics-class-popover {
+    background: white
+}
+:root:not([data-theme="dark"]) .live-analytics .analytics-class-popover fieldset {
+    background: white
+}
+:root:not([data-theme="dark"]) .live-analytics .class-picker-all {
+    background: white
+}

@@ -141,4 +141,13 @@ function remove(index) {
 .add-entry {
   justify-self: start;
 }
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .entry-editor textarea {
+    background: white
+}
+:root:not([data-theme="dark"]) .entry-editor button {
+    background: white
+}
 </style>

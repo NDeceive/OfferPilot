@@ -63,6 +63,7 @@ public class ReportService {
     private final VoiceAnalysisService voiceAnalysisService;
     private final AnswerAudioService answerAudioService;
     private final VoiceRetentionService voiceRetentionService;
+    private final InterviewPlanService plans;
 
     private static final ObjectMapper JSON = new ObjectMapper();
 
@@ -219,6 +220,11 @@ public class ReportService {
             if (session.getEndTime() != null && session.getStartTime() != null) {
                 resp.setActualDurationSeconds(
                     java.time.Duration.between(session.getStartTime(), session.getEndTime()).toSeconds());
+            }
+            if(plans.find(session.getId())!=null) {
+                int elapsed=plans.elapsedSeconds(session);
+                resp.setActualDurationSeconds((long)elapsed);
+                resp.setInterviewPlan(plans.view(session,elapsed));
             }
         }
         resp.setTotalScore(report.getTotalScore());

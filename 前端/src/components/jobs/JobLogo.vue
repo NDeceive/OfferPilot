@@ -168,4 +168,31 @@ const officialSrc = computed(() => officialIcons[props.iconKey] || '')
 .job-logo--amber { background: var(--surface-soft); color: #9a6a20; }
 .job-logo--green { background: var(--surface-soft); color: #33704c; }
 .job-logo--neutral { background: var(--surface-soft); color: #25282b; }
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .job-logo {
+    background: #f2f7f4
+}
+:root:not([data-theme="dark"]) .job-logo--blue {
+    background: #eef5ff
+}
+:root:not([data-theme="dark"]) .job-logo--cyan {
+    background: #edf9fa
+}
+:root:not([data-theme="dark"]) .job-logo--violet {
+    background: #f5f0ff
+}
+:root:not([data-theme="dark"]) .job-logo--orange {
+    background: #fff5e8
+}
+:root:not([data-theme="dark"]) .job-logo--amber {
+    background: #fff7e6
+}
+:root:not([data-theme="dark"]) .job-logo--green {
+    background: #eef8f1
+}
+:root:not([data-theme="dark"]) .job-logo--neutral {
+    background: #f2f3f4
+}
 </style>

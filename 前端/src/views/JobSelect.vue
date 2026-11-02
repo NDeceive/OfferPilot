@@ -540,9 +540,9 @@
               <div class="launch-capabilities"><span>语音问答</span><span>动态追问</span><span>实时评估</span></div>
 
               <section class="duration-section">
-                <h3>面试时长</h3>
+                <h3>参考时长</h3>
                 <button class="duration-trigger duration-trigger--card" type="button" aria-haspopup="dialog" @click="openDurationPicker">
-                  <span><strong>{{ formattedDuration }}</strong><small>当前训练时长</small></span>
+                  <span><strong>{{ formattedDuration }}</strong><small>预计训练时长</small></span>
                   <b>调整 →</b>
                 </button>
                 <p>支持 5 分钟至 2 小时自定义，精确到秒。</p>
@@ -566,7 +566,7 @@
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14m-6-6 6 6-6 6" /></svg>
               </button>
               <p v-if="startError" class="start-error" role="alert">{{ startError }}</p>
-              <small class="launch-note">进入后将准备首道问题，面试期间按所选时长进行。</small>
+              <small class="launch-note">以完成核心问题为主，时长会随答题进度调整，到达参考时间不会立即结束。</small>
             </aside>
           </div>
 
@@ -3563,4 +3563,97 @@ onUnmounted(() => { ++reviewRequest; ++uploadRequest; if (observer) observer.dis
 .voice-toggle { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; color: var(--neutral-800); cursor: pointer; }
 .voice-toggle input { width: 16px; height: 16px; accent-color: var(--accent-600); cursor: pointer; }
 .voice-section p { margin-top: 6px; font-size: 12px; line-height: 1.6; color: var(--neutral-500); }
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .module-option {
+    background: rgba(255,255,255,.74)
+}
+:root:not([data-theme="dark"]) .module-priority__empty {
+    background: rgba(255,255,255,.36)
+}
+:root:not([data-theme="dark"]) .priority-list li {
+    background: rgba(255,255,255,.82)
+}
+:root:not([data-theme="dark"]) .priority-index {
+    background: #e2f1e9
+}
+:root:not([data-theme="dark"]) .level-picker {
+    background: #f3f8f5
+}
+:root:not([data-theme="dark"]) .level-picker button:hover {
+    background: rgba(255,255,255,.72)
+}
+:root:not([data-theme="dark"]) .level-picker button.is-active {
+    background: #fff
+}
+:root:not([data-theme="dark"]) .drag-handle:hover {
+    background: #e4f0ea
+}
+:root:not([data-theme="dark"]) .stepper__item--skipped .stepper__dot {
+    background: #fff8e8
+}
+:root:not([data-theme="dark"]) .family-nav {
+    background: #f7faf8
+}
+:root:not([data-theme="dark"]) .family-nav button:hover {
+    background: rgba(255, 255, 255, 0.75)
+}
+:root:not([data-theme="dark"]) .family-nav button.is-active {
+    background: #fff
+}
+:root:not([data-theme="dark"]) .job-list-panel {
+    background: #fff
+}
+:root:not([data-theme="dark"]) .job-list__item:hover {
+    background: #f8fbf9
+}
+:root:not([data-theme="dark"]) .job-list__item.is-selected {
+    background: color-mix(in srgb, var(--accent-500) 6%, #fff)
+}
+:root:not([data-theme="dark"]) .job-detail__abilities span {
+    background: rgba(255, 255, 255, 0.72)
+}
+:root:not([data-theme="dark"]) .job-detail__empty-icon {
+    background: #fff
+}
+:root:not([data-theme="dark"]) .job-detail {
+    background: #f8fbf9
+}
+:root:not([data-theme="dark"]) .job-detail__footer {
+    background: rgba(255,255,255,.8)
+}
+:root:not([data-theme="dark"]) .module-option.is-selected {
+    background: #f7fcfa
+}
+:root:not([data-theme="dark"]) .module-priority.card {
+    background: #fff
+}
+:root:not([data-theme="dark"]) .priority-list li {
+    background: #fff
+}
+:root:not([data-theme="dark"]) .priority-list li:hover, :root:not([data-theme="dark"]) .priority-list li.is-active {
+    background: #f7fcfa
+}
+:root:not([data-theme="dark"]) .strategy-focus {
+    background: #f1f8f5 !important
+}
+:root:not([data-theme="dark"]) .launch-card {
+    background: #fbfefc
+}
+:root:not([data-theme="dark"]) .launch-format {
+    background: #f3faf7
+}
+:root:not([data-theme="dark"]) .launch-format__mark {
+    background: #fff
+}
+:root:not([data-theme="dark"]) .saved-resume select {
+    background: white
+}
+:root:not([data-theme="dark"]) .resume-review__findings li {
+    background: #fafdfb
+}
+:root:not([data-theme="dark"]) .company-preset__options button {
+    background: #fff
+}
 </style>

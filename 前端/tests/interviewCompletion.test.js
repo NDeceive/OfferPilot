@@ -1,6 +1,29 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { pollInterviewReport, interviewReportRoute } from '../src/utils/interviewCompletion.js'
+import { pollInterviewReport, interviewReportRoute, presentInterviewClosing, INTERVIEW_CLOSING_TEXT } from '../src/utils/interviewCompletion.js'
+
+test('closing stays visible until both minimum reading time and playback finish', async () => {
+  const events = []
+  let finishPlayback, finishReading
+  const closing = presentInterviewClosing(text => events.push(text), () => new Promise(resolve => { finishPlayback = resolve }),
+    ms => { assert.equal(ms, 5000); return new Promise(resolve => { finishReading = resolve }) })
+  let complete = false
+  closing.then(() => { complete = true })
+  await Promise.resolve()
+  assert.deepEqual(events, [INTERVIEW_CLOSING_TEXT])
+  finishReading()
+  await Promise.resolve()
+  assert.equal(complete, false)
+  finishPlayback()
+  await closing
+  assert.equal(complete, true)
+})
+
+test('unavailable avatar still shows the closing before the report', async () => {
+  const events = []
+  await presentInterviewClosing(text => events.push(text), () => { throw new Error('offline') }, async () => {})
+  assert.deepEqual(events, [INTERVIEW_CLOSING_TEXT])
+})
 
 test('report polling uses a wall-clock budget even when status requests fail slowly', async () => {
   let elapsed=0, calls=0

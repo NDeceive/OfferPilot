@@ -7,6 +7,8 @@ import lombok.Data;
  */
 @Data
 public class QuestionView {
+    private Long questionInstanceId;
+    private String interviewStage;
 
     private Long id;
     private String content;

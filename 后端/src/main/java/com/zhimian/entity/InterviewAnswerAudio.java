@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 
 /** 每题作答录音。只存元数据，文件落盘。 */
 @Data
-@TableName("interview_answer_audio")
+@TableName("interview_round_audio")
 public class InterviewAnswerAudio {
 
     @TableId(type = IdType.AUTO)

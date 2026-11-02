@@ -44,4 +44,25 @@ function handleKey(event) {
 .teacher-drawer :deep(.drawer-actions a){display:inline-flex;align-items:center;min-height:44px;padding:8px 12px;border:1px solid #dce5df;border-radius:8px;text-decoration:none;box-sizing:border-box}
 .teacher-drawer :deep(:is(button,a,input,select,textarea):focus-visible){outline:2px solid #059669;outline-offset:3px}
 @media(max-width:600px){.teacher-drawer-overlay.centered-modal{padding:12px}.centered-modal .teacher-drawer{padding:20px;max-height:calc(100dvh - 24px)}.centered-modal .teacher-drawer>header{top:-20px;gap:12px}.teacher-drawer h2{font-size:18px}.teacher-drawer :deep(dl){grid-template-columns:1fr;gap:8px}.teacher-drawer :deep(dd){margin:0 0 12px}.teacher-drawer :deep(.la-drill){grid-template-columns:1fr}.teacher-drawer :deep(.la-drill>.la-button),.teacher-drawer :deep(.la-drill>.la-button:first-of-type){grid-column:1;grid-row:auto;justify-self:start;margin-top:4px}}
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .teacher-drawer {
+    background: white
+}
+:root:not([data-theme="dark"]) .teacher-drawer button {
+    background: white
+}
+:root:not([data-theme="dark"]) .centered-modal .teacher-drawer>header {
+    background: white
+}
+:root:not([data-theme="dark"]) .teacher-drawer button:hover {
+    background: #f3f8f5
+}
+:root:not([data-theme="dark"]) .teacher-drawer :deep(.la-button) {
+    background: white
+}
+:root:not([data-theme="dark"]) .teacher-drawer :deep(.la-button:hover) {
+    background: #ecfdf5
+}
 </style>

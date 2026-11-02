@@ -90,4 +90,10 @@ const list = computed(() => (Array.isArray(props.items) && props.items.length ? 
 .mtb a.is-center .mtb__icon :deep(svg) { width: 22px; height: 22px; }
 .mtb a.is-center.router-link-active .mtb__icon { background: #174b39; }
 .mtb a.is-center:active .mtb__icon { transform: scale(.94); }
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .mtb {
+    background: rgba(255, 255, 255, .96)
+}
 </style>

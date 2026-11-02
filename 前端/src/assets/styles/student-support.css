@@ -47,3 +47,122 @@
 .support-drawer .teacher-drawer{width:min(600px,100%);height:auto;max-height:calc(100dvh - 48px);border-radius:16px}
 .support-drawer .support-draft-empty{padding:16px;background:var(--surface-soft);border-radius:10px;color:#52665f;font-size:13px}
 @media(max-width:600px){.support-drawer.teacher-drawer-overlay{padding:12px}.support-drawer .teacher-drawer{max-height:calc(100dvh - 24px)}}
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .student-support button, :root:not([data-theme="dark"]) .student-support .support-button {
+    background: white
+}
+:root:not([data-theme="dark"]) .student-support button:hover, :root:not([data-theme="dark"]) .student-support .support-button:hover {
+    background: #ecfdf5
+}
+:root:not([data-theme="dark"]) .student-support input, :root:not([data-theme="dark"]) .student-support select {
+    background: white
+}
+:root:not([data-theme="dark"]) .support-panel {
+    background: white
+}
+:root:not([data-theme="dark"]) .student-support button[aria-pressed=true] {
+    background: #ecfdf5
+}
+:root:not([data-theme="dark"]) .support-track {
+    background: #edf3ef
+}
+:root:not([data-theme="dark"]) .support-cue {
+    background: #f0faf5
+}
+:root:not([data-theme="dark"]) .student-support th {
+    background: #f7f9f8
+}
+:root:not([data-theme="dark"]) .support-tag {
+    background: #f0f7f3
+}
+:root:not([data-theme="dark"]) .support-warning {
+    background: #fff7e8
+}
+:root:not([data-theme="dark"]) .support-drawer select {
+    background: white
+}
+:root:not([data-theme="dark"]) .student-support {
+    background: #f7f9f8
+}
+:root:not([data-theme="dark"]) .support-filter-surface {
+    background: white
+}
+:root:not([data-theme="dark"]) .choice-menu {
+    background: white
+}
+:root:not([data-theme="dark"]) .student-support .support-groups>button[aria-pressed=true] {
+    background: #eaf6ef
+}
+:root:not([data-theme="dark"]) .support-groups b {
+    background: #f1f4f2
+}
+:root:not([data-theme="dark"]) .support-tag {
+    background: #f2f5f3
+}
+:root:not([data-theme="dark"]) .support-actions button:not(:last-child):not(:disabled) {
+    background: white
+}
+:root:not([data-theme="dark"]) .support-cue {
+    background: #f1f8f3
+}
+:root:not([data-theme="dark"]) .support-actions button:not(:disabled):hover {
+    background: #f0f7f3
+}
+:root:not([data-theme="dark"]) .student-support {
+    background: #fff
+}
+:root:not([data-theme="dark"]) .support-total {
+    background: #f8faf9
+}
+:root:not([data-theme="dark"]) .support-groups b {
+    background: #f8faf9
+}
+:root:not([data-theme="dark"]) .support-groups button[aria-pressed=true] b {
+    background: white
+}
+:root:not([data-theme="dark"]) .student-support .support-groups>button[aria-pressed=true] {
+    background: #eef8f2
+}
+:root:not([data-theme="dark"]) .support-tag {
+    background: #f7f9f8
+}
+:root:not([data-theme="dark"]) .support-tag.tag-short, :root:not([data-theme="dark"]) .support-tag.tag-invest {
+    background: #f1f8f4
+}
+:root:not([data-theme="dark"]) .support-tag.tag-blocked, :root:not([data-theme="dark"]) .support-tag.tag-overdue {
+    background: #fff8ee
+}
+:root:not([data-theme="dark"]) .support-tag.tag-near {
+    background: #eff8f6
+}
+:root:not([data-theme="dark"]) .support-tag.tag-missing {
+    background: #f5f7fa
+}
+:root:not([data-theme="dark"]) .support-tag.tag-start {
+    background: #f6f5fa
+}
+:root:not([data-theme="dark"]) .support-main th {
+    background: #f8faf9
+}
+@media (min-width:761px) {
+    :root:not([data-theme="dark"]) .support-main .support-context {
+        background: #fff
+    }
+}
+:root:not([data-theme="dark"]) .support-drawer .teacher-drawer button {
+    background: #fff
+}
+:root:not([data-theme="dark"]) .support-drawer .teacher-drawer button:hover {
+    background: #f3f7f5
+}
+:root:not([data-theme="dark"]) .support-drawer .teacher-drawer button:disabled {
+    background: #f2f4f3
+}
+:root:not([data-theme="dark"]) .support-draft-note {
+    background: #f5f8f6
+}
+:root:not([data-theme="dark"]) .support-drawer .support-draft-empty {
+    background: #f5f8f6
+}

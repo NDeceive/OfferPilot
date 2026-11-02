@@ -147,7 +147,7 @@
           ><small v-if="!preparationFlow && !report.suggestedModules?.length"
             >暂无有效模块建议，可以手动选择。</small
           >
-          <button v-if="preparationFlow" type="button" class="analysis__primary" @click="$emit('next')">下一步：训练目标 →</button>
+          <button v-if="preparationFlow" type="button" class="btn btn--primary analysis__primary" @click="$emit('next')">下一步：训练目标 →</button>
         </footer>
     <Teleport to="body">
       <dialog ref="detailDialog" class="analysis-detail" aria-labelledby="analysis-detail-title" @close="selectedDetail = null" @click="closeOnBackdrop">
@@ -359,7 +359,7 @@ onBeforeUnmount(() => { ++sequence; closeDetail(); });
 .analysis small {
   color: #66776f;
 }
-.analysis button {
+.analysis button:not(.btn) {
   font: inherit;
   min-height: 44px;
   padding: 8px 16px;
@@ -585,4 +585,55 @@ onBeforeUnmount(() => { ++sequence; closeDetail(); });
 .analysis__pager > span { font-size: 13px; color: #52675c; white-space: nowrap; }
 .analysis .analysis__pager button { padding: 6px 10px; font-size: 13px; min-height: 44px; }
 @media (max-width: 760px) { .analysis__card { height: 480px; } }
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .analysis button:not(.analysis__primary) {
+    background: white
+}
+:root:not([data-theme="dark"]) .analysis__notice {
+    background: #f0f7f4
+}
+:root:not([data-theme="dark"]) .analysis__error {
+    background: #fff3ee
+}
+:root:not([data-theme="dark"]) .analysis__notice--warning {
+    background: #fcf5e9
+}
+:root:not([data-theme="dark"]) .analysis button:hover:not(:disabled) {
+    background: #f0f7f4
+}
+:root:not([data-theme="dark"]) .analysis__card {
+    background: white
+}
+:root:not([data-theme="dark"]) .analysis__count {
+    background: #eef5f1
+}
+:root:not([data-theme="dark"]) .analysis small.analysis__priority {
+    background: #fcf5e9
+}
+:root:not([data-theme="dark"]) .analysis blockquote {
+    background: #f6f8f7
+}
+:root:not([data-theme="dark"]) .analysis__empty {
+    background: #f7faf8
+}
+:root:not([data-theme="dark"]) .analysis .analysis__detail-button:hover {
+    background: #f0f7f4
+}
+:root:not([data-theme="dark"]) .analysis-detail {
+    background: white
+}
+:root:not([data-theme="dark"]) .analysis-detail button {
+    background: white
+}
+:root:not([data-theme="dark"]) .analysis-detail blockquote {
+    background: #f6f8f7
+}
+:root:not([data-theme="dark"]) .analysis-detail__note {
+    background: #f0f7f4
+}
+:root:not([data-theme="dark"]) .analysis__interviews {
+    background: #f3f8f5
+}
 </style>

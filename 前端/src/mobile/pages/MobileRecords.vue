@@ -396,4 +396,10 @@ onUnmounted(disconnect)
 
 .mrec__more,
 .mrec__end { padding: 20px 0 4px; color: var(--m-text-tertiary); text-align: center; font-size: 12px; }
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .mrec__badge.is-aborted {
+    background: #f0f1ed
+}
 </style>

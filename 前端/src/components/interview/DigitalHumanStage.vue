@@ -107,6 +107,18 @@ let connectionTimer = null
 let openingPending = false
 let speechTimer = null
 let liveReady = false
+const closingWaiters = new Map()
+function sayClosing(text) {
+  pendingSpeech.value = null
+  if (stage.value !== 'LIVE' || !liveReady || connectionState.value === 'error') return Promise.resolve()
+  const key = `closing-${Date.now()}`
+  return new Promise(resolve => {
+    const done = () => { clearTimeout(timer); closingWaiters.delete(key); resolve() }
+    const timer = setTimeout(done, 20000)
+    closingWaiters.set(key, done)
+    postToFrame({ type: 'offerpilot.speak', text, key, waitForEnd: true })
+  })
+}
 
 const statusText = computed(() => ({
   connecting: '正在连接数字人',
@@ -174,7 +186,7 @@ function resolveTargetOrigin() {
 
 function withLayoutVersion(url) {
   const separator = url.includes('?') ? '&' : '?'
-  return `${url}${separator}offerpilotLayout=3`
+  return `${url}${separator}offerpilotLayout=4`
 }
 
 function speak(text, key = '') {
@@ -292,6 +304,7 @@ function handleMessage(event) {
   if (targetOrigin !== '*' && event.origin !== targetOrigin) return
 
   const data = event.data || {}
+  if (data.type === 'offerpilot.embed.speechEnded') closingWaiters.get(data.key)?.()
   if (data.type === 'offerpilot.embed.ready') {
     clearTimeout(connectionTimer)
     connectionState.value = 'ready'
@@ -342,6 +355,7 @@ watch(
 window.addEventListener('message', handleMessage)
 
 onBeforeUnmount(() => {
+  for (const done of closingWaiters.values()) done()
   clearTimeout(connectionTimer)
   clearTimeout(speechTimer)
   close()
@@ -349,6 +363,7 @@ onBeforeUnmount(() => {
 })
 
 defineExpose({
+  sayClosing,
   speak,
   stop,
   close,
@@ -447,5 +462,11 @@ defineExpose({
   border-radius: 8px;
   color: #fff;
   background: rgba(15, 23, 42, 0.82);
+}
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .digital-human {
+    background: #e3ebf6
 }
 </style>

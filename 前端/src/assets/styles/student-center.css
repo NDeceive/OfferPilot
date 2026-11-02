@@ -30,3 +30,45 @@
 .student-evidence-footer{padding:16px 24px;background:var(--surface-elevated)}
 .student-evidence .student-primary{background:#10b981;border-color:#10b981;border-radius:8px}
 @media(max-width:600px){.student-evidence.teacher-drawer-overlay{padding:12px}.student-evidence .teacher-drawer{max-height:calc(100dvh - 24px)}.student-evidence .teacher-drawer>header,.student-evidence-body{padding:18px}.student-evidence-footer{padding:14px 18px}.student-evidence .student-evidence-facts{grid-template-columns:1fr!important;gap:6px}.student-evidence .student-evidence-facts dd{margin-bottom:10px;overflow-wrap:anywhere}}
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .student-center button, :root:not([data-theme="dark"]) .student-evidence button, :root:not([data-theme="dark"]) .student-primary {
+    background: #fff
+}
+:root:not([data-theme="dark"]) .student-center button:hover, :root:not([data-theme="dark"]) .student-evidence button:hover {
+    background: #f5faf7
+}
+:root:not([data-theme="dark"]) .student-filters input, :root:not([data-theme="dark"]) .student-filters select {
+    background: white
+}
+:root:not([data-theme="dark"]) .student-advanced {
+    background: #fafcfb
+}
+:root:not([data-theme="dark"]) .student-center th {
+    background: #fafcfb
+}
+:root:not([data-theme="dark"]) .student-main-concern {
+    background: #f3faf7
+}
+:root:not([data-theme="dark"]) .student-ability-track {
+    background: #eef2f0
+}
+:root:not([data-theme="dark"]) .student-evidence blockquote {
+    background: #f7faf8
+}
+:root:not([data-theme="dark"]) .student-evidence-selected {
+    background: #f3faf7
+}
+:root:not([data-theme="dark"]) .student-load-error {
+    background: #fcf4f2
+}
+:root:not([data-theme="dark"]) .student-header-actions details>a {
+    background: white
+}
+:root:not([data-theme="dark"]) .student-evidence .student-evidence-summary {
+    background: #f3f8f5
+}
+:root:not([data-theme="dark"]) .student-evidence-footer {
+    background: white
+}

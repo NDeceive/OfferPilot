@@ -9,6 +9,8 @@ import lombok.Data;
  */
 @Data
 public class AnswerRequest {
+    /** Acknowledged recording ID; required for the self-introduction stage. */
+    private Long audioId;
 
     /** 题库题目必传；体验题（AI 生成）可传 null 或 0 */
     private Long questionId;

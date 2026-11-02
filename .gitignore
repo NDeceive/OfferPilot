@@ -64,6 +64,8 @@ Thumbs.db
 /designs/
 /migration-stage2-audit/
 /output/
+/artifacts/
+/文档输出/
 /docs/
 /*.docx
 /*.pptx

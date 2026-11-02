@@ -84,6 +84,8 @@ public class InterviewFlowService {
     private final TeachingService teachingService;
     private final ReportJobService reportJobs;
     private final InterviewSnapshotService snapshots;
+    private final InterviewStageService stages;
+    private final InterviewPlanService plans;
     private final org.springframework.jdbc.core.JdbcTemplate jdbc;
 
     // 新标签化题库
@@ -135,9 +137,9 @@ public class InterviewFlowService {
             response.setDurationSeconds(session.getDurationSeconds());response.setRemainingSeconds((Integer)restored.get("remainingSeconds"));
             response.setJobName(snapshots.job(existing,session.getJobId()).getName());
             response.setFinishable(!STATUS_ONGOING.equals(restored.get("status")));
+            response.setInterviewPlan(planView(session));
             var prompt=(InterviewMessage)restored.get("currentQuestion");
-            if(prompt!=null){var q=new QuestionView();q.setId(prompt.getQuestionId());q.setContent(prompt.getContent());
-                q.setRoundNo(prompt.getRoundNo());q.setAbilityTag(prompt.getAbilityTag());q.setQuestionType(prompt.getQuestionType());response.setQuestion(q);}
+            if(prompt!=null)response.setQuestion(promptView(prompt));
             return response;
         }
         int difficulty = normalizeDifficulty(req.getDifficulty());
@@ -215,15 +217,17 @@ public class InterviewFlowService {
             modulePreferenceService.savePreference(session.getId(), userId, moduleItems);
         }
 
-        SkillQuestion first = candidates.get(0);
-        String abilityTag = resolveAbilityTag(first.getId());
-        saveInterviewerMessage(session.getId(), first.getId(), MSG_MAIN, 1, first.getContent(), abilityTag);
+        stages.start(session.getId());
+        plans.start(session, candidates.stream().map(SkillQuestion::getId).toList());
+        String opening="你好，先简单介绍一下自己吧，聊聊你的专业背景，以及和这个岗位相关的经历。";
+        saveInterviewerMessage(session.getId(), -1L, MSG_MAIN, 1, opening, "自我介绍");
 
         InterviewStartResponse resp = new InterviewStartResponse();
         resp.setSessionId(session.getId());
         resp.setJobName(job.getName());
-        resp.setQuestion(toView(first, 1, abilityTag));
+        resp.setQuestion(promptView(latestPrompt(session.getId())));
         resp.setDurationSeconds(duration);
+        resp.setInterviewPlan(planView(session));
         return resp;
     }
 
@@ -268,11 +272,28 @@ public class InterviewFlowService {
             var receipts=jdbc.queryForList("SELECT payload_hash,response_json FROM student_answer_receipt WHERE session_id=? AND request_id=?",sessionId,req.getRequestId());
             if(!receipts.isEmpty()) {
                 if(!hash.equals(receipts.get(0).get("payload_hash"))) throw new BizException("请求编号已用于另一份回答");
-                try { return objectMapper.readValue((String)receipts.get(0).get("response_json"),InterviewStep.class); }
+                try {
+                    var cached=objectMapper.readValue((String)receipts.get(0).get("response_json"),InterviewStep.class);
+                    var latest=latestPrompt(sessionId);
+                    if(latest!=null && cached.getQuestionInstanceId()!=null && !latest.getId().equals(cached.getQuestionInstanceId()))
+                        throw new BizException("回答已保存，但问题已更新，请刷新恢复面试进度");
+                    cached.setInterviewPlan(planView(sessionMapper.selectById(sessionId)));
+                    return cached;
+                }
+                catch(BizException failure){throw failure;}
                 catch(Exception failure){throw new IllegalStateException(failure);}
             }
         }
         var result=answerOnce(sessionId,req);
+        var currentSession=sessionMapper.selectById(sessionId);
+        plans.updateEstimate(currentSession,elapsedSeconds(currentSession));
+        result.setInterviewPlan(planView(currentSession));
+        if(result.getInterviewPlan()!=null && Boolean.TRUE.equals(result.getInterviewPlan().get("canFinish")))
+            result.setNextAction(ACTION_FINISHABLE);
+        var currentPrompt=latestPrompt(sessionId);
+        if(currentPrompt!=null)result.setQuestionInstanceId(currentPrompt.getId());
+        result.setInterviewStage(stages.stage(sessionId));
+        if(result.getQuestion()!=null && currentPrompt!=null)result.setQuestion(promptView(currentPrompt));
         if(req.getRequestId()!=null && !req.getRequestId().isBlank()) {
             try {
                 jdbc.update("INSERT INTO student_answer_receipt(session_id,request_id,payload_hash,response_json) VALUES (?,?,?,?)",
@@ -287,16 +308,23 @@ public class InterviewFlowService {
         teachingService.lockSession(sessionId);
         InterviewSession session = requireOngoingSession(sessionId);
 
+        String stage=stages.stage(sessionId);
+        if(stage!=null && req.getQuestionInstanceId()==null)
+            throw new BizException("缺少当前问题标识，请恢复面试进度");
+
         var askedMain = askedMainMessages(sessionId);
         if (askedMain.isEmpty()) throw new BizException("该题尚未提问，无法作答");
         InterviewMessage parentMain = askedMain.get(askedMain.size()-1);
         if (!java.util.Objects.equals(parentMain.getQuestionId(), req.getQuestionId() == null ? 0L : req.getQuestionId()) ||
                 (req.getRoundNo() != null && !req.getRoundNo().equals(parentMain.getRoundNo())))
             throw new BizException("只能提交当前问题，请刷新面试进度");
-        if (isTimeExceeded(session)) throw new BizException("训练时间已到，请结束训练并生成报告");
+        if (isTimeExceeded(session)) throw new BizException(plans.find(sessionId)==null
+                ? "训练时间已到，请结束训练并生成报告" : "已到本场保护上限，请结束面试并生成报告");
         int round = parentMain.getRoundNo();
         if (req.isSkipped() && teachingService.teachingSession(sessionId)) throw new BizException("教学任务问题不能跳过");
         if (!req.isSkipped() && (req.getAnswer() == null || req.getAnswer().isBlank())) throw new BizException("回答内容不能为空");
+        if (InterviewStageService.INTRO.equals(stage) && req.isSkipped())
+            throw new BizException("请先完成自我介绍，不能跳过");
 
         if (teachingService.teachingSession(sessionId)) {
             if(isTimeExceeded(session))throw new BizException("训练时间已到，请结束训练并生成报告");
@@ -327,13 +355,20 @@ public class InterviewFlowService {
             repeated.setNextAction(hasTimeLeft(session) ? ACTION_NEXT : ACTION_FINISHABLE);
             return repeated;
         }
+        if(InterviewStageService.INTRO.equals(stage))
+            answerAudioService.requireValidIntroduction(sessionId,round,parentMain.getQuestionId(),req.getAudioId());
         if (req.isSkipped()) {
             saveMessage(sessionId,parentMain.getQuestionId(),round,ROLE_CANDIDATE,"SKIPPED","[已跳过]",parentMain.getAbilityTag());
             return next(sessionId);
         }
 
-        saveMessage(sessionId, req.getQuestionId(), round, ROLE_CANDIDATE, MSG_ANSWER,
+        var savedAnswer=saveMessage(sessionId, req.getQuestionId(), round, ROLE_CANDIDATE, MSG_ANSWER,
                 req.getAnswer(), parentMain.getAbilityTag());
+        if(InterviewStageService.INTRO.equals(stage)) {
+            stages.set(sessionId,InterviewStageService.PROJECT);
+            var step=new InterviewStep();step.setAnswerId(savedAnswer.getId());
+            step.setNextAction(isTimeExceeded(session)?ACTION_FINISHABLE:ACTION_NEXT);return step;
+        }
 
         SkillQuestion question = skillQuestionMapper.selectById(req.getQuestionId());
         // 体验题（questionId=0）：从 parentMain 中取题目内容和参考答案
@@ -352,10 +387,12 @@ public class InterviewFlowService {
         }
 
         InterviewStep step = new InterviewStep();
+        step.setAnswerId(savedAnswer.getId());
         FollowupPlan plan = planFollowup(session, sessionId, parentMain, question, abilityTag,
                 req.getAnswer(), questionContent, questionRefAnswer, round, followupLayers);
 
-        if (plan.ask) {
+        // Generation also consumes time: never publish a late follow-up.
+        if (plan.ask && hasFollowupBudget(session)) {
             saveMessage(sessionId, req.getQuestionId(), round, ROLE_INTERVIEWER, MSG_FOLLOWUP,
                     plan.followUpQuestion, abilityTag);
 
@@ -383,6 +420,14 @@ public class InterviewFlowService {
 
     @Transactional
     public InterviewStep next(Long sessionId) {
+        var result=nextOnce(sessionId);
+        var session=sessionMapper.selectById(sessionId);
+        plans.updateEstimate(session,elapsedSeconds(session));
+        result.setInterviewPlan(planView(session));
+        return result;
+    }
+
+    private InterviewStep nextOnce(Long sessionId) {
         lockOwnSession(sessionId);
         teachingService.lockSession(sessionId);
         InterviewSession session = requireOngoingSession(sessionId);
@@ -404,11 +449,13 @@ public class InterviewFlowService {
             var prompt=chronological.get(0); var pending=new InterviewStep();
             if (MSG_FOLLOWUP.equals(prompt.getMsgType())) {
                 pending.setNextAction(ACTION_FOLLOWUP);pending.setFollowupQuestion(prompt.getContent());
+                pending.setQuestion(promptView(prompt));
             } else {
                 pending.setNextAction(ACTION_NEXT); var q=new QuestionView();q.setId(prompt.getQuestionId());
                 q.setContent(prompt.getContent());q.setRoundNo(prompt.getRoundNo());q.setAbilityTag(prompt.getAbilityTag());
-                q.setQuestionType(prompt.getQuestionType());pending.setQuestion(q);
+                q.setQuestionType(prompt.getQuestionType());pending.setQuestion(promptView(prompt));
             }
+            pending.setInterviewStage(stages.stage(sessionId));pending.setQuestionInstanceId(prompt.getId());
             if(isTimeExceeded(session))pending.setNextAction(ACTION_FINISHABLE);
             return pending;
         }
@@ -416,10 +463,32 @@ public class InterviewFlowService {
 
         InterviewStep step = new InterviewStep();
 
-        // 时间到 → 结束面试（前端计时器为主控，后端作为安全网）
-        if (isTimeExceeded(session)) {
+        var plan=plans.find(sessionId);
+        if(plan!=null && plans.counts(sessionId).professional()>=plan.questionIds().size()) {
+            step.setNextAction(ACTION_FINISHABLE);return step;
+        }
+
+        // Count main questions, including experience questions; follow-up time is part of each round.
+        if (!hasTimeLeft(session)) {
             step.setNextAction(ACTION_FINISHABLE);
             return step;
+        }
+
+        String stage=stages.stage(sessionId);
+        if(InterviewStageService.INTRO.equals(stage))throw new BizException("请先有效提交自我介绍");
+        if(InterviewStageService.PROJECT.equals(stage)) {
+            var history=messageMapper.selectList(new LambdaQueryWrapper<InterviewMessage>()
+                    .eq(InterviewMessage::getSessionId,sessionId).orderByAsc(InterviewMessage::getId));
+            String project=stages.projectQuestion(session,history);
+            if(!hasTimeLeft(session)){step.setNextAction(ACTION_FINISHABLE);return step;}
+            if(project!=null){
+                int projectRound=askedMainMessages(sessionId).size()+1;
+                saveInterviewerMessage(sessionId,-(long)projectRound,MSG_MAIN,projectRound,project,"项目实践表达");
+                step.setNextAction(ACTION_NEXT);step.setQuestion(promptView(latestPrompt(sessionId)));
+                step.setInterviewStage(stages.stage(sessionId));return step;
+            }
+            stages.set(sessionId,InterviewStageService.PROFESSIONAL);
+            plans.resolveProjects(sessionId);
         }
 
         Resume resume = snapshots.resume(sessionId,session.getResumeId());
@@ -429,12 +498,16 @@ public class InterviewFlowService {
         List<SkillQuestion> candidates = candidateQuestionsByTags(
                 jobTags, userTags, session.getDifficulty());
 
-        SkillQuestion nextQuestion = candidates.stream()
-                .filter(q -> !asked.contains(q.getId()))
-                .findFirst()
-                .orElse(null);
+        SkillQuestion nextQuestion;
+        if(plan!=null) {
+            int index=plans.counts(sessionId).professional();
+            nextQuestion=skillQuestionMapper.selectById(plan.questionIds().get(index));
+        } else {
+            nextQuestion=candidates.stream().filter(q -> !asked.contains(q.getId())).findFirst().orElse(null);
+        }
 
         if (nextQuestion == null) {
+            if(plan!=null)plans.end(sessionId,"QUESTION_UNAVAILABLE");
             step.setNextAction(ACTION_FINISHABLE);
             return step;
         }
@@ -452,10 +525,12 @@ public class InterviewFlowService {
         }
 
         String abilityTag = resolveAbilityTag(nextQuestion.getId());
+        if(!hasTimeLeft(session)){step.setNextAction(ACTION_FINISHABLE);return step;}
         saveInterviewerMessage(sessionId, nextQuestion.getId(), MSG_MAIN, round, nextQuestion.getContent(), abilityTag);
 
         step.setNextAction(ACTION_NEXT);
-        step.setQuestion(toView(nextQuestion, round, abilityTag));
+        step.setQuestion(promptView(latestPrompt(sessionId)));
+        step.setInterviewStage(stages.stage(sessionId));
         return step;
     }
 
@@ -468,6 +543,14 @@ public class InterviewFlowService {
         settlePause(sessionId);
         if(teachingService.teachingSession(sessionId) && !teachingService.submitted(sessionId)) return sessionId;
         if (!STATUS_FINISHED.equals(session.getStatus())) {
+            var progress=planView(session);
+            String reason=progress!=null && Boolean.TRUE.equals(progress.get("canFinish"))?"PLAN_COMPLETED"
+                    : !hasTimeLeft(session)?"TIME_PROTECTION":"USER_ENDED";
+            plans.end(sessionId,reason);
+            stages.set(sessionId,"CLOSING");
+            saveInterviewerMessage(sessionId, 0L, "SUMMARY", askedMainMessages(sessionId).size(),
+                    InterviewPacing.CLOSING_TEXT, "面试收尾");
+            stages.set(sessionId,"COMPLETED");
             session.setStatus(STATUS_FINISHED);session.setEndTime(LocalDateTime.now());sessionMapper.updateById(session);
             reportJobs.enqueue(sessionId);
         }
@@ -484,10 +567,11 @@ public class InterviewFlowService {
         lockOwnSession(sessionId);
         var session=sessionMapper.selectById(sessionId);
         int remaining=remainingSeconds(session);
-        if(STATUS_ONGOING.equals(session.getStatus()) && remaining==0) finish(sessionId);
         var result=new java.util.LinkedHashMap<String,Object>();
         result.put("sessionId",sessionId);result.put("status",sessionMapper.selectById(sessionId).getStatus());
+        result.put("interviewStage",stages.stage(sessionId));
         result.put("durationSeconds",session.getDurationSeconds());result.put("remainingSeconds",remaining);
+        result.put("interviewPlan",planView(session));
         result.put("paused",isPaused(sessionId));result.put("serverTime",System.currentTimeMillis());
         var messages=messageMapper.selectList(new LambdaQueryWrapper<InterviewMessage>().eq(InterviewMessage::getSessionId,sessionId).orderByAsc(InterviewMessage::getId));
         result.put("messages",messages);
@@ -507,7 +591,10 @@ public class InterviewFlowService {
             if (remainingSeconds(session)==0) throw new BizException("训练时间已到，请结束面试");
             jdbc.update("INSERT INTO interview_pause_state(session_id,paused_at) VALUES (?,NOW()) ON DUPLICATE KEY UPDATE paused_at=NOW()",sessionId);
         } else if (!paused) settlePause(sessionId);
-        return Map.of("paused",isPaused(sessionId),"remainingSeconds",remainingSeconds(session),"serverTime",System.currentTimeMillis());
+        var response=new java.util.LinkedHashMap<String,Object>();
+        response.put("paused",isPaused(sessionId));response.put("remainingSeconds",remainingSeconds(session));
+        response.put("serverTime",System.currentTimeMillis());response.put("interviewPlan",planView(session));
+        return response;
     }
 
     private boolean isPaused(long sessionId) {
@@ -518,7 +605,15 @@ public class InterviewFlowService {
         return values.isEmpty()?0:values.get(0);
     }
     private int remainingSeconds(InterviewSession session) {
+        var plan=plans.find(session.getId());
+        if(plan!=null)return Math.max(0,plan.hardLimitSeconds()+InterviewPlanService.ANSWER_GRACE_SECONDS-elapsedSeconds(session));
         return (int)Math.max(0,session.getDurationSeconds()-java.time.Duration.between(session.getStartTime(),LocalDateTime.now()).getSeconds()+pausedSeconds(session.getId()));
+    }
+    private int elapsedSeconds(InterviewSession session) {
+        return plans.elapsedSeconds(session);
+    }
+    private Map<String,Object> planView(InterviewSession session) {
+        return plans.view(session,elapsedSeconds(session));
     }
     private void settlePause(long sessionId) {
         jdbc.update("UPDATE interview_pause_state SET paused_seconds=paused_seconds+TIMESTAMPDIFF(SECOND,paused_at,NOW()),paused_at=NULL WHERE session_id=? AND paused_at IS NOT NULL",sessionId);
@@ -579,11 +674,16 @@ public class InterviewFlowService {
         followupRecordService.deleteBySession(sessionId);
         followupChainService.deleteBySession(sessionId);
         answerAudioService.deleteBySession(sessionId);
+        jdbc.update("DELETE FROM interview_voice_analysis WHERE session_id=?",sessionId);
+        jdbc.update("DELETE FROM interview_voice_retention WHERE session_id=?",sessionId);
+        jdbc.update("DELETE FROM interview_voice_session WHERE session_id=?",sessionId);
         messageMapper.delete(new LambdaQueryWrapper<InterviewMessage>()
                 .eq(InterviewMessage::getSessionId, sessionId));
         jdbc.update("DELETE FROM interview_module_preference WHERE session_id=?",sessionId);
         jdbc.update("DELETE FROM interview_score_config_snapshot WHERE session_id=?",sessionId);
         jdbc.update("DELETE FROM student_answer_receipt WHERE session_id=?",sessionId);
+        jdbc.update("DELETE FROM interview_flow_state WHERE session_id=?",sessionId);
+        jdbc.update("DELETE FROM interview_session_plan WHERE session_id=?",sessionId);
         jdbc.update("DELETE FROM student_interview_snapshot WHERE session_id=?",sessionId);
         jdbc.update("DELETE FROM interview_training_context WHERE session_id=?",sessionId);
         sessionMapper.deleteById(sessionId);
@@ -820,22 +920,23 @@ public class InterviewFlowService {
                         .orderByAsc(InterviewMessage::getId));
     }
 
-    /**
-     * 面试是否还有剩余时间。
-     *
-     * 面试长度由用户选的时长驱动（前端默认 1800 秒），**不设题量上限**：
-     * 只要时间没到就继续出题。题目抽完了由 next() 返回 FINISHABLE 收口，
-     * 所以这里不需要再数题数。（原先有个 MAX_QUESTIONS=8 的上限，但它只在
-     * answer() 不触发追问的分支上检查，只要每题都产生追问就形同虚设。）
-     */
+    /** Match upstream: the selected duration, not an extra question quota, ends the interview. */
     private boolean hasTimeLeft(InterviewSession session) {
+        var plan=plans.find(session.getId());
+        if(plan!=null)return elapsedSeconds(session)<plan.hardLimitSeconds();
         return !isTimeExceeded(session);
+    }
+
+    private boolean hasFollowupBudget(InterviewSession session) {
+        return hasTimeLeft(session);
     }
 
     /**
      * 检查面试是否超时（基于 durationSeconds 与 startTime 计算）。
      */
     private boolean isTimeExceeded(InterviewSession session) {
+        var plan=plans.find(session.getId());
+        if(plan!=null)return elapsedSeconds(session)>=plan.hardLimitSeconds()+InterviewPlanService.ANSWER_GRACE_SECONDS;
         return isTimeExceeded(session, LocalDateTime.now().minusSeconds(pausedSeconds(session.getId())));
     }
 
@@ -861,7 +962,7 @@ public class InterviewFlowService {
         saveMessage(sessionId, questionId, round, ROLE_INTERVIEWER, msgType, content, abilityTag);
     }
 
-    private void saveMessage(Long sessionId, Long questionId, int round, String role,
+    private InterviewMessage saveMessage(Long sessionId, Long questionId, int round, String role,
                              String msgType, String content, String abilityTag) {
         InterviewMessage msg = new InterviewMessage();
         msg.setSessionId(sessionId);
@@ -871,7 +972,21 @@ public class InterviewFlowService {
         msg.setMsgType(msgType);
         msg.setContent(content);
         msg.setAbilityTag(abilityTag);
+        String stage=stages.stage(sessionId);
+        if(stage!=null)msg.setQuestionType(stage);
         messageMapper.insert(msg);
+        return msg;
+    }
+
+    private InterviewMessage latestPrompt(long sessionId) {
+        return messageMapper.selectList(new LambdaQueryWrapper<InterviewMessage>()
+                .eq(InterviewMessage::getSessionId,sessionId).eq(InterviewMessage::getRole,ROLE_INTERVIEWER)
+                .orderByDesc(InterviewMessage::getId).last("LIMIT 1")).stream().findFirst().orElse(null);
+    }
+    private QuestionView promptView(InterviewMessage prompt) {
+        var view=new QuestionView();view.setId(prompt.getQuestionId());view.setContent(prompt.getContent());
+        view.setRoundNo(prompt.getRoundNo());view.setAbilityTag(prompt.getAbilityTag());view.setQuestionType(prompt.getQuestionType());
+        view.setQuestionInstanceId(prompt.getId());view.setInterviewStage(stages.stage(prompt.getSessionId()));return view;
     }
 
     private QuestionView toView(SkillQuestion q, int round, String abilityTag) {
@@ -897,6 +1012,12 @@ public class InterviewFlowService {
                                       SkillQuestion question, String abilityTag, String answer,
                                       String questionContent, String refAnswer, int round, int askedLayers) {
         int layer = askedLayers + 1;
+        if (!hasFollowupBudget(session)) {
+            return FollowupPlan.stop(layer, GateDecision.stop(GateDecision.STOP_NO_TIME, 0, 0));
+        }
+        var sessionPlan=plans.find(sessionId);
+        if(sessionPlan!=null && layer>1 && elapsedSeconds(session)>=session.getDurationSeconds())
+            return FollowupPlan.stop(layer,GateDecision.stop(GateDecision.STOP_NO_TIME,0,0));
         int difficulty = (question != null && question.getDifficulty() != null) ? question.getDifficulty() : 2;
 
         List<InterviewFollowupChain> chainRows = followupChainService.listByRound(sessionId, round);
@@ -907,7 +1028,7 @@ public class InterviewFlowService {
         }
 
         GateDecision gate = followupGate.decide(sessionId, parentMain.getId(), layer, difficulty,
-                remainingSeconds(session), answer, uncoveredEmpty);
+                sessionPlan==null?remainingSeconds(session):Math.max(0,sessionPlan.hardLimitSeconds()-elapsedSeconds(session)), answer, uncoveredEmpty);
 
         if (!gate.isAsk()) {
             log.info("[追问闸门] sessionId={}, round={}, layer={}, gate={}, p={}",
@@ -1044,7 +1165,9 @@ public class InterviewFlowService {
         record.setJobId(session.getJobId());
         record.setQuestionId(req.getQuestionId());
         record.setPosition(resolveJobName(session));
-        record.setOriginalQuestion(question != null ? question.getContent() : null);
+        record.setOriginalQuestion(question != null ? question.getContent() : askedMainMessages(session.getId()).stream()
+                .filter(m -> java.util.Objects.equals(m.getRoundNo(), req.getRoundNo()))
+                .map(InterviewMessage::getContent).findFirst().orElse(null));
         record.setUserAnswer(req.getAnswer());
         record.setFollowUpQuestion(followup.followUpQuestion);
         record.setSource(followup.source);
@@ -1109,6 +1232,11 @@ public class InterviewFlowService {
 
             ExperienceQuestionService.ExperienceQuestionResult result =
                     experienceQuestionService.generate(jobName, resume, askedContents, jobTags);
+            if (!hasTimeLeft(session)) {
+                var finished = new InterviewStep();
+                finished.setNextAction(ACTION_FINISHABLE);
+                return finished;
+            }
             String labeledContent = result.getQuestion();
 
             InterviewMessage msg = new InterviewMessage();
@@ -1123,16 +1251,12 @@ public class InterviewFlowService {
             msg.setReferenceAnswer(result.getReferenceAnswer());
             messageMapper.insert(msg);
 
-            QuestionView view = new QuestionView();
-            view.setId(0L);
-            view.setContent(labeledContent);
-            view.setAbilityTag(msg.getAbilityTag());
-            view.setRoundNo(roundNo);
-            view.setQuestionType(QUESTION_TYPE_EXPERIENCE);
+            QuestionView view = promptView(msg);
 
             InterviewStep step = new InterviewStep();
             step.setNextAction(ACTION_NEXT);
             step.setQuestion(view);
+            step.setInterviewStage(stages.stage(session.getId()));
             return step;
         } catch (Exception e) {
             log.warn("[体验题] 生成失败，回退题库选题: sessionId={}, roundNo={}, err={}",

@@ -233,4 +233,19 @@ function onOnlineSaved(payload) {
 .mres__tag.is-on { color: #fff; background: var(--m-primary); }
 
 .merr { padding: 10px 12px; color: #7c4315; background: var(--m-accent-soft); border-radius: 10px; font-size: 12px; line-height: 1.5; }
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .mres__saved-icon {
+    background: rgba(255,255,255,.75)
+}
+:root:not([data-theme="dark"]) .mres__remove {
+    background: rgba(255,255,255,.8)
+}
+:root:not([data-theme="dark"]) .mres__skill button {
+    background: rgba(255,255,255,.7)
+}
+:root:not([data-theme="dark"]) .mres__tag {
+    background: #f2f4f0
+}
 </style>
