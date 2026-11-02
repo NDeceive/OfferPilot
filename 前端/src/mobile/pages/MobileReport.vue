@@ -40,6 +40,8 @@
         </div>
       </section>
 
+      <InterviewRecordings v-if="report?.sessionId" :session-id="report.sessionId" />
+
       <section class="mobile-section">
         <header class="mobile-section-heading"><h2>本次结论</h2></header>
         <article class="mobile-info-card mrep__conclusion">
@@ -218,6 +220,7 @@ import MobileShell from '../components/MobileShell.vue'
 import MobileState from '../components/MobileState.vue'
 import MobileSkeleton from '../components/MobileSkeleton.vue'
 import MobileScoreRing from '../components/MobileScoreRing.vue'
+import InterviewRecordings from '../../components/interview/InterviewRecordings.vue'
 
 const route = useRoute()
 /** /report 没有 :id 段，退化成「没编号」而不是去请求 /report/undefined */
@@ -326,7 +329,7 @@ const dateText = computed(() => {
 })
 
 const durationText = computed(() => {
-  const total = Math.max(0, Number(report.value?.actualDurationSeconds || report.value?.durationSeconds) || 0)
+  const total = Math.max(0, Number(report.value?.actualDurationSeconds ?? report.value?.durationSeconds) || 0)
   const minutes = Math.floor(total / 60)
   const rest = total % 60
   if (!total) return '时长待记录'
@@ -556,4 +559,22 @@ onMounted(loadReport)
 .mrep__foot .mobile-primary-button { grid-column: 1 / -1; }
 .mrep__foot .mobile-secondary-button { min-height: 44px; }
 .mrep__foot button:disabled { opacity: .6; }
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .mrep__track {
+    background: #edf1ee
+}
+:root:not([data-theme="dark"]) .mrep__insight.is-warn {
+    background: #fdfaf5
+}
+:root:not([data-theme="dark"]) .mrep__q-head:active {
+    background: #f6f8f7
+}
+:root:not([data-theme="dark"]) .mrep__dialogue {
+    background: #f6f8f7
+}
+:root:not([data-theme="dark"]) .mrep__dialogue.is-followup {
+    background: #edf5f1
+}
 </style>

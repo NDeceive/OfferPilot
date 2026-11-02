@@ -206,4 +206,13 @@ onUnmounted(() => {
     max-height: 650px;
   }
 }
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .page-controls button {
+    background: white
+}
+:root:not([data-theme="dark"]) .page-surface canvas {
+    background: white
+}
 </style>

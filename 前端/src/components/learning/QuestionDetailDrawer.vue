@@ -112,4 +112,37 @@ onBeforeUnmount(() => { disposed = true; sequence++; if (previousFocus?.isConnec
 .self-assessment{flex-shrink:0;padding:12px 0;border-top:1px solid #e8eeeb}.self-assessment h3{font-size:15px;margin:0 0 6px}.self-assessment p{font-size:12px;line-height:1.7;margin:6px 0;color:#52615b}
 @media(max-width:767px){.question-drawer{padding:18px 20px;bottom:calc(68px + env(safe-area-inset-bottom));width:100%;top:var(--nav-height,64px)}.drawer-heading h2{font-size:20px}.detail-tabs{margin-top:14px}.drawer-content{padding:16px 0}}
 @media(prefers-reduced-motion:reduce){.report-drawer-enter-active,.report-drawer-leave-active,.question-drawer button{transition:none}}
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .outcome {
+    background: #f0f3f2
+}
+:root:not([data-theme="dark"]) .outcome.failed, :root:not([data-theme="dark"]) .outcome.system {
+    background: #fff0f1
+}
+:root:not([data-theme="dark"]) .outcome.self {
+    background: #fff7e9
+}
+:root:not([data-theme="dark"]) .question-statement {
+    background: #f8faf9
+}
+:root:not([data-theme="dark"]) .readonly-options .chosen .choice-box {
+    background: #e3f5ed
+}
+:root:not([data-theme="dark"]) .readonly-options .wrong .choice-box {
+    background: #fff0f1
+}
+:root:not([data-theme="dark"]) .drawer-content pre {
+    background: #f4f7f5
+}
+:root:not([data-theme="dark"]) .detail-error {
+    background: #fff0f1
+}
+:root:not([data-theme="dark"]) .question-drawer button {
+    background: white
+}
+:root:not([data-theme="dark"]) .question-drawer button:hover {
+    background: #f0f8f4
+}
 </style>

@@ -39,6 +39,24 @@ public class InterviewAudioController {
     private final VoiceRetentionService retentionService;
     private final com.zhimian.mapper.InterviewSessionMapper sessionMapper;
 
+    /** Recording discovery is independent of voice analysis success. Never return local filesystem paths. */
+    @GetMapping("/{sessionId}/recordings")
+    public Result<java.util.List<Map<String, Object>>> recordings(@PathVariable Long sessionId) {
+        var session=sessionMapper.selectById(sessionId);
+        if(session==null || !session.getUserId().equals(UserContext.getUserId()))
+            throw new BizException("无权访问该会话的录音");
+        var recordings=new java.util.ArrayList<Map<String,Object>>();
+        for(var audio:audioService.listBySession(sessionId)) {
+            if(!"OK".equals(audio.getStatus()))continue;
+            var item=new LinkedHashMap<String,Object>();
+            item.put("audioId",audio.getId());item.put("roundNo",audio.getRoundNo());
+            item.put("durationMs",audio.getDurationMs());item.put("byteSize",audio.getByteSize());
+            item.put("available",Files.isRegularFile(audioService.pathOf(audio)));
+            recordings.add(item);
+        }
+        return Result.success(recordings);
+    }
+
     @PostMapping("/{sessionId}/answers/{roundNo}/audio")
     public Result<Map<String, Object>> upload(@PathVariable Long sessionId,
                                               @PathVariable int roundNo,

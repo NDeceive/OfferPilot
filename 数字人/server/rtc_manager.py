@@ -37,6 +37,12 @@ class RTCManager:
         """
         self.opt = opt
         self.pcs: set = set()
+        bitrate = getattr(opt, 'video_bitrate', 0)
+        if bitrate:
+            from aiortc.codecs import h264, vpx
+            for codec in (h264, vpx):
+                codec.DEFAULT_BITRATE = bitrate
+                codec.MAX_BITRATE = max(codec.MAX_BITRATE, bitrate*2)
 
     async def handle_offer(self, request):
         """处理 WebRTC offer 信令"""

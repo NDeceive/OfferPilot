@@ -11,3 +11,24 @@
 .teaching-portal .student-task-action>.primary{display:flex;width:100%}
 
 @media(max-width:600px){.teaching-score-plan .table-scroll{overflow:visible}.teaching-score-plan table{min-width:0!important;width:100%}.teaching-score-plan thead{display:none}.teaching-score-plan tbody{display:block}.teaching-score-plan tr{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));padding:16px;border-bottom:1px solid #e4e4e7;gap:12px}.teaching-score-plan tr:last-child{border:0}.teaching-score-plan td{display:grid;padding:0!important;border:0!important;white-space:normal!important;gap:6px}.teaching-score-plan td:first-child{grid-column:1/-1;font-weight:600}.teaching-score-plan td[data-label]::before{content:attr(data-label);color:#52525b;font-size:12px}}
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .student-task-filter {
+    background: white
+}
+:root:not([data-theme="dark"]) .student-task-card {
+    background: white
+}
+:root:not([data-theme="dark"]) .student-teaching-tasks progress {
+    background: #f4f4f5
+}
+:root:not([data-theme="dark"]) .student-teaching-tasks progress::-webkit-progress-bar {
+    background: #f4f4f5
+}
+:root:not([data-theme="dark"]) .student-task-questions li>span {
+    background: #f4f4f5
+}
+:root:not([data-theme="dark"]) .student-task-blocked {
+    background: #fafaf9
+}

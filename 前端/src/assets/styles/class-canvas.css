@@ -6,3 +6,63 @@
 .class-insights-shell:has(.class-canvas) .main-content{background:var(--surface-soft)}.class-insights-shell:has(.class-canvas){background:var(--surface-soft)}
 
 .class-canvas .actions>a,.canvas-table td>a,.canvas-back{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:10px 16px;border:1px solid var(--neutral-300,#d4d4d8);border-radius:8px;background:var(--surface-elevated);line-height:1.5;text-decoration:none;gap:8px}.class-canvas .actions>a:hover,.canvas-table td>a:hover,.class-canvas .canvas-back:hover{background:var(--surface-soft);border-color:#b5dcca}.class-canvas .actions>a.primary{background:var(--accent-500,#10b981);border-color:var(--accent-500,#10b981);color:white}.class-canvas .actions>a.primary:hover{background:var(--accent-600,#059669)}.canvas-back{margin-bottom:16px}.class-canvas :is(input,select){border-color:var(--neutral-300,#d4d4d8);border-radius:8px;line-height:1.5}.class-canvas button[aria-pressed=true]{border-color:#b5dcca}.canvas-table td>a{margin:4px 0}.canvas-bar:hover{border-color:#b5dcca!important;background:var(--surface-soft)!important}
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .class-canvas :is(button,input,select) {
+    background: white
+}
+:root:not([data-theme="dark"]) .class-canvas button:hover {
+    background: #f0f7f3
+}
+:root:not([data-theme="dark"]) .canvas-workspace>nav button {
+    background: white
+}
+:root:not([data-theme="dark"]) .class-canvas button[aria-pressed=true] {
+    background: #e1f3e9
+}
+:root:not([data-theme="dark"]) .canvas-analysis {
+    background: white
+}
+:root:not([data-theme="dark"]) .canvas-bar {
+    background: white !important
+}
+:root:not([data-theme="dark"]) .canvas-bar[aria-pressed=true] {
+    background: #e1f3e9 !important
+}
+:root:not([data-theme="dark"]) .canvas-track {
+    background: #eef3ef
+}
+:root:not([data-theme="dark"]) .canvas-evidence {
+    background: #eaf7f0
+}
+:root:not([data-theme="dark"]) .canvas-warning {
+    background: #fff2df
+}
+:root:not([data-theme="dark"]) .canvas-empty {
+    background: white
+}
+:root:not([data-theme="dark"]) .canvas-table {
+    background: white
+}
+:root:not([data-theme="dark"]) .canvas-table th {
+    background: #f6f9f7
+}
+:root:not([data-theme="dark"]) .canvas-score {
+    background: #eaf7f0
+}
+:root:not([data-theme="dark"]) .class-insights-shell:has(.class-canvas) .main-content {
+    background: #f6f8f7
+}
+:root:not([data-theme="dark"]) .class-insights-shell:has(.class-canvas) {
+    background: #f6f8f7
+}
+:root:not([data-theme="dark"]) .class-canvas .actions>a, :root:not([data-theme="dark"]) .canvas-table td>a, :root:not([data-theme="dark"]) .canvas-back {
+    background: white
+}
+:root:not([data-theme="dark"]) .class-canvas .actions>a:hover, :root:not([data-theme="dark"]) .canvas-table td>a:hover, :root:not([data-theme="dark"]) .class-canvas .canvas-back:hover {
+    background: #f0f7f3
+}
+:root:not([data-theme="dark"]) .canvas-bar:hover {
+    background: #f0f7f3 !important
+}

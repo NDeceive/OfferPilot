@@ -333,4 +333,37 @@ onUnmounted(() => {
 @keyframes landscape-drift{from{transform:translate(-18px,8px) rotate(-.6deg)}to{transform:translate(18px,-8px) rotate(.6deg)}}
 @media(max-width:1000px){.hero-landscape{height:110px;opacity:.65}}
 @media(prefers-reduced-motion:reduce){.landscape-back,.landscape-front{animation:none}}
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .register-link {
+    background: #d9fff3
+}
+:root:not([data-theme="dark"]) .register-link:hover {
+    background: #fff
+}
+:root:not([data-theme="dark"]) .chat-row p {
+    background: rgba(255,255,255,.045)
+}
+:root:not([data-theme="dark"]) .score-note, :root:not([data-theme="dark"]) .improve-note {
+    background: #fff
+}
+:root:not([data-theme="dark"]) .code-mark {
+    background: #e0f4eb
+}
+:root:not([data-theme="dark"]) .step-preview {
+    background: #edf5ef
+}
+:root:not([data-theme="dark"]) .interview-main {
+    background: #f0f5ee
+}
+:root:not([data-theme="dark"]) .java-mark {
+    background: #e2f2eb
+}
+:root:not([data-theme="dark"]) .mini-steps article {
+    background: #eef3eb
+}
+:root:not([data-theme="dark"]) .java-mark {
+    background: #eef6f2
+}
 </style>

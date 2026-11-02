@@ -496,4 +496,25 @@ const handleCommand = (cmd) => {
     height: 44px;
   }
 }
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .layout-shell {
+    background: #f7faff
+}
+:root:not([data-theme="dark"]) .sidebar {
+    background: rgba(255, 255, 255, 0.94)
+}
+:root:not([data-theme="dark"]) .collapse-btn {
+    background: #fff
+}
+:root:not([data-theme="dark"]) .topbar {
+    background: rgba(255, 255, 255, 0.9)
+}
+:root:not([data-theme="dark"]) .search-shell {
+    background: #fff
+}
+:root:not([data-theme="dark"]) .search-shell kbd {
+    background: #f3f6fb
+}
 </style>

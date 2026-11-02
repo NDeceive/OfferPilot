@@ -407,4 +407,46 @@ onMounted(loadOverview)
 .resume-library-actions .primary-btn,.resume-library-actions .secondary-btn{min-height:36px;padding-inline:12px;font-size:11px}
 @media(max-width:760px){.advice-card{grid-template-columns:1fr;padding:0;gap:0}.coach-portrait{height:230px}.coach-portrait img{height:250px;width:auto}.advice-copy{padding:22px}.advice-copy h1{font-size:23px}}
 .quick-card{height:auto;min-height:210px}.quick-action{display:block;margin-top:12px;color:var(--accent-700);font-size:12px;line-height:1.5}.quick-card:focus-visible{outline:2px solid var(--accent-700);outline-offset:3px}.mini-ui b{min-width:0;overflow-wrap:anywhere;text-align:right}
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .panel, :root:not([data-theme="dark"]) .advice-card, :root:not([data-theme="dark"]) .overview-strip {
+    background: rgba(255,255,255,.92)
+}
+:root:not([data-theme="dark"]) .secondary-btn {
+    background: #fff
+}
+:root:not([data-theme="dark"]) .secondary-btn:hover {
+    background: #fbfdfc
+}
+:root:not([data-theme="dark"]) .quick-card {
+    background: #fbfdfc
+}
+:root:not([data-theme="dark"]) .mini-ui, :root:not([data-theme="dark"]) .question-list {
+    background: rgba(255,255,255,.8)
+}
+:root:not([data-theme="dark"]) .profile-paper {
+    background: rgba(248,252,250,.72)
+}
+:root:not([data-theme="dark"]) .profile-title>span {
+    background: #e7f6ef
+}
+:root:not([data-theme="dark"]) .tag-list span {
+    background: #f1f5f3
+}
+:root:not([data-theme="dark"]) .resume-row {
+    background: rgba(255,255,255,.84)
+}
+:root:not([data-theme="dark"]) .generating em {
+    background: #edf1ef
+}
+:root:not([data-theme="dark"]) .error-mark {
+    background: #f5e7e3
+}
+:root:not([data-theme="dark"]) .resume-library-list>a {
+    background: rgba(255,255,255,.85)
+}
+:root:not([data-theme="dark"]) .resume-library-list>a:hover {
+    background: #f7fcf9
+}
 </style>

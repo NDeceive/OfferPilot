@@ -38,6 +38,19 @@ class TeacherDashboardIsolationTest {
 
     @AfterEach void clear() { UserContext.clear(); }
 
+    @Test void firstLayerIsCountedOnceAndDeeperLayersAreAdded() throws Exception {
+        var service=service(new FakeTeaching(1L,List.of(),List.of(),List.of()),List.of(),List.of(),List.of(),
+                mapper(InterviewFollowupRecordMapper.class,(name,args)->List.of()));
+        var first=new com.zhimian.entity.InterviewFollowupChain();first.setLayerNo(1);first.setSource("AI");
+        var second=new com.zhimian.entity.InterviewFollowupChain();second.setLayerNo(2);second.setSource("RULE");
+        var third=new com.zhimian.entity.InterviewFollowupChain();third.setLayerNo(3);third.setSource("AI");
+        var method=TeacherDashboardService.class.getDeclaredMethod("buildSummary",List.class,List.class,Set.class,List.class,List.class);
+        method.setAccessible(true);
+        var summary=(com.zhimian.dto.TeacherDashboardSummary)method.invoke(service,List.of(),List.of(),Set.of(),
+                List.of(followup(100L,"首层","AI")),List.of(first,second,third));
+        assertEquals(2,summary.getAiFollowupCount());assertEquals(1,summary.getRuleFollowupCount());
+    }
+
     @Test void emptyTeacherNeverQueriesFollowupsOrInventsWeaknesses() {
         UserContext.set(1L, "TEACHER");
         AtomicInteger followupQueries = new AtomicInteger();

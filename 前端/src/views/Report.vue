@@ -202,7 +202,7 @@
           <div v-if="report?.voice" class="voice-summary">
             <template v-if="report.voice.status === 'ANALYZED'">
               <strong>表达表现</strong>
-              <span>综合 {{ report.voice.overall }} 分</span>
+              <span v-if="report.voice.overall != null">综合 {{ report.voice.overall }} 分</span>
               <span>已分析 {{ voiceRounds.length }} 题</span>
               <label class="voice-retain">
                 保留
@@ -270,7 +270,7 @@
                       <span class="round-msg-label">原声回放</span>
                       <audio :src="voiceAudio[r.roundNo]" controls preload="none"></audio>
                       <small v-if="voiceOfRound(r.roundNo)">
-                        流畅 {{ Math.round(voiceOfRound(r.roundNo).fluency) }} · 音量 {{ Math.round(voiceOfRound(r.roundNo).volume) }} · 状态 {{ Math.round(voiceOfRound(r.roundNo).confidence) }}
+                        流畅 {{ Math.round(voiceOfRound(r.roundNo).fluency) }} · 音量 {{ Math.round(voiceOfRound(r.roundNo).volume) }}<template v-if="voiceOfRound(r.roundNo).confidence != null"> · 状态 {{ Math.round(voiceOfRound(r.roundNo).confidence) }}</template>
                       </small>
                     </div>
                   </div>

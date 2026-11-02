@@ -626,4 +626,13 @@ function connTitle(p) {
   .waiting-code { font-size: 2rem; }
   .waiting-hint { font-size: var(--text-xs); }
 }
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .waiting-copy:hover {
+    background: rgba(255, 255, 255, 0.1)
+}
+:root:not([data-theme="dark"]) .member-note {
+    background: #fef7e6
+}
 </style>

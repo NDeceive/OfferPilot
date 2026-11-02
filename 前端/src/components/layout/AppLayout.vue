@@ -664,4 +664,28 @@ onUnmounted(() => {
 .class-insights-shell .main-content{background:var(--surface-elevated)}
 .training-task-shell .main-content{background:var(--surface-elevated)}
 .teacher-shell .nav-link:hover{background:var(--surface-soft);color:#087f60}
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .topnav {
+    background: rgba(250, 250, 250, 0.82)
+}
+:root:not([data-theme="dark"]) .teacher-shell .topnav {
+    background: #fff
+}
+:root:not([data-theme="dark"]) .teacher-shell .main-content {
+    background: #f8f9f8
+}
+:root:not([data-theme="dark"]) .teacher-shell .nav-link.active {
+    background: #e1f3e9
+}
+:root:not([data-theme="dark"]) .class-insights-shell .main-content {
+    background: #fff
+}
+:root:not([data-theme="dark"]) .training-task-shell .main-content {
+    background: #fff
+}
+:root:not([data-theme="dark"]) .teacher-shell .nav-link:hover {
+    background: #f0f7f3
+}
 </style>

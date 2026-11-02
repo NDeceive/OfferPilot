@@ -10,11 +10,11 @@
         <span class="session-tag">{{ jobTitle }} 面试</span>
       </div>
       <div class="topbar-center">
-        <div class="timer" :class="{ warning: timeLeft < 300, danger: timeLeft < 60 }">
+        <div class="timer" :class="{ warning: interviewPlan ? softLimitReached : timeLeft < 300, danger: interviewPlan ? hardLimitReached : timeLeft < 60 }">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
           </svg>
-          <span>{{ formatTime(timeLeft) }}</span>
+          <span>{{ interviewPlan ? '已用 ' + formatTime(elapsedSeconds) : formatTime(timeLeft) }}</span>
         </div>
       </div>
       <div class="topbar-right">
@@ -31,7 +31,7 @@
           </svg>
           <span class="pause-label">{{ isPaused ? '继续' : '暂停' }}</span>
         </button>
-        <button class="end-btn" :disabled="expressionEnding" @click="endInterview">{{ sessionFinished ? '已结束' : expressionEnding ? '正在结束…' : '结束面试' }}</button>
+        <button class="end-btn" :disabled="expressionEnding || isSubmitting || isSpeechProcessing" @click="endInterview">{{ sessionFinished ? '已结束' : expressionEnding ? '正在结束…' : '结束面试' }}</button>
       </div>
     </header>
 
@@ -75,6 +75,13 @@
           <span class="mq-label">当前题目</span>
           <span class="mq-text">{{ latestQuestion }}</span>
         </p>
+        <div v-if="interviewPlan" class="interview-plan-status" role="status">
+          <span>核心问题 {{ interviewPlan.completedCoreQuestions }}/{{ interviewPlan.totalCoreQuestions }}</span>
+          <span>预计约 {{ Math.ceil(interviewPlan.estimatedDurationSeconds / 60) }} 分钟</span>
+          <span v-if="interviewPlan.skippedCoreQuestions">已跳过 {{ interviewPlan.skippedCoreQuestions }} 题</span>
+          <p v-if="hardLimitReached">已到保护上限，请在 {{ formatTime(timeLeft) }} 内完成当前回答；系统将收尾。</p>
+          <p v-else-if="softLimitReached">已达参考时长，将继续完成核心问题，当前回答不会被打断。</p>
+        </div>
 
         <div class="input-bar" :class="{ collapsed: !showTranscript }">
           <div class="transcript-toolbar">
@@ -119,7 +126,7 @@
             :transcript="answer"
             :disabled="isSubmitting || isPaused || pauseChanging || expressionEnding || needsNextQuestion || !sessionId"
             :paused="isPaused || pauseChanging"
-            :allow-skip="!route.query.assignmentId"
+            :allow-skip="!route.query.assignmentId && interviewStage !== 'SELF_INTRODUCTION'"
             @transcript="appendSpeechTranscript"
             @processing="isSpeechProcessing = $event"
             @submit="submitAnswerFn"
@@ -141,12 +148,13 @@
         <div class="info-card">
           <div class="q-head">
             <span class="q-num">第 {{ currentQuestion }} 题</span>
-            <span class="q-of">{{ formatTime(timeLeft) }}</span>
+            <span class="q-of">{{ interviewPlan ? '核心问题 ' + interviewPlan.completedCoreQuestions + '/' + interviewPlan.totalCoreQuestions : formatTime(timeLeft) }}</span>
           </div>
           <div class="q-progress">
             <div class="q-bar" :style="{ width: progressPercent + '%' }"></div>
           </div>
           <div class="q-rows">
+            <div v-if="stageLabels[interviewStage]" class="q-row"><span class="ql">阶段</span><span class="qv">{{ stageLabels[interviewStage] }}</span></div>
             <div class="q-row"><span class="ql">类型</span><span class="qv">{{ questionTypes[currentQuestion - 1] || '技术问题' }}</span></div>
             <div class="q-row"><span class="ql">难度</span><span class="qv">{{ questionDifficulties[currentQuestion - 1] || '中等' }}</span></div>
             <div class="q-row"><span class="ql">考察</span><span class="qv">{{ questionSkills[currentQuestion - 1] || '综合能力' }}</span></div>
@@ -174,7 +182,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { interviewReportRoute } from '../utils/interviewCompletion'
+import { interviewReportRoute, presentInterviewClosing } from '../utils/interviewCompletion'
 import { startInterview, submitAnswer, getNextQuestion, finishInterview as finishInterviewRequest, getExpressionContext, setInterviewPaused, getInterviewResume } from '../api'
 import ExpressionUploadStatus from '../components/interview/ExpressionUploadStatus.vue'
 import CameraPreview from '../components/interview/CameraPreview.vue'
@@ -190,10 +198,27 @@ const isMobile = useIsMobile()
 // --- Session state ---
 const sessionId = ref(null)
 const currentQuestionId = ref(null)
+const currentPromptId = ref(null)
+const interviewStage = ref('')
+const stageLabels = { SELF_INTRODUCTION: '自我介绍', PROJECT_DISCUSSION: '项目经历与技术深挖', PROFESSIONAL_QUESTIONS: '岗位专业知识考察', CLOSING: '面试收尾', COMPLETED: '面试已结束' }
+function syncQuestion(question, stage) {
+  currentPromptId.value = question?.questionInstanceId ?? (question?.questionId != null ? question.id : null)
+  interviewStage.value = stage || question?.interviewStage || ''
+}
 const jobTitle = ref('前端开发工程师')
 const currentQuestion = ref(1)
 const totalDuration = ref(1800)
 const timeLeft = ref(1800)
+const interviewPlan = ref(null)
+const elapsedSeconds = ref(0)
+const softLimitReached = computed(() => interviewPlan.value && elapsedSeconds.value >= interviewPlan.value.initialDurationSeconds)
+const hardLimitReached = computed(() => interviewPlan.value && elapsedSeconds.value >= interviewPlan.value.hardLimitSeconds)
+function syncPlan(plan) {
+  if (!plan || plan.mode !== 'CORE_QUESTIONS') return
+  interviewPlan.value = plan
+  elapsedSeconds.value = Number(plan.elapsedSeconds) || 0
+  timeLeft.value = Number(plan.remainingSeconds) || 0
+}
 const answer = ref('')
 const isAiTyping = ref(false)
 const isPaused = ref(false)
@@ -223,9 +248,9 @@ let pendingAnswerRequest = null
 let pendingSkipRequest = null
 watch(sessionId, sid => { if (sid) syncExpressionClock() })
 // 换题就重开一段录音；同一题的追问不打断
-watch([currentQuestionId, sessionFinished], ([id, finished]) => {
-  if (!id || finished || !voiceEnabled.value || !sessionId.value) return
-  answerAudio.start({ sessionId: sessionId.value, roundNo: currentQuestion.value, questionId: id })
+watch([currentQuestion, currentQuestionId, sessionFinished], ([round, id, finished]) => {
+  if (id == null || finished || (!voiceEnabled.value && interviewStage.value !== 'SELF_INTRODUCTION') || !sessionId.value) return
+  answerAudio.start({ sessionId: sessionId.value, roundNo: round, questionId: id })
 })
 async function syncExpressionClock() {
   clockReady.value = false
@@ -251,6 +276,16 @@ function finishInterview(sid) {
     try {
       try { cameraPreviewRef.value?.stopExpressions() } catch(error) { console.warn('Stop sampling failed',error) }
       try { Promise.resolve(expressionUploadRef.value?.flush()).catch(error=>console.warn('Expression upload deferred',error)) } catch(error) { console.warn('Expression upload deferred',error) }
+      try { await microphoneRef.value?.stopMicrophone() } catch(error) { console.warn('Stop microphone failed',error) }
+      await answerAudio.flushSubmitted(sid)
+      answerAudio.discard()
+      isAiTyping.value=false
+      // Start the closing before waiting for the server (an in-flight answer may hold its session lock).
+      const closingPlayback = presentInterviewClosing(text => {
+        showTranscript.value=true
+        messages.value.push({role:'ai',text,followup:false})
+        scrollToBottom()
+      }, text => digitalHumanRef.value?.sayClosing(text))
       try { await finishInterviewRequest(sid) }
       catch(error) {
         // The server may have committed even when its response was lost.
@@ -259,9 +294,10 @@ function finishInterview(sid) {
         if(state?.status!=='FINISHED')throw error
       }
       sessionFinished.value=true
-      answerAudio.discard()
+      await closingPlayback
+      releaseMediaDevices()
       return sid
-    } catch(error) { expressionEnding.value=false; finishError.value='结束结果暂未确认，请检查网络后重试。'; throw error }
+    } catch(error) { expressionEnding.value=false; finishError.value=error.message || '结束结果暂未确认，请检查网络后重试。'; throw error }
   })().finally(()=>{ finishPromise=null })
   return finishPromise
 }
@@ -280,9 +316,9 @@ const evalItems = ref([
   { name: '技术深度', value: 0, color: '#8b5cf6' },
 ])
 
-const progressPercent = computed(() => totalDuration.value > 0
-  ? ((totalDuration.value - timeLeft.value) / totalDuration.value) * 100
-  : 0)
+const progressPercent = computed(() => interviewPlan.value
+  ? Math.min(100, interviewPlan.value.completedCoreQuestions / Math.max(1, interviewPlan.value.totalCoreQuestions) * 100)
+  : totalDuration.value > 0 ? ((totalDuration.value - timeLeft.value) / totalDuration.value) * 100 : 0)
 
 // 手机端默认收起问答记录，用这条常驻展示当前题目，避免看不到题
 const latestQuestion = computed(() => {
@@ -295,8 +331,8 @@ const latestQuestion = computed(() => {
 let timerInterval = null
 let autoFinished = false
 
-watch([timeLeft, isSubmitting], ([seconds, submitting]) => {
-  if (seconds <= 0 && sessionId.value && !submitting && !autoFinished && !expressionEnding.value) {
+watch([timeLeft, isPaused, isSubmitting, isSpeechProcessing], ([seconds, paused, submitting, processing]) => {
+  if (seconds <= 0 && sessionId.value && !paused && !submitting && !processing && !autoFinished && !expressionEnding.value) {
     autoFinished = true
     autoFinishInterview()
   }
@@ -305,9 +341,17 @@ watch([timeLeft, isSubmitting], ([seconds, submitting]) => {
 // --- Initialize interview on mount ---
 onMounted(async () => {
   // Start local timer
+  let lastTick = Date.now()
   timerInterval = setInterval(() => {
-    if (timeLeft.value > 0 && !isPaused.value) timeLeft.value--
-  }, 1000)
+    const now = Date.now()
+    const elapsed = Math.floor((now - lastTick) / 1000)
+    if (elapsed < 1) return
+    lastTick += elapsed * 1000
+    if (!isPaused.value && !sessionFinished.value && !expressionEnding.value) {
+      timeLeft.value = Math.max(0, timeLeft.value - elapsed)
+      if (interviewPlan.value) elapsedSeconds.value += elapsed
+    }
+  }, 250)
 
   // Keep the duration selected on the preparation page.
   const jobId = Number(route.query.jobId) || 1
@@ -324,8 +368,10 @@ onMounted(async () => {
       if (resumed.status !== 'ONGOING') autoFinished = true
       totalDuration.value = resumed.durationSeconds || durationSeconds
       timeLeft.value = resumed.remainingSeconds ?? totalDuration.value
+      syncPlan(resumed.interviewPlan)
       isPaused.value = !!resumed.paused
       if (resumed.status !== 'ONGOING') {
+        sessionFinished.value = true
         expressionEnding.value = true
         releaseMediaDevices()
         expressionUploadRef.value?.flush()
@@ -333,6 +379,7 @@ onMounted(async () => {
         return
       }
       const prompt = resumed.currentQuestion
+      syncQuestion(prompt, resumed.interviewStage)
       const records = resumed.messages || []
       messages.value = records.map(item => ({ role: item.role === 'INTERVIEWER' ? 'ai' : 'user', text: item.content, followup: item.msgType === 'FOLLOWUP' }))
       for (const item of records.filter(item => item.role === 'INTERVIEWER' && item.msgType === 'MAIN')) {
@@ -354,10 +401,12 @@ onMounted(async () => {
     sessionId.value = res.sessionId
     if(res.finishable){autoFinished=true;await finishInterview(sessionId.value);releaseMediaDevices();await waitForReport(sessionId.value);return}
     if(res.durationSeconds){totalDuration.value=res.durationSeconds;timeLeft.value=res.remainingSeconds??res.durationSeconds}
+    syncPlan(res.interviewPlan)
     jobTitle.value = res.jobName || '模拟面试'
 
     // Set first question
     if (res.question) {
+      syncQuestion(res.question)
       currentQuestion.value=res.question.roundNo||1
       currentQuestionId.value = res.question.id
       questionTypes.value.push(mapQuestionType(res.question.type))
@@ -413,16 +462,27 @@ async function submitAnswerFn() {
 
   try {
     if (!pendingAnswerRequest || pendingAnswerRequest.answer !== userAnswer || pendingAnswerRequest.roundNo !== currentQuestion.value) {
-      pendingAnswerRequest = { questionId: currentQuestionId.value, roundNo: currentQuestion.value, answer: userAnswer, requestId: crypto.randomUUID() }
+      pendingAnswerRequest = { questionId: currentQuestionId.value, questionInstanceId: currentPromptId.value, roundNo: currentQuestion.value, answer: userAnswer, requestId: crypto.randomUUID() }
+    }
+    if (interviewStage.value === 'SELF_INTRODUCTION' && !pendingAnswerRequest.audioId) {
+      const uploaded = await answerAudio.stopAndUpload({ required: true })
+      if (!uploaded?.audioId) throw new Error('录音尚未保存，请重试提交')
+      pendingAnswerRequest.audioId = uploaded.audioId
     }
     const res = await submitAnswer(sessionId.value, {
       ...pendingAnswerRequest,
     })
+    answerAudio.markSubmitted()
+    syncPlan(res.interviewPlan)
     pendingAnswerRequest = null
+
+    if (expressionEnding.value) return
+    currentPromptId.value = res.questionInstanceId || currentPromptId.value
+    interviewStage.value = res.interviewStage || interviewStage.value
 
     isAiTyping.value = false
     // 追问还是同一题，继续录；进入下一题才把这一段传上去
-    if (res.nextAction !== 'FOLLOWUP') answerAudio.stopAndUpload()
+    if (res.nextAction !== 'FOLLOWUP') await answerAudio.stopAndUpload()
 
     if (res.nextAction === 'FOLLOWUP' && res.followupQuestion) {
       const followupText = normalizeFollowupQuestion(res.followupQuestion)
@@ -439,6 +499,8 @@ async function submitAnswerFn() {
       // Fetch the next question from the server
       try {
         const nextRes = await getNextQuestion(sessionId.value)
+        syncPlan(nextRes.interviewPlan)
+        if (expressionEnding.value) return
         if(nextRes.nextAction==='FINISHABLE'){
           await finishInterview(sessionId.value)
           releaseMediaDevices()
@@ -446,6 +508,7 @@ async function submitAnswerFn() {
           return
         }
         if (nextRes.question) {
+          syncQuestion(nextRes.question, nextRes.interviewStage)
           needsNextQuestion.value = false
           currentQuestion.value = nextRes.question.roundNo || currentQuestion.value + 1
           currentQuestionId.value = nextRes.question.id
@@ -475,7 +538,7 @@ async function submitAnswerFn() {
         releaseMediaDevices()
         messages.value.push({
           role: 'ai',
-          text: '面试结束！感谢你的精彩回答。正在生成你的能力报告...',
+          text: '面试已结束，正在生成报告…',
           followup: false,
         })
         scrollToBottom()
@@ -497,12 +560,18 @@ async function submitAnswerFn() {
       evaluationReady.value = true
     }
   } catch (e) {
+    if (expressionEnding.value) return
     console.error('Failed to submit answer:', e)
     answer.value=userAnswer
+    if (interviewStage.value === 'SELF_INTRODUCTION' && e.code !== 'AUDIO_UPLOAD_FAILED'
+        && (!pendingAnswerRequest?.audioId || e.message?.includes('录音'))) {
+      if (pendingAnswerRequest) delete pendingAnswerRequest.audioId
+      await answerAudio.start({ sessionId: sessionId.value, roundNo: currentQuestion.value, questionId: currentQuestionId.value })
+    }
     isAiTyping.value = false
     messages.value.push({
       role: 'ai',
-      text: '提交回答失败，请检查网络后重试。',
+      text: e.message || '提交回答失败，请检查网络后重试。',
       followup: false,
     })
   } finally {
@@ -520,18 +589,23 @@ async function skipQuestion() {
   try {
     if (!pendingSkipRequest || pendingSkipRequest.roundNo !== currentQuestion.value) pendingSkipRequest = {
       questionId: currentQuestionId.value,
+      questionInstanceId: currentPromptId.value,
       roundNo: currentQuestion.value,
       skipped: true,
       requestId: crypto.randomUUID(),
       answer: '',
     }
     let res = await submitAnswer(sessionId.value, pendingSkipRequest)
+    syncPlan(res.interviewPlan)
     pendingSkipRequest = null
-    if (res.nextAction === 'NEXT' && !res.question) { needsNextQuestion.value = true; res = await getNextQuestion(sessionId.value) }
+    if (expressionEnding.value) return
+    if (res.nextAction === 'NEXT' && !res.question) { needsNextQuestion.value = true; res = await getNextQuestion(sessionId.value); syncPlan(res.interviewPlan) }
+    if (expressionEnding.value) return
 
     isAiTyping.value = false
 
     if (res.nextAction === 'NEXT' && res.question) {
+      syncQuestion(res.question, res.interviewStage)
       needsNextQuestion.value = false
       currentQuestion.value = res.question.roundNo || currentQuestion.value + 1
       currentQuestionId.value = res.question.id
@@ -557,13 +631,14 @@ async function skipQuestion() {
       releaseMediaDevices()
       messages.value.push({
         role: 'ai',
-        text: '面试结束！感谢你的精彩回答。正在生成你的能力报告...',
+        text: '面试已结束，正在生成报告…',
         followup: false,
       })
       await waitForReport(sessionId.value)
     }
 
   } catch (e) {
+    if (expressionEnding.value) return
     console.error('Failed to skip question:', e)
     isAiTyping.value = false
     messages.value.push({ role: 'ai', text: '操作失败，请重试。', followup: false })
@@ -592,16 +667,19 @@ async function recoverNextQuestion() {
   isSubmitting.value = true
   try {
     const step = await getNextQuestion(sessionId.value)
+    syncPlan(step.interviewPlan)
+    if (expressionEnding.value) return
     if (step.nextAction === 'FINISHABLE') { await finishInterview(sessionId.value); releaseMediaDevices(); await waitForReport(sessionId.value); return }
     if (step.question) {
       const q=step.question
+      syncQuestion(q, step.interviewStage)
       currentQuestion.value=q.roundNo || currentQuestion.value+1
       currentQuestionId.value=q.id
       const index=currentQuestion.value-1
       questionTypes.value[index]=mapQuestionType(q.type)
       questionDifficulties.value[index]=difficultyLabels[q.difficulty] || '中等'
       questionSkills.value[index]=q.abilityTag || '综合能力'
-      messages.value.push({role:'ai',text:q.content,followup:false})
+      messages.value.push({role:'ai',text:q.content,followup:step.nextAction === 'FOLLOWUP'})
       speakQuestion(q.content)
       needsNextQuestion.value=false
     }
@@ -616,13 +694,13 @@ async function togglePause() {
     const result=await setInterviewPaused(sessionId.value,!isPaused.value)
     isPaused.value=result.paused
     timeLeft.value=result.remainingSeconds
+    syncPlan(result.interviewPlan)
   } catch (error) { messages.value.push({role:'ai',text:error.message || '暂停状态更新失败，请重试。',followup:false}) }
   finally { pauseChanging.value=false }
 }
 
 async function endInterview() {
-  if(expressionEnding.value)return
-  releaseMediaDevices()
+  if(expressionEnding.value || isSubmitting.value || isSpeechProcessing.value)return
   if (sessionId.value) {
     try {
       const res = await finishInterview(sessionId.value)
@@ -636,6 +714,7 @@ async function endInterview() {
     }
   }
   // Fallback navigation
+  releaseMediaDevices()
   router.push(route.query.assignmentId?'/my/tasks/'+route.query.assignmentId:'/history')
 }
 
@@ -646,13 +725,12 @@ function scrollToBottom() {
 }
 
 async function autoFinishInterview() {
-  releaseMediaDevices()
   isAiTyping.value = true
   try {
     const finishRes = await finishInterview(sessionId.value)
     messages.value.push({
       role: 'ai',
-      text: '面试时间已到，正在生成你的能力报告…',
+      text: '本次面试已结束，正在生成你的能力报告…',
       followup: false,
     })
     scrollToBottom()
@@ -685,13 +763,17 @@ function releaseMediaDevices() {
 
 function completionDestination() { return route.query.assignmentId ? '/my/tasks/'+route.query.assignmentId : '/history' }
 function leaveFinishedInterview() { return router.push(completionDestination()) }
-function waitForReport(sid) {
+async function waitForReport(sid) {
+  await finishInterview(sid)
   sessionFinished.value=true
+  releaseMediaDevices()
   return router.push(interviewReportRoute(sid, null, route.query.assignmentId))
 }
 </script>
 
 <style scoped>
+.interview-plan-status { display:flex; flex-wrap:wrap; gap:4px 16px; flex:0 0 auto; color:var(--neutral-700); font-size:14px; line-height:1.6; }
+.interview-plan-status p { width:100%; margin:0; color:var(--accent-700); overflow-wrap:anywhere; }
 .expression-note { margin:8px 0; font-size:12px; line-height:1.6; color:var(--neutral-600); }
 .interview-page {
   height: 100dvh;
@@ -1038,5 +1120,43 @@ function waitForReport(sid) {
   .input-bar.collapsed { height:auto; min-height:0; }
   .input-bar :deep(.voice-footer) { flex-wrap:wrap; gap:10px; }
   .input-bar :deep(.voice-actions) { margin-left:auto; }
+}
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .interview-body {
+    background: #fff
+}
+:root:not([data-theme="dark"]) .chat-panel {
+    background: #fff
+}
+:root:not([data-theme="dark"]) .digital-human-stage {
+    background: #e3ebf6
+}
+:root:not([data-theme="dark"]) .question-strip {
+    background: #f8faf9
+}
+:root:not([data-theme="dark"]) .question-strip button {
+    background: #fff
+}
+:root:not([data-theme="dark"]) .input-bar {
+    background: #fff
+}
+:root:not([data-theme="dark"]) .conversation-scroll {
+    background: rgba(255,255,255,.97)
+}
+:root:not([data-theme="dark"]) .info-panel {
+    background: #fbfcfb
+}
+:root:not([data-theme="dark"]) .vr-card {
+    background: #f4f5f6
+}
+:root:not([data-theme="dark"]) .info-card {
+    background: #f8faf9
+}
+@media (max-width:767.98px) {
+    :root:not([data-theme="dark"]) .mobile-question {
+        background: #f8faf9
+    }
 }
 </style>

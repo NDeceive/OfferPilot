@@ -277,6 +277,90 @@ const tone = status => ['低活跃', '轻微下降', '待点评'].includes(statu
 @media(max-width:1100px){.overview-refined .page-head{align-items:flex-start}.overview-refined .global-filters{max-width:100%;justify-content:flex-start}.overview-refined .metric:nth-child(4):before{display:none}.overview-refined .metric:nth-child(n+4){border-top:1px solid #edf1ed}.overview-refined .overview-top{grid-template-columns:1fr}.overview-refined .overview-bottom{grid-template-columns:1fr 1fr}.overview-refined .overview-bottom>.todo-panel{display:block}.overview-refined .todo-panel .module-heading{margin-bottom:12px}.overview-refined .todo{padding:14px 0}.overview-refined .todo-clear~.todo{display:none}}
 @media(max-width:700px){.overview-refined .metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.overview-refined .metric:nth-child(4):before{display:block}.overview-refined .metric:nth-child(odd):before{display:none}.overview-refined .metric:nth-child(n+3){border-top:1px solid #edf1ed}.overview-refined .overview-bottom{grid-template-columns:1fr}.overview-refined .data-notice{flex-wrap:wrap;gap:6px 10px}.overview-refined .data-notice>span{flex-basis:calc(100% - 80px)}.overview-refined .data-notice button{margin-left:auto}.overview-refined .panel{padding:18px}.overview-refined .global-filters{width:100%}.overview-refined .global-filters label{flex:1 1 42%}.overview-refined .global-filters select{width:100%}.overview-refined .global-filters .primary{width:100%}.overview-refined .panel-head{flex-wrap:wrap}.overview-refined .guided-state{min-height:190px}}
 @media(prefers-reduced-motion:reduce){.overview-refined .page-head,.overview-refined .metrics,.overview-refined.data-refreshing :is(.metric strong,.data-insight,.ability-row,.task-row,.attention,.todo){animation:none!important}.overview-refined .bar-track>i,.overview-refined .stack i,.overview-refined .segments:before{transition:none!important}}
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .tw select, :root:not([data-theme="dark"]) .tw input:not([type=checkbox]), :root:not([data-theme="dark"]) .tw button, :root:not([data-theme="dark"]) .tw .primary {
+    background: white
+}
+:root:not([data-theme="dark"]) .tw button:disabled {
+    background: #f3f4f6
+}
+:root:not([data-theme="dark"]) .panel {
+    background: #fff
+}
+:root:not([data-theme="dark"]) .metric {
+    background: white
+}
+:root:not([data-theme="dark"]) .chosen {
+    background: #ecfdf5 !important
+}
+:root:not([data-theme="dark"]) .bar-track {
+    background: #eef0f3
+}
+:root:not([data-theme="dark"]) .distribution-row.selected {
+    background: #ecfdf5 !important
+}
+:root:not([data-theme="dark"]) .distribution-row:hover {
+    background: #f8f9f8 !important
+}
+:root:not([data-theme="dark"]) .tw th {
+    background: #f8f9fa
+}
+:root:not([data-theme="dark"]) .badge {
+    background: #ecfdf5
+}
+:root:not([data-theme="dark"]) .badge.warn {
+    background: #fff2e3
+}
+:root:not([data-theme="dark"]) .badge.danger {
+    background: #ffebe7
+}
+:root:not([data-theme="dark"]) .badge.neutral {
+    background: #f0f1f4
+}
+:root:not([data-theme="dark"]) .error {
+    background: #fff2e3
+}
+:root:not([data-theme="dark"]) .review-table .active {
+    background: #ecfdf5
+}
+:root:not([data-theme="dark"]) .hint {
+    background: #fff8ee
+}
+:root:not([data-theme="dark"]) .tw select:disabled {
+    background: #f3f4f6
+}
+:root:not([data-theme="dark"]) .action-success {
+    background: #ecfdf5
+}
+:root:not([data-theme="dark"]) .overview-refined .data-notice {
+    background: #eef3ee
+}
+:root:not([data-theme="dark"]) .overview-refined .metrics {
+    background: #fff
+}
+:root:not([data-theme="dark"]) .overview-refined .metric+.metric:before {
+    background: #e9ede9
+}
+:root:not([data-theme="dark"]) .overview-refined .metric:hover {
+    background: #f4f8f4
+}
+:root:not([data-theme="dark"]) .overview-refined .panel {
+    background: #fff
+}
+:root:not([data-theme="dark"]) .overview-refined .overview-bottom>.todo-panel {
+    background: #f4f7f3
+}
+:root:not([data-theme="dark"]) .overview-refined .bar-track {
+    background: #edf1ed
+}
+:root:not([data-theme="dark"]) .overview-refined .segments {
+    background: #f1f4f1
+}
+:root:not([data-theme="dark"]) .overview-refined .segments:before {
+    background: #fff
+}
 </style>
 
 <style>
@@ -294,4 +378,10 @@ const tone = status => ['低活跃', '轻微下降', '待点评'].includes(statu
 .workspace-detail-window button{font:inherit;min-height:44px;padding:9px 14px;border-radius:8px}
 .workspace-detail-window button.primary{background:#10b981;border-color:#10b981;color:#102e22;font-weight:600}
 @media(max-width:600px){.workspace-detail-window.teacher-drawer-overlay{padding:12px}.workspace-detail-window.teacher-drawer-overlay.centered-modal .teacher-drawer{padding:20px;max-height:calc(100dvh - 24px)}.workspace-detail-window dl{grid-template-columns:1fr;gap:6px}.workspace-detail-window dd{margin-bottom:10px}}
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .workspace-extend-form input {
+    background: white
+}
 </style>

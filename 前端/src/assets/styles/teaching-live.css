@@ -287,3 +287,132 @@
 @media(max-width:1100px){.task-editor-layout{grid-template-columns:minmax(0,1.2fr) minmax(320px,1fr);gap:20px}.teaching-portal .task-form .task-editor-section{padding:18px}}
 @media(max-width:900px){.task-editor-layout{grid-template-columns:1fr}.task-editor-sidebar{grid-template-columns:1fr 1fr;align-items:start}}
 @media(max-width:600px){.task-editor-heading{align-items:start}.task-editor-heading h1{font-size:24px}.task-editor-sidebar{grid-template-columns:1fr}.teaching-portal .task-form .task-editor-basics,.teaching-portal .task-form .form-grid{grid-template-columns:1fr}.task-form .task-description{grid-column:auto;grid-row:auto}.task-editor-footer{flex-direction:column;align-items:stretch}.task-editor-footer button{width:100%}.task-editor-heading .status-tag{white-space:nowrap}}
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .teaching-portal button, :root:not([data-theme="dark"]) .teaching-portal .primary {
+    background: #fff
+}
+:root:not([data-theme="dark"]) .teaching-portal input:not([type=checkbox]), :root:not([data-theme="dark"]) .teaching-portal select, :root:not([data-theme="dark"]) .teaching-portal textarea {
+    background: white
+}
+:root:not([data-theme="dark"]) .teaching-portal .error {
+    background: #fef2f2
+}
+:root:not([data-theme="dark"]) .teaching-portal .form {
+    background: white
+}
+:root:not([data-theme="dark"]) .teaching-portal .table-scroll {
+    background: white
+}
+:root:not([data-theme="dark"]) .teaching-portal th {
+    background: #f6f7f8
+}
+:root:not([data-theme="dark"]) .teaching-portal tbody tr:hover {
+    background: #fafcfb
+}
+:root:not([data-theme="dark"]) .teaching-portal .status-tag.positive {
+    background: #ecfdf5
+}
+:root:not([data-theme="dark"]) .teaching-portal .status-tag.warning {
+    background: #fffbeb
+}
+:root:not([data-theme="dark"]) .teaching-portal .facts {
+    background: white
+}
+:root:not([data-theme="dark"]) .teaching-portal .result-row {
+    background: white
+}
+:root:not([data-theme="dark"]) .teaching-portal .empty, :root:not([data-theme="dark"]) .teaching-portal .live-empty {
+    background: #fff
+}
+:root:not([data-theme="dark"]) .teaching-portal .live-class-card {
+    background: white
+}
+:root:not([data-theme="dark"]) .live-filterbar {
+    background: white
+}
+:root:not([data-theme="dark"]) .teaching-portal .live-metrics {
+    background: white
+}
+:root:not([data-theme="dark"]) .teaching-portal .live-panel {
+    background: white
+}
+:root:not([data-theme="dark"]) .teaching-inbox {
+    background: white
+}
+:root:not([data-theme="dark"]) .mail-folders {
+    background: #f8faf9
+}
+:root:not([data-theme="dark"]) .mail-search {
+    background: #fafafa
+}
+:root:not([data-theme="dark"]) .mail-row {
+    background: #fafafa
+}
+:root:not([data-theme="dark"]) .mail-row.unread {
+    background: white
+}
+:root:not([data-theme="dark"]) .mail-row.selected, :root:not([data-theme="dark"]) .mail-row.opened {
+    background: #effaf5
+}
+:root:not([data-theme="dark"]) .mail-row:hover {
+    background: #f0f7f3
+}
+:root:not([data-theme="dark"]) .mail-preview {
+    background: white
+}
+:root:not([data-theme="dark"]) .mail-operation-error {
+    background: #fef2f2
+}
+:root:not([data-theme="dark"]) .teaching-portal .pie-legend button[aria-pressed=true] {
+    background: #ecfdf5
+}
+:root:not([data-theme="dark"]) .teaching-portal .scatter-regions button {
+    background: #fafafa
+}
+:root:not([data-theme="dark"]) .teaching-portal .scatter-regions button[aria-pressed=true] {
+    background: #ecfdf5
+}
+:root:not([data-theme="dark"]) .teacher-shell .surface-classes .live-class-card footer a {
+    background: white
+}
+:root:not([data-theme="dark"]) .teacher-shell .surface-classes .live-class-card footer a:hover {
+    background: #f0f7f3
+}
+:root:not([data-theme="dark"]) .teacher-shell .surface-classes :is(input,select,textarea) {
+    background: white
+}
+:root:not([data-theme="dark"]) .create-class-dialog {
+    background: white
+}
+:root:not([data-theme="dark"]) .create-class-dialog :is(input,button) {
+    background: white
+}
+:root:not([data-theme="dark"]) .create-class-dialog button:hover {
+    background: #f0f7f3
+}
+:root:not([data-theme="dark"]) .create-class-dialog .dialog-error {
+    background: #fff0ed
+}
+:root:not([data-theme="dark"]) .insight-directory-tools button[aria-pressed=true] {
+    background: #e1f3e9
+}
+:root:not([data-theme="dark"]) .teaching-portal .insight-class-cover {
+    background: #eaf7f0
+}
+:root:not([data-theme="dark"]) .teaching-portal .tone-1 .insight-class-cover {
+    background: #eef5fb
+}
+:root:not([data-theme="dark"]) .teaching-portal .tone-2 .insight-class-cover {
+    background: #fcf5eb
+}
+:root:not([data-theme="dark"]) .teaching-portal .insight-class-grid.is-list {
+    background: white
+}
+:root:not([data-theme="dark"]) .teaching-portal .is-list .insight-class-card:hover {
+    background: #fcfefd
+}
+:root:not([data-theme="dark"]) .teaching-portal .task-form .task-editor-section {
+    background: #fff
+}

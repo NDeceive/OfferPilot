@@ -15,6 +15,7 @@ let ctx = null
 let audioCtx = null
 
 const queue = []
+const pendingSaves = new Set()
 const recording = ref(false)
 
 function releaseStream() {
@@ -57,19 +58,34 @@ async function toWav(blob) {
 }
 
 async function upload(item) {
-  const form = new FormData()
-  form.append('file', item.blob, 'answer.wav')
-  if (item.questionId) form.append('questionId', item.questionId)
-  await request.post('/interview/' + item.sessionId + '/answers/' + item.roundNo + '/audio', form)
+  if (item.uploading) return item.uploading
+  item.uploading = performUpload(item)
+  try { return await item.uploading } finally { item.uploading = null }
 }
 
-async function flushQueue() {
-  while (queue.length) {
-    const item = queue[0]
+async function performUpload(item) {
+  if (!item.blob) {
+    item.blob = await toWav(item.raw)
+    if (item.blob.size <= 44) throw new Error('录音为空，请重新录音')
+  }
+  const form = new FormData()
+  form.append('file', item.blob, 'answer.wav')
+  if (item.questionId != null) form.append('questionId', item.questionId)
+  const result = await request.post('/interview/' + item.sessionId + '/answers/' + item.roundNo + '/audio', form)
+  item.context.uploaded = result
+  item.context.pending = null
+  const index = queue.indexOf(item)
+  if (index >= 0) queue.splice(index, 1)
+  return result
+}
+
+async function flushQueue({ required = false, sessionId } = {}) {
+  for (const item of [...queue]) {
+    if (sessionId && item.sessionId !== sessionId) continue
     try {
       await upload(item)
-      queue.shift()
     } catch (e) {
+      if (required) throw Object.assign(new Error('已提交回答的录音尚未保存，请检查网络后重试结束面试'), { code: 'AUDIO_UPLOAD_FAILED' })
       return
     }
   }
@@ -83,60 +99,90 @@ export function useAnswerAudio() {
   async function start(next) {
     if (!supported() || !next || !next.sessionId) return
     discard()
-    ctx = { ...next }
+    const current = { ...next }
+    ctx = current
+    let acquired
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      acquired = await navigator.mediaDevices.getUserMedia({ audio: true })
     } catch (e) {
-      ctx.failed = 'mic_denied'
+      current.failed = 'mic_denied'
       return
     }
-    chunks = []
+    if (ctx !== current) { acquired.getTracks().forEach(track => track.stop()); return }
+    stream = acquired
+    const parts = []
+    chunks = parts
     try {
       recorder = new MediaRecorder(stream)
     } catch (e) {
       releaseStream()
       recorder = null
-      ctx.failed = 'mic_denied'
+      current.failed = 'mic_denied'
       return
     }
-    recorder.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data) }
+    recorder.ondataavailable = e => { if (e.data && e.data.size) parts.push(e.data) }
     recorder.start(1000)
     recording.value = true
     flushQueue()
   }
 
   /** 停止并上传当前这一题的录音 */
-  function stopAndUpload() {
-    if (!recorder || !ctx) return Promise.resolve()
+  function stopAndUpload({ required = false } = {}) {
+    if (ctx?.saving) return ctx.saving
+    if (!recorder || !ctx) {
+      if (ctx?.uploaded) return Promise.resolve(ctx.uploaded)
+      if (ctx?.pending) return upload(ctx.pending)
+      return required ? Promise.reject(new Error('录音未就绪，请重新开启麦克风')) : Promise.resolve()
+    }
     const current = ctx
     const currentRecorder = recorder
     const parts = chunks
+    const currentStream = stream
+    stream = null
     recorder = null
     chunks = []
     recording.value = false
 
-    return new Promise(resolve => {
+    const saving = new Promise((resolve, reject) => {
+      const release = () => currentStream?.getTracks().forEach(track => track.stop())
       currentRecorder.onstop = async () => {
-        releaseStream()
-        if (current.failed || !parts.length) { resolve(); return }
-        try {
-          const raw = new Blob(parts, { type: currentRecorder.mimeType || 'audio/webm' })
-          const wav = await toWav(raw)
-          if (wav.size <= 44) { resolve(); return }
-          const item = { ...current, blob: wav }
-          if (queue.length >= 3) queue.shift()
-          try {
-            await upload(item)
-          } catch (e) {
-            queue.push(item)
-          }
-        } catch (e) {
-          /* 编码失败就放弃这一题 */
+        release()
+        if (current.failed || !parts.length) { current.saveError = new Error('没有有效录音，请重新录音'); if(required) reject(current.saveError); else resolve(); return }
+        const raw = new Blob(parts, { type: currentRecorder.mimeType || 'audio/webm' })
+        const item = { ...current, raw, context: current }
+        current.pending = item
+        queue.push(item)
+        try { resolve(await upload(item)) }
+        catch (e) {
+          if(required) reject(Object.assign(new Error('录音保存失败，请检查网络后重试'), { code: 'AUDIO_UPLOAD_FAILED' }))
+          else resolve()
         }
-        resolve()
       }
-      try { currentRecorder.stop() } catch (e) { releaseStream(); resolve() }
+      try { currentRecorder.stop() } catch (e) { current.saveError = e; release(); if(required) reject(e); else resolve() }
     })
+    current.saving = saving
+    pendingSaves.add(saving)
+    const done = () => { pendingSaves.delete(saving); current.saving = null }
+    saving.then(done, done)
+    return saving
+  }
+
+  function markSubmitted() {
+    if (ctx) ctx.submitted = true
+  }
+
+  async function flushSubmitted(sessionId) {
+    try {
+      // A submitted main answer may still be recording while its follow-up is open.
+      if (ctx?.sessionId === sessionId && ctx.submitted) {
+        await stopAndUpload()
+        if (ctx.saveError) throw ctx.saveError
+      }
+      await Promise.allSettled([...pendingSaves])
+      await flushQueue({ required: true, sessionId })
+    } catch (error) {
+      throw Object.assign(new Error(error.code === 'AUDIO_UPLOAD_FAILED' ? error.message : '已提交回答的录音尚未保存，请检查网络后重试结束面试'), { code: 'AUDIO_UPLOAD_FAILED' })
+    }
   }
 
   /** 直接丢弃（离开页面、结束面试又不需要上传时） */
@@ -151,5 +197,5 @@ export function useAnswerAudio() {
     ctx = null
   }
 
-  return { recording, supported, start, stopAndUpload, discard }
+  return { recording, supported, start, stopAndUpload, markSubmitted, flushSubmitted, discard }
 }

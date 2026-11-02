@@ -1,7 +1,7 @@
 ﻿param([string]$AssetCache = (Join-Path ([IO.Path]::GetTempPath()) 'offerpilot-digital-human-assets'))
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
-foreach ($file in @('scripts/start-web.ps1', '数字人/start_offerpilot_digital_human.ps1', '数字人/setup_offerpilot_assets.ps1')) {
+foreach ($file in @('scripts/dev-start.ps1', 'scripts/start-web.ps1', '数字人/start_offerpilot_digital_human.ps1', '数字人/setup_offerpilot_assets.ps1')) {
     $tokens = $null; $errors = $null
     [Management.Automation.Language.Parser]::ParseFile((Join-Path $root $file), [ref]$tokens, [ref]$errors) | Out-Null
     if ($errors.Count) { throw ($errors.Message -join '; ') }

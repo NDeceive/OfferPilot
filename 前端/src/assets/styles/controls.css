@@ -134,3 +134,21 @@ body :is(.mail-search,.search-shell,.search-box,.search-input-wrapper) input:is(
 body button { border-radius: var(--control-radius); min-height: var(--control-height); }
 body button:not([class]):not([role="tab"]):not([aria-pressed="true"]) { border-radius: var(--control-radius) !important; }
 body button:active:not(:disabled) { filter: brightness(.97); }
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) body :is(a,button):is(.secondary,.secondary-btn,.btn--ghost,.btn-ghost,.ghost-btn,.mobile-secondary-button,.modal-btn-cancel,.mini-btn,.page-btn,[data-variant="secondary"]) {
+    background: white !important
+}
+:root:not([data-theme="dark"]) body :is(a,button):is(.danger,.danger-button,.modal-btn-danger,.batch-btn-danger,.delete-btn,[data-variant="danger"]):hover:not(:disabled) {
+    background: #fee2e2 !important
+}
+:root:not([data-theme="dark"]) body :is(form,.live-pagination,.pagination,.mail-actions,.drawer-actions,.table-actions,.selection-actions) button:not([class]):not([role="tab"]) {
+    background: white
+}
+:root:not([data-theme="dark"]) body input:is([type="search"],[placeholder*="搜索"],[aria-label^="搜索"]) {
+    background: white !important
+}
+:root:not([data-theme="dark"]) body :is(.mail-search,.search-shell,.search-box,.search-input-wrapper):has(input) {
+    background: white !important
+}

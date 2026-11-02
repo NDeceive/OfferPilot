@@ -2,6 +2,7 @@ package com.zhimian.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zhimian.config.VoiceProperties;
 import com.zhimian.entity.InterviewAnswerAudio;
 import com.zhimian.entity.InterviewVoiceAnalysis;
@@ -28,6 +29,8 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class VoiceAnalysisService {
+
+    private static final ObjectMapper JSON = new ObjectMapper();
 
     private final VoiceProperties props;
     private final VoiceAnalysisClient client;
@@ -58,7 +61,16 @@ public class VoiceAnalysisService {
     public List<InterviewVoiceAnalysis> results(Long sessionId) {
         return analysisMapper.selectList(new LambdaQueryWrapper<InterviewVoiceAnalysis>()
                 .eq(InterviewVoiceAnalysis::getSessionId, sessionId)
-                .orderByAsc(InterviewVoiceAnalysis::getRoundNo));
+                .orderByAsc(InterviewVoiceAnalysis::getRoundNo)).stream()
+                .filter(row -> {
+                    try {
+                        JsonNode metrics = JSON.readTree(row.getMetricsJson());
+                        if (!validMetrics(metrics)) return false;
+                        if (!number(metrics, "f0_std")) row.setConfidenceEst(null);
+                        return true;
+                    }
+                    catch (Exception invalid) { return false; }
+                }).toList();
     }
 
     private void setStatus(Long sessionId, String status, String reason) {
@@ -104,13 +116,15 @@ public class VoiceAnalysisService {
             try {
                 Path path = audioService.pathOf(audio).toAbsolutePath();
                 JsonNode m = client.analyze(path.toString());
+                if (!validMetrics(m)) throw new IllegalArgumentException("empty_or_invalid_audio_metrics");
                 InterviewVoiceAnalysis row = new InterviewVoiceAnalysis();
                 row.setSessionId(sessionId);
                 row.setRoundNo(audio.getRoundNo());
                 row.setMetricsJson(m.toString());
                 row.setFluency(bd(fluency(m)));
                 row.setVolumeScore(bd(volume(m)));
-                row.setConfidenceEst(bd(confidence(m)));
+                // Pitch is optional; an unavailable measurement must never become a default score.
+                row.setConfidenceEst(number(m, "f0_std") ? bd(confidence(m)) : null);
                 InterviewVoiceAnalysis exists = findOne(sessionId, audio.getRoundNo());
                 if (exists != null) {
                     row.setId(exists.getId());
@@ -143,27 +157,54 @@ public class VoiceAnalysisService {
 
     /* ---------------- 指标 -> 分数 ---------------- */
 
+    static boolean validMetrics(JsonNode m) {
+        if (m == null || !m.isObject() || !m.path("empty").isBoolean() || m.path("empty").asBoolean()) return false;
+        for (String key : List.of("duration", "speech_ratio", "pause_count", "longest_pause",
+                "rms_mean_db", "rms_std_db", "frame_count")) {
+            if (!number(m, key)) return false;
+        }
+        double duration = m.path("duration").asDouble();
+        return duration > 0.2 && m.path("speech_ratio").asDouble() > 0
+                && m.path("speech_ratio").asDouble() <= 1
+                && m.path("pause_count").asDouble() >= 0
+                && m.path("pause_count").asDouble() == Math.floor(m.path("pause_count").asDouble())
+                && m.path("longest_pause").asDouble() >= 0
+                && m.path("longest_pause").asDouble() <= duration + 0.05
+                && m.path("rms_std_db").asDouble() >= 0 && m.path("frame_count").asDouble() > 0
+                && (!m.has("f0_std") || (number(m, "f0_std") && m.path("f0_std").asDouble() >= 0));
+    }
+
+    private static boolean number(JsonNode m, String key) {
+        return m != null && m.path(key).isNumber() && Double.isFinite(m.path(key).doubleValue());
+    }
+
+    private static double metric(JsonNode m, String key) {
+        if (m == null || m.path("empty").asBoolean() || !number(m, key))
+            throw new IllegalArgumentException("Missing or invalid audio metric: " + key);
+        return m.path(key).doubleValue();
+    }
+
     static double fluency(JsonNode m) {
-        double pauses = m.path("pause_count").asDouble(0);
-        double longest = m.path("longest_pause").asDouble(0);
-        double speech = m.path("speech_ratio").asDouble(0.8);
+        double pauses = metric(m, "pause_count");
+        double longest = metric(m, "longest_pause");
+        double speech = metric(m, "speech_ratio");
         double score = 100 - Math.min(40, pauses * 7) - Math.min(30, Math.max(0, longest - 0.8) * 18)
                 - Math.max(0, 0.55 - speech) * 100;
         return clamp(score, 30, 100);
     }
 
     static double volume(JsonNode m) {
-        double mean = m.path("rms_mean_db").asDouble(-30);
-        double std = m.path("rms_std_db").asDouble(3);
+        double mean = metric(m, "rms_mean_db");
+        double std = metric(m, "rms_std_db");
         double ideal = -20;                       // 口播比较舒服的位置
         double score = 100 - Math.abs(mean - ideal) * 3.2 - Math.max(0, std - 4) * 3;
         return clamp(score, 30, 100);
     }
 
     static double confidence(JsonNode m) {
-        double f0std = m.path("f0_std").asDouble(20);
-        double volStd = m.path("rms_std_db").asDouble(3);
-        double pauses = m.path("pause_count").asDouble(0);
+        double f0std = metric(m, "f0_std");
+        double volStd = metric(m, "rms_std_db");
+        double pauses = metric(m, "pause_count");
         double score = 82 + (f0std >= 10 && f0std <= 40 ? 8 : -6) - Math.max(0, volStd - 5) * 3 - pauses * 3;
         return clamp(score, 30, 100);
     }
@@ -183,15 +224,12 @@ public class VoiceAnalysisService {
         double sum = 0;
         int n = 0;
         for (InterviewVoiceAnalysis r : rows) {
-            if (r.getFluency() == null) continue;
-            sum += (r.getFluency().doubleValue() + safe(r.getVolumeScore(), 70)
-                    + safe(r.getConfidenceEst(), 70)) / 3.0;
+            if (r.getFluency() == null || r.getVolumeScore() == null || r.getConfidenceEst() == null) continue;
+            sum += (r.getFluency().doubleValue() + r.getVolumeScore().doubleValue()
+                    + r.getConfidenceEst().doubleValue()) / 3.0;
             n++;
         }
         return n == 0 ? -1 : sum / n / 100.0;
     }
 
-    private static double safe(BigDecimal v, double fallback) {
-        return v == null ? fallback : v.doubleValue();
-    }
 }

@@ -665,8 +665,35 @@ onMounted(async () => {
   font-size: 14px;
   font-weight: 600;
 }
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .wiz__bar {
+    background: rgba(255, 255, 255, .94)
+}
+:root:not([data-theme="dark"]) .wiz__step-back {
+    background: #f2f4f0
+}
+:root:not([data-theme="dark"]) .wiz__track {
+    background: rgba(255, 255, 255, .94)
+}
+:root:not([data-theme="dark"]) .wiz__mode {
+    background: rgba(255, 255, 255, .94)
+}
+:root:not([data-theme="dark"]) .wiz__cta {
+    background: rgba(255, 255, 255, .96)
+}
+:root:not([data-theme="dark"]) .wiz__skip {
+    background: #f2f4f0
+}
 </style>
 
 <style scoped>
 .version-picker{display:block;margin-bottom:16px;font-size:13px}.version-picker select{display:block;width:100%;min-height:42px;margin-top:8px;border:1px solid #dce6df;background:var(--surface-elevated);border-radius:8px;padding:8px;font:inherit}
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .version-picker select {
+    background: white
+}
 </style>

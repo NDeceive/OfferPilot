@@ -350,3 +350,18 @@
   --m-shadow: 0 12px 30px rgba(0, 0, 0, 0.42);
 }
 
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .mobile-document-art {
+    background: rgba(255, 255, 255, .86)
+}
+:root:not([data-theme="dark"]) .mobile-suggestion > a {
+    background: rgba(255,255,255,.55)
+}
+:root:not([data-theme="dark"]) .mobile-progress {
+    background: #edf0ed
+}
+:root:not([data-theme="dark"]) .mobile-segments {
+    background: #f0f1ed
+}

@@ -131,3 +131,60 @@
   .review-section { scroll-margin-top:16px; }
 }
 @media(prefers-reduced-motion:reduce) { .practice-report button,.type-statistics article,.progress-track span { transition:none; } }
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .practice-report button {
+    background: white
+}
+:root:not([data-theme="dark"]) .practice-report button:hover {
+    background: #f3faf7
+}
+:root:not([data-theme="dark"]) .notice {
+    background: #edf7f2
+}
+:root:not([data-theme="dark"]) .system-notice {
+    background: #fff0f1
+}
+:root:not([data-theme="dark"]) .report-overview {
+    background: white
+}
+:root:not([data-theme="dark"]) .session-state {
+    background: #edf3f0
+}
+:root:not([data-theme="dark"]) .progress-track {
+    background: #e5ebe7
+}
+:root:not([data-theme="dark"]) .type-statistics article {
+    background: white
+}
+:root:not([data-theme="dark"]) .result-filters button span {
+    background: #f0f3f1
+}
+:root:not([data-theme="dark"]) .filter-toolbar select {
+    background: white
+}
+:root:not([data-theme="dark"]) .question-list {
+    background: white
+}
+:root:not([data-theme="dark"]) .report-question:hover, :root:not([data-theme="dark"]) .report-question.selected {
+    background: #f1faf6
+}
+:root:not([data-theme="dark"]) .question-number {
+    background: #f0f3f1
+}
+:root:not([data-theme="dark"]) .outcome {
+    background: #f0f3f1
+}
+:root:not([data-theme="dark"]) .outcome.failed, :root:not([data-theme="dark"]) .outcome.system {
+    background: #fff0f1
+}
+:root:not([data-theme="dark"]) .outcome.self {
+    background: #fff7e9
+}
+:root:not([data-theme="dark"]) .review-mark {
+    background: #edf3f0
+}
+:root:not([data-theme="dark"]) .statistics>div {
+    background: #f2f6f3
+}

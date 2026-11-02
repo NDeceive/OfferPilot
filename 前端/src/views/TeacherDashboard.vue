@@ -703,4 +703,16 @@ onBeforeUnmount(() => {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .chart-panel {
+    background: #fff
+}
+:root:not([data-theme="dark"]) .weakness-bar {
+    background: #f0f3f8
+}
+:root:not([data-theme="dark"]) .content-panel {
+    background: #fff
+}
 </style>

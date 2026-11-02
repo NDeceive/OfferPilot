@@ -202,4 +202,16 @@ onBeforeUnmount(() => window.clearInterval(timer))
   .orbit-card { transition: none; }
   .video-scene img, .video-scene video { animation: none; }
 }
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .scene {
+    background: rgba(255, 255, 255, 0.94)
+}
+:root:not([data-theme="dark"]) .message p {
+    background: #f0f5f3
+}
+:root:not([data-theme="dark"]) .message b {
+    background: #dff5ec
+}
 </style>

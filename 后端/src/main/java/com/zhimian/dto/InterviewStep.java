@@ -10,6 +10,10 @@ import lombok.Data;
  */
 @Data
 public class InterviewStep {
+    private java.util.Map<String,Object> interviewPlan;
+    private Long answerId;
+    private Long questionInstanceId;
+    private String interviewStage;
 
     private String nextAction;
     private QuestionView question;

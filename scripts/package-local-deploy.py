@@ -19,7 +19,7 @@ stamp = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
 OUT = ROOT / 'output' / ('local-deploy-' + stamp)
 DEST = OUT / 'OfferPilot'
 DEST.mkdir(parents=True)
-skip = {'node_modules', 'target', 'dist', '__pycache__', '.npm-cache', 'logs', 'streamout', '.git'}
+skip = {'node_modules', 'target', 'dist', '__pycache__', '.npm-cache', 'logs', 'streamout', '.git', 'envs'}
 
 def copy(relative):
     src = ROOT / relative
@@ -42,7 +42,7 @@ for name in ['README.md', 'PRODUCT.md', 'DESIGN.md', '一键启动网页.bat',
              '后端/src', '后端/.mvn', '后端/libs', '后端/pom.xml', '后端/mvnw', '后端/mvnw.cmd',
              '前端/src', '前端/public', '前端/tests', '前端/package.json', '前端/package-lock.json',
              '前端/index.html', '前端/vite.config.js', '前端/.env.example', 'docs',
-             'scripts/start-web.ps1', 'scripts/package-local-deploy.py', 'scripts/test-startup.ps1', 'infra',
+             'scripts/dev-start.ps1', 'scripts/start-web.ps1', 'scripts/package-local-deploy.py', 'scripts/test-startup.ps1', 'infra', '语音分析',
              'scripts/import-practice-pack.py', 'scripts/verify-practice-pack.py',
              'scripts/build-practice-pack.py', 'scripts/build-objective-pack.py',
              'scripts/fetch-practice-sources.py', 'scripts/prepare-practice-judge.py',

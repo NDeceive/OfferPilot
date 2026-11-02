@@ -27,7 +27,7 @@ class InterviewTimingTest {
     }
 
     @Test
-    void interviewEndsOnlyWhenConfiguredDurationExpires() {
+    void configuredDurationRemainsTheHardDeadline() {
         LocalDateTime startedAt = LocalDateTime.of(2026, 8, 1, 10, 0);
         InterviewSession session = new InterviewSession();
         session.setStartTime(startedAt);
@@ -35,4 +35,5 @@ class InterviewTimingTest {
         assertFalse(InterviewFlowService.isTimeExceeded(session, startedAt.plusSeconds(1799)));
         assertTrue(InterviewFlowService.isTimeExceeded(session, startedAt.plusSeconds(1800)));
     }
+
 }

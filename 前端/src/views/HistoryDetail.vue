@@ -37,6 +37,8 @@
           </div>
         </header>
 
+        <InterviewRecordings v-if="expressionSessionId" :session-id="expressionSessionId" />
+
         <section class="conclusion-panel">
           <div class="section-kicker">本次结论</div>
           <p>{{ summary || '报告已生成，请结合能力分布与逐题回顾制定下一步练习计划。' }}</p>
@@ -221,6 +223,7 @@ import AppLayout from '../components/layout/AppLayout.vue'
 import TeachingFeedback from '../components/teacher/TeachingFeedback.vue'
 import RadarChart from '../components/ui/RadarChart.vue'
 import ExpressionReport from '../components/interview/ExpressionReport.vue'
+import InterviewRecordings from '../components/interview/InterviewRecordings.vue'
 import ExpressionUploadStatus from '../components/interview/ExpressionUploadStatus.vue'
 import { getJobPresentation } from '../utils/jobPresentation'
 
@@ -579,5 +582,59 @@ onMounted(loadReport)
 }
 @media (prefers-reduced-motion: reduce) {
   .question-trigger svg { transition: none; }
+}
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .report-source-context {
+    background: white
+}
+:root:not([data-theme="dark"]) .conclusion-panel {
+    background: #fefefe
+}
+:root:not([data-theme="dark"]) .profile-tags i {
+    background: #f3f8f5
+}
+:root:not([data-theme="dark"]) .analysis-section, :root:not([data-theme="dark"]) .action-section, :root:not([data-theme="dark"]) .review-section {
+    background: white
+}
+:root:not([data-theme="dark"]) .score-track {
+    background: #edf1ee
+}
+:root:not([data-theme="dark"]) .module-detail {
+    background: #f8faf9
+}
+:root:not([data-theme="dark"]) .module-track {
+    background: #e6ece8
+}
+:root:not([data-theme="dark"]) .priority-section {
+    background: #fcfaf6
+}
+:root:not([data-theme="dark"]) .priority-list li > span {
+    background: #e7f0eb
+}
+:root:not([data-theme="dark"]) .insight-grid {
+    background: white
+}
+:root:not([data-theme="dark"]) .weakness-column {
+    background: #fcfaf6
+}
+:root:not([data-theme="dark"]) .question-trigger {
+    background: white
+}
+:root:not([data-theme="dark"]) .question-trigger:hover {
+    background: #f8faf9
+}
+:root:not([data-theme="dark"]) .answer-body {
+    background: white
+}
+:root:not([data-theme="dark"]) .dialogue {
+    background: #f6f8f7
+}
+:root:not([data-theme="dark"]) .dialogue.followup {
+    background: #edf5f1
+}
+:root:not([data-theme="dark"]) .secondary-btn {
+    background: white
 }
 </style>

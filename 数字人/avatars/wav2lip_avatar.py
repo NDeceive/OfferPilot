@@ -120,7 +120,7 @@ class LipReal(BaseAvatar):
         length = len(self.face_list_cycle)
         img_batch = []
         for i in range(self.batch_size):
-            idx = mirror_index(length, index + i)
+            idx = self.get_frame_index(index + i)
             face = self.face_list_cycle[idx]
             img_batch.append(face)
         img_batch, audiofeat_batch = np.asarray(img_batch), np.asarray(audiofeat_batch)
@@ -143,7 +143,22 @@ class LipReal(BaseAvatar):
         bbox = self.coord_list_cycle[idx]
         combine_frame = copy.deepcopy(self.frame_list_cycle[idx])
         y1, y2, x1, x2 = bbox
-        res_frame = cv2.resize(pred_frame.astype(np.uint8),(x2-x1,y2-y1))
+        mode = getattr(self.opt, 'face_composite', 'full')
+        res_frame = cv2.resize(np.clip(pred_frame, 0, 255).astype(np.uint8),
+                              (x2-x1,y2-y1),
+                              interpolation=cv2.INTER_CUBIC if mode == 'mouth' else cv2.INTER_LINEAR)
+        if mode == 'mouth':
+            original = combine_frame[y1:y2, x1:x2].astype(np.float32)
+            height, width = original.shape[:2]
+            yy, xx = np.mgrid[:height, :width].astype(np.float32)
+            distance = ((xx-.5*width)/(.40*width))**2 + ((yy-.75*height)/(.23*height))**2
+            mask = np.clip((1-distance)/.55, 0, 1)
+            mask = mask*mask*(3-2*mask) * np.clip((yy/height-.60)/.06, 0, 1)
+            generated = res_frame.astype(np.float32)
+            ring = (distance > .45) & (distance < 1) & (yy > .61*height)
+            if np.any(ring):
+                generated += np.clip(np.median((original-generated)[ring], axis=0), -30, 30)
+            res_frame = np.clip(np.rint(original*(1-mask[...,None]) + generated*mask[...,None]), 0, 255).astype(np.uint8)
         combine_frame[y1:y2, x1:x2] = res_frame
         return combine_frame
 

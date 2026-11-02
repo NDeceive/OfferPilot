@@ -161,4 +161,10 @@ import LogoIcon from '../ui/LogoIcon.vue'
     display: none;
   }
 }
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .notification-btn:hover {
+    background: rgba(255,255,255,0.05)
+}
 </style>

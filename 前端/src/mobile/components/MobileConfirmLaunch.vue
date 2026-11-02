@@ -51,7 +51,7 @@
 
     <!-- 时长 -->
     <section class="mcfm__card">
-      <h3 class="mcfm__cap">面试时长</h3>
+      <h3 class="mcfm__cap">参考时长</h3>
       <div class="mcfm__presets">
         <button
           v-for="p in presets"
@@ -72,7 +72,7 @@
         </span>
         <button type="button" :disabled="durationSeconds >= max" aria-label="增加 5 分钟" @click="step(300)">＋</button>
       </div>
-      <p class="mcfm__muted mcfm__range">可调范围：5 分钟 ~ 2 小时</p>
+      <p class="mcfm__muted mcfm__range">可调范围：5 分钟 ~ 2 小时。以完成核心问题为主，时长随答题进度调整。</p>
     </section>
 
     <p v-if="error" class="mcfm__err">{{ error }}</p>
@@ -173,4 +173,16 @@ function formatDuration(totalSeconds) {
 .mcfm__range { margin-top: 10px; text-align: center; }
 
 .mcfm__err { padding: 11px 13px; color: #7c4315; background: var(--m-accent-soft); border-radius: 10px; font-size: 12.5px; line-height: 1.5; }
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .mcfm__skills .is-more {
+    background: #f0f1ed
+}
+:root:not([data-theme="dark"]) .mcfm__presets button {
+    background: #f2f4f0
+}
+:root:not([data-theme="dark"]) .mcfm__stepper > button:disabled {
+    background: #f2f4f0
+}
 </style>

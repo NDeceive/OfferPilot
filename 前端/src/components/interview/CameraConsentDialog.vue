@@ -11,7 +11,7 @@
         <p class="camera-consent__note">画面在本地处理，用于表情分析，仅保存分类概率与时间。首次使用时，浏览器或系统还会请求摄像头权限。</p>
         <div class="camera-consent__actions">
           <button type="button" autofocus @click="answerCameraConsent(false)">拒绝并返回</button>
-          <button type="button" class="camera-consent__allow" @click="answerCameraConsent(true)">允许并进入面试</button>
+          <button type="button" class="btn btn--primary camera-consent__allow" @click="answerCameraConsent(true)">允许并进入面试</button>
         </div>
       </form>
     </dialog>
@@ -38,10 +38,25 @@ watch([cameraConsentOpen, dialogRef], ([open, dialog]) => {
 .camera-consent p { margin:0 0 16px; font-size:14px; line-height:1.8; color:#4b6056; }
 .camera-consent .camera-consent__note { padding:12px 14px; border-radius:8px; background:var(--surface-soft); font-size:12px; }
 .camera-consent__actions { display:flex; justify-content:flex-end; gap:12px; margin-top:24px; }
-.camera-consent button { min-height:44px; padding:10px 16px; border:1px solid #d6e3dd; border-radius:8px; background:var(--surface-elevated); color:#334b3e; font:inherit; font-size:14px; cursor:pointer; }
-.camera-consent button:hover { background:var(--surface-soft); }
+.camera-consent button:not(.btn) { min-height:44px; padding:10px 16px; border:1px solid #d6e3dd; border-radius:8px; background:var(--surface-elevated); color:#334b3e; font:inherit; font-size:14px; cursor:pointer; }
+.camera-consent button:not(.btn--primary):hover { background:var(--surface-soft); }
 .camera-consent .camera-consent__allow { background:var(--accent-500,#10b981); border-color:transparent; color:#fff; font-weight:600; }
 .camera-consent .camera-consent__allow:hover { background:var(--accent-600,#059669); }
 .camera-consent button:focus-visible { outline:3px solid #059669; outline-offset:3px; }
 @media(max-width:480px) { .camera-consent { padding:24px 20px; } .camera-consent h2 { font-size:19px; } .camera-consent__actions { flex-direction:column-reverse; } .camera-consent button { width:100%; } }
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .camera-consent {
+    background: #fff
+}
+:root:not([data-theme="dark"]) .camera-consent .camera-consent__note {
+    background: #f4f7f5
+}
+:root:not([data-theme="dark"]) .camera-consent button:not(.btn--primary) {
+    background: #fff
+}
+:root:not([data-theme="dark"]) .camera-consent button:not(.btn--primary):hover {
+    background: #f0f7f4
+}
 </style>

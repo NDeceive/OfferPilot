@@ -65,3 +65,51 @@
 .la-evidence-values>div{display:grid;gap:4px}
 .la-evidence-values dt{font-size:12px;color:#526159}
 .la-evidence-values dd{margin:0;font-size:15px;font-weight:600;color:#233b30;font-variant-numeric:tabular-nums}
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .live-analysis button, :root:not([data-theme="dark"]) .live-analysis .la-button, :root:not([data-theme="dark"]) .la-drill .la-button {
+    background: white
+}
+:root:not([data-theme="dark"]) .live-analysis button:hover {
+    background: #f1f8f4
+}
+:root:not([data-theme="dark"]) .live-analysis button[aria-pressed=true] {
+    background: #edf8f1
+}
+:root:not([data-theme="dark"]) .live-analysis input, :root:not([data-theme="dark"]) .live-analysis select {
+    background: white
+}
+:root:not([data-theme="dark"]) .la-filters .choice-menu {
+    background: white
+}
+:root:not([data-theme="dark"]) .la-picker>div {
+    background: white
+}
+:root:not([data-theme="dark"]) .la-track {
+    background: #f0f4f1
+}
+:root:not([data-theme="dark"]) .la-stack {
+    background: #f5f7f5
+}
+:root:not([data-theme="dark"]) .live-analysis th {
+    background: #f8faf8
+}
+:root:not([data-theme="dark"]) .la-matrix {
+    background: #f8faf8 !important
+}
+:root:not([data-theme="dark"]) .la-warning {
+    background: #fff8ed
+}
+:root:not([data-theme="dark"]) .la-picker-options label:hover {
+    background: #f5f8f6
+}
+:root:not([data-theme="dark"]) .la-picker-options label.is-selected {
+    background: #ecfdf5
+}
+:root:not([data-theme="dark"]) .analytics-detail-window .la-detail-links .la-button {
+    background: white
+}
+:root:not([data-theme="dark"]) .analytics-detail-window .la-detail-links .la-button:hover {
+    background: #ecfdf5
+}

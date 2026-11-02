@@ -218,4 +218,19 @@ function levelLabel(value) {
 .mgoal__chip.is-on .mgoal__tick { color: #fff; background: var(--m-primary); }
 
 .mgoal__feedback { margin-top: 10px; padding: 10px 12px; color: #7c4315; background: var(--m-accent-soft); border-radius: 10px; font-size: 12px; line-height: 1.5; }
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .mgoal__arrows button {
+    background: #fafbf9
+}
+:root:not([data-theme="dark"]) .mgoal__arrows button:disabled {
+    background: #f6f7f5
+}
+:root:not([data-theme="dark"]) .mgoal__levels {
+    background: rgba(255,255,255,.8)
+}
+:root:not([data-theme="dark"]) .mgoal__tick {
+    background: #f0f1ed
+}
 </style>

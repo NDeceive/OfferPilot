@@ -1,5 +1,5 @@
 -- 语音分析与作答录音（只增不改，启动时幂等执行）
-CREATE TABLE IF NOT EXISTS interview_answer_audio (
+CREATE TABLE IF NOT EXISTS interview_round_audio (
     id              BIGINT PRIMARY KEY AUTO_INCREMENT,
     session_id      BIGINT NOT NULL COMMENT '会话ID',
     round_no        INT NOT NULL COMMENT '第几题',

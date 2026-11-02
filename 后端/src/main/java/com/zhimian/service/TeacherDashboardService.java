@@ -140,9 +140,9 @@ public class TeacherDashboardService {
         }
 
         long aiCount = followups.stream().filter(r -> "AI".equals(r.getSource())).count()
-                + chains.stream().filter(c -> "AI".equals(c.getSource())).count();
+                + chains.stream().filter(c -> c.getLayerNo() != null && c.getLayerNo() >= 2 && "AI".equals(c.getSource())).count();
         long ruleCount = followups.stream().filter(r -> "RULE".equals(r.getSource())).count()
-                + chains.stream().filter(c -> "RULE".equals(c.getSource())).count();
+                + chains.stream().filter(c -> c.getLayerNo() != null && c.getLayerNo() >= 2 && "RULE".equals(c.getSource())).count();
 
         TeacherDashboardSummary summary = new TeacherDashboardSummary();
         summary.setStudentTotal(studentTotal);

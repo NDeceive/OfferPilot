@@ -16,7 +16,9 @@ def json_ok(data=None):
     """返回成功 JSON 响应"""
     body = {"code": 0, "msg": "ok"}
     if data is not None:
-        body.update(data)
+        body['data'] = data
+        if isinstance(data, dict):
+            body.update(data)  # Preserve existing clients reading flat fields such as "closed".
     return web.Response(
         content_type="application/json",
         text=json.dumps(body),
@@ -54,6 +56,8 @@ async def human(request):
             avatar_session.flush_talk()
 
         datainfo = {}
+        if params.get('speech_id'):
+            datainfo['speech_id'] = str(params['speech_id'])[:128]
         if params.get('tts'):  # tts 参数透传（voice, emotion 等）
             datainfo['tts'] = params.get('tts')
 
@@ -161,6 +165,11 @@ async def is_speaking(request):
     avatar_session = get_session(request, sessionid)
     if avatar_session is None:
         return json_error("session not found")
+    if params.get('speech_id'):
+        event = getattr(avatar_session, 'last_speech_event', {})
+        return json_ok(data={
+            'completed': event.get('speech_id') == str(params['speech_id'])[:128] and event.get('status') == 'end'
+        })
     return json_ok(data=avatar_session.is_speaking())
 
 

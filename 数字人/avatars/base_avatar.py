@@ -217,6 +217,9 @@ class BaseAvatar:
 
     def notify(self, eventpoint:dict):
         if eventpoint and eventpoint.get('status'):
+            if eventpoint.get('speech_id'):
+                # HumanPlayer calls this when the tagged audio frame leaves the WebRTC track.
+                self.last_speech_event = dict(eventpoint)
             logger.info("notify:%s", eventpoint)
 
     def start_recording(self):
@@ -298,6 +301,12 @@ class BaseAvatar:
         if hasattr(self, 'frame_list_cycle'):
             return len(self.frame_list_cycle)
         return 1
+
+    def get_frame_index(self, index):
+        length = self.get_avatar_length()
+        if getattr(self.opt, 'avatar_loop', 'mirror') == 'forward':
+            return index % length
+        return mirror_index(length, index)
         
     def inference(self, quit_event):
         length = self.get_avatar_length()
@@ -331,7 +340,7 @@ class BaseAvatar:
 
             if is_all_silence: #全为静音数据，只需要取fullimg，不需要推理
                 for i in range(self.batch_size):
-                    idx = mirror_index(length, index)
+                    idx = self.get_frame_index(index)
                     self.res_frame_queue.put((None, audio_frames[i*2:i*2+2], idx))
                     index = index + 1
             else:
@@ -348,7 +357,7 @@ class BaseAvatar:
                     count = 0
                     counttime = 0
                 for i, res_frame in enumerate(pred):
-                    self.res_frame_queue.put((res_frame, audio_frames[i*2:i*2+2], mirror_index(length, index)))
+                    self.res_frame_queue.put((res_frame, audio_frames[i*2:i*2+2], self.get_frame_index(index)))
                     index = index + 1
                     
             if current_speaking != last_speaking:
@@ -376,13 +385,17 @@ class BaseAvatar:
                 continue
             
             # 检测状态变化
-            current_speaking = not (audio_frames[0].type!=0 and audio_frames[1].type!=0)
+            is_silent = all(frame.type != 0 for frame in audio_frames)
+            threshold = getattr(self.opt, 'audio_silence_threshold', 0)
+            if threshold > 0 and not is_silent:
+                is_silent = all(float(np.mean(np.square(frame.data))) <= threshold**2 for frame in audio_frames)
+            current_speaking = not is_silent
             if current_speaking != _last_speaking:
                 logger.info(f"状态切换：{'说话' if _last_speaking else '静音'} → {'说话' if current_speaking else '静音'}")
                 _transition_start = time.time()
             _last_speaking = current_speaking
 
-            if audio_frames[0].type!=0 and audio_frames[1].type!=0: #全为静音数据，只需要取fullimg
+            if is_silent: # 静音或低于候选素材的RMS阈值时保留原始底片
                 self.speaking = False
                 audiotype = audio_frames[0].type
                 if self.custom_index.get(audiotype) is not None: #有自定义视频
@@ -422,8 +435,6 @@ class BaseAvatar:
                 else:
                     combine_frame = current_frame
 
-            cv2.putText(combine_frame, "LiveTalking", (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (128,128,128), 1)
-            
             # 使用统一输出接口推送视频帧
             self.output.push_video_frame(combine_frame)
             self.record_video_data(combine_frame)

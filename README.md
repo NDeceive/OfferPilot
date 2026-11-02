@@ -11,7 +11,7 @@
 - **岗位化模拟面试**：按目标岗位生成贴合岗位的面试题目与场景。
 - **简历工作台**：核实事实、按岗位制作多版本简历，预览并导出 PDF/DOCX；面试前获得简历评价和训练建议。详见 [简历工作台说明](简历工作台说明.md)。
 - **动态追问**：基于 DeepSeek 大模型对考生回答实时生成追问；不可用时自动回退到内置规则（RULE）追问，保证流程不中断。
-- **语音回答**：支持微信通话式开麦/静音、自动分句，并通过 GLM-ASR 转换为可编辑文字。
+- **语音回答**：支持微信通话式开麦/静音、自动分句；优先使用浏览器 SpeechRecognition/webkitSpeechRecognition 转写，仅浏览器缺少该 API 时回退 GLM-ASR。
 - **多维评分报告**：面试前从 10 个能力模块中挑 5 个（可排序、可设目标线），面试结束自动生成这 5 个模块的评分与匹配度，含雷达图与优势 / 不足 / 建议。
 - **专项刷题**：知识题作答、代码提交、收藏与训练历史均按用户持久化保存；编程题可接入自部署 Judge0 CE 进行真实判题。
 - **训练闭环**：历史记录可回看报告，支持针对性复训。
@@ -23,8 +23,9 @@
 - 岗位选择
 - 简历事实台账 / 在线制作 / 面试准备
 - 模拟面试流程（提问 → 作答 → 追问 → 下一题 → 结束）
+- 正式面试：新建自主面试按“自我介绍 → 项目深挖 → 岗位专业知识 → 收尾 → 报告”推进，以完成核心问题为主要结束条件，所选时长作为可顺延参考；默认自我介绍1项、项目最多2项、岗位核心题最多3项，保留按难度2/3/4层的动态追问并在超参考时间后压缩额外追问。自我介绍需有效录音和回答，结束前等待已提交录音保存。结束语写入记录，前端等待数字人播报完成后进入报告。旧会话及教师固定任务沿用兼容流程。当前策略与验证见 [问题主导面试实施说明](问题主导面试实施说明.md)。
 - DeepSeek AI 动态追问
-- GLM-ASR 语音回答转写
+- 浏览器原生语音转写优先，缺少 API 时使用 GLM-ASR 回退
 - RULE 规则化追问回退（AI 不可用时自动启用）
 - 多维能力评分报告
 - 面试历史记录
@@ -38,7 +39,7 @@
 | 前端 | Vue 3.5 + Vite 8 + Vue Router + Pinia + Axios + ECharts（无 Element Plus） |
 | 后端 | Spring Boot 3.2.5（源码级别 Java 17，本机用 JDK21 编译）+ MyBatis-Plus |
 | 数据库 | MySQL 8 |
-| AI 服务 | DeepSeek 动态追问 + GLM-ASR-2512 语音转写 + RULE 回退；Praat 语音分析（本地边车） |
+| AI 服务 | DeepSeek 动态追问 + 浏览器原生 ASR / GLM-ASR-2512 回退转写 + RULE 追问回退；Praat 语音分析（本地边车） |
 | 鉴权 | JWT（无状态 Token 鉴权） |
 
 ## 目录结构
@@ -84,19 +85,29 @@ npm run dev
 
 ### Windows 一键启动
 
-安装上述 JDK、Node.js、MySQL 和 Python 3.10，按下方说明初始化数据库后，双击根目录的 `一键启动网页.bat`（内部调用 `scripts/dev-start.ps1`：端口已占用就复用，探活通过后自动打开浏览器）。
+安装上述 JDK、Node.js、MySQL 和 Python 3.10，按下方说明初始化数据库后，双击根目录的 `一键启动网页.bat`。统一启动链路为 `一键启动网页.bat → scripts/dev-start.ps1 → scripts/start-web.ps1`：先检查或启动本地 Praat 语音分析服务，再检查或启动后端、数字人和前端；已有服务只有探活通过才复用。
+
+语音分析默认监听 `127.0.0.1:8020`，Python 环境需安装 `numpy` 和 `praat-parselmouth`（`python -m pip install numpy praat-parselmouth`）。启动器优先使用 `数字人/envs/speech/Scripts/python.exe`，不存在时使用 PATH 中的 `python.exe`。可通过 `INTERVIEW_VOICE_URL` 指定已有服务，或用 `INTERVIEW_VOICE_ENABLED=false` 关闭表达分析。Praat 只做本地声学分析；浏览器缺少原生语音识别 API 时，回退转写需要有可用额度的智谱账户。浏览器识别运行中报错会明确提示，不会静默改用云端。
 启动器检查数字人 Python 是否实际可执行，自动创建或修复项目内 `.venv`，缺少依赖时安装默认 Wav2Lip 所需的 `数字人/requirements-offerpilot.txt`。
 已有可用的 CUDA PyTorch 环境会继续使用；新环境可用 CPU 运行，速度取决于硬件。其他数字人引擎仍使用完整的 `requirements.txt`。
 如 Python 未被发现，可将 `OFFERPILOT_PYTHON` 设置为可用 Python 3.10 的 `python.exe` 完整路径。
 
 首次运行需联网访问 PyPI/Maven/npm/GitHub，并留出模型、头像和 Python 依赖所需磁盘空间。
 资源包下载失败会重试，三个包均校验 SHA-256；已校验的 ZIP 保留在系统临时目录供断点后的重新启动复用，文件缺失或空帧会自动修复。
-启动器只有在网页、后端及数字人 HTTP 服务均就绪后才显示成功；发生错误时会保留明确提示，日志在 `后端/logs/`。
+启动器只有在网页、后端、数字人及已启用的语音分析服务均就绪后才显示成功；发生错误时会保留明确提示，日志在 `后端/logs/`。
 保持启动窗口打开；按回车结束时只关闭本次启动的服务，不会清空数据库，也不会强制结束其他占用端口的程序。
+
+无界面启动检查：`powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\dev-start.ps1 -SmokeTest`。该模式不打开浏览器、不等待回车；检查结束后关闭本次新启动的服务，保留原本已运行的服务。
+
+如需启动后保留服务、但不自动打开浏览器，可改用 `-NoBrowser`，并保持启动窗口打开。完整冷启动、重复启动复用及退出清理检查可运行 `node scripts/verify-one-click.cjs`（运行前先停止这四个应用服务，MySQL 保持运行）。
+
+### 工程文件与本地产物
+
+业务源码与可复用检查脚本保留在 `前端/`、`后端/`、`数字人/`、`语音分析/` 和 `scripts/`。`artifacts/`、`output/`、`文档输出/`、`tmp/`、`.codex-tmp/` 作为本地调试、预览、交付及临时产物目录，不提交到 Git。现有报告、截图和文档保留在本机；模型、Python 环境、日志及用户作答录音沿用原有忽略规则，不因工程整理删除。
 
 ### 简历 AI 使用 DeepSeek
 
-简历工作台的 AI 生成使用 DeepSeek 官方 API；面试智能追问与语音识别仍使用原有智谱配置。先在 [DeepSeek 平台](https://platform.deepseek.com/) 创建 API Key，再运行 `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\configure-resume-deepseek.ps1`，在本机隐藏输入框中设置 `DEEPSEEK_RESUME_API_KEY`。不要将密钥写入前端、仓库或聊天记录。默认模型为 `deepseek-flash`，可用 `DEEPSEEK_RESUME_MODEL` 调整；无需安装 DeepSeek Harness。后端重启后，简历工作台会显示“已配置”状态。没有密钥时仍可手工填写简历，事例示例会回退为规则模板。仅做回滚时，可设置 `RESUME_DEEPSEEK_ENABLED=false` 恢复简历 AI 使用原有智谱客户端。
+简历工作台的 AI 生成使用 DeepSeek 官方 API；面试智能追问使用 DEEPSEEK_API_KEY 或后端本地配置，语音识别使用智谱 ZHIPU_API_KEY。先在 [DeepSeek 平台](https://platform.deepseek.com/) 创建 API Key，再运行 `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\configure-resume-deepseek.ps1`，在本机隐藏输入框中设置 `DEEPSEEK_RESUME_API_KEY`。不要将密钥写入前端、仓库或聊天记录。默认模型为 `deepseek-flash`，可用 `DEEPSEEK_RESUME_MODEL` 调整；无需安装 DeepSeek Harness。后端重启后，简历工作台会显示“已配置”状态。没有密钥时仍可手工填写简历，事例示例会回退为规则模板。仅做回滚时，可设置 `RESUME_DEEPSEEK_ENABLED=false` 恢复简历 AI 使用共享的 AI 客户端。
 
 只有简历 AI 所需的当前事实和岗位文本会发送至 DeepSeek，不会发送原始简历文件；提交前请检查敏感信息。API 调用可能计费或受额度限制，是否可用须在配置密钥后完成真实生成验证。接口参照 [DeepSeek 官方 API 文档](https://api-docs.deepseek.com/)。
 
@@ -106,7 +117,7 @@ npm run dev
 powershell -NoProfile -ExecutionPolicy Bypass -File .\数字人\start_offerpilot_digital_human.ps1 -CheckOnly
 ```
 
-语音识别仍需自己的智谱 API Key；数字人播报使用在线 EdgeTTS，需要能访问微软语音服务。
+仅 GLM-ASR 回退转写需要自己的智谱 API Key；浏览器原生语音识别的服务可用性取决于浏览器及网络。数字人播报使用在线 EdgeTTS，需要能访问微软语音服务。
 
 启动回归检查（先完成资源下载，使用缓存 ZIP 在独立目录检查首次安装和缺失修复）：
 
@@ -190,9 +201,12 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-startup.ps1
 | `JWT_SECRET` | JWT 签名密钥（HS256，≥32 字符） | 开发占位值 | **必须注入，无默认值** |
 | `DEEPSEEK_API_KEY` | DeepSeek 大模型密钥 | 空（追问回退 RULE） | **必须注入，无默认值** |
 | `ZHIPU_API_KEY` | 智谱语音转写密钥 | 空（语音转写不可用） | **必须注入，无默认值** |
-| `DEEPSEEK_MODEL` | DeepSeek 大模型名称 | `deepseek-flash` | 可覆盖 |
-| `DEEPSEEK_BASE_URL` | DeepSeek API 地址 | `https://api.deepseek.com` | 可覆盖 |
+| `AI_MODEL` | 共享 AI 客户端模型名称 | `deepseek-chat` | 可覆盖 |
+| `AI_BASE_URL` | 共享 AI 客户端 API 地址 | `https://api.deepseek.com` | 可覆盖 |
 | `ZHIPU_ASR_MODEL` | 智谱语音识别模型 | `glm-asr-2512` | 可覆盖 |
+| `INTERVIEW_VOICE_ENABLED` | 是否启用本地表达分析 | `true` | 按需配置 |
+| `INTERVIEW_VOICE_URL` | Praat 语音分析服务地址 | `http://127.0.0.1:8020` | 指向已部署的服务 |
+| `INTERVIEW_VOICE_TIMEOUT_MS` | 语音分析请求超时（毫秒） | `20000` | 按需配置 |
 | `JUDGE_ENABLED` | 是否启用自部署 Judge0 CE | `false` | 按需设为 `true` |
 | `JUDGE_BASE_URL` | 自部署 Judge0 CE 的服务地址 | 空 | 启用判题时必须注入 |
 | `JUDGE_AUTH_TOKEN` | Judge0 网关 `X-Auth-Token`（如有） | 空 | 按需注入 |

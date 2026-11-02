@@ -43,3 +43,72 @@
 .member-detail-window .member-dialog-actions,.member-confirm-window .ci-drawer .controls{display:flex;justify-content:flex-end;gap:12px;margin-top:20px;padding-top:16px;border-top:1px solid #e3e7e5}
 .member-detail-window .ci button{min-height:44px;border-radius:8px}
 @media(max-width:600px){.member-detail-window.teacher-drawer-overlay{padding:12px}.member-detail-window.teacher-drawer-overlay.centered-modal .teacher-drawer{padding:20px;max-height:calc(100dvh - 24px)}.member-detail-window .ci-drawer dl{grid-template-columns:1fr;gap:6px}.member-detail-window .ci-drawer dd{margin-bottom:8px}.member-detail-window .ci-drawer .import-steps{gap:8px}}
+
+
+/* Restore the pre-sync light appearance; retain current dark-theme rules. */
+:root:not([data-theme="dark"]) .ci {
+    background: #fff
+}
+:root:not([data-theme="dark"]) .ci button, :root:not([data-theme="dark"]) .ci select, :root:not([data-theme="dark"]) .ci input:not([type=checkbox]), :root:not([data-theme="dark"]) .ci .primary {
+    background: #fff
+}
+:root:not([data-theme="dark"]) .ci button:hover:not(:disabled) {
+    background: #f5faf7
+}
+:root:not([data-theme="dark"]) .ci button:disabled, :root:not([data-theme="dark"]) .ci input:disabled, :root:not([data-theme="dark"]) .ci select:disabled {
+    background: #f5f6f5
+}
+:root:not([data-theme="dark"]) .ci .primary:disabled {
+    background: #e3e7e5
+}
+:root:not([data-theme="dark"]) .ci .tag {
+    background: #ecfdf5
+}
+:root:not([data-theme="dark"]) .ci .tag.danger {
+    background: #fff0ed
+}
+:root:not([data-theme="dark"]) .ci .class-focus {
+    background: #f7faf8
+}
+:root:not([data-theme="dark"]) .ci .summary-card:hover {
+    background: #fcfefc
+}
+:root:not([data-theme="dark"]) .ci .panel {
+    background: #fff
+}
+:root:not([data-theme="dark"]) .ci .bar-track {
+    background: #eef1ef
+}
+:root:not([data-theme="dark"]) .ci .selected {
+    background: #f0faf5 !important
+}
+:root:not([data-theme="dark"]) .ci .chosen {
+    background: #ecfdf5
+}
+:root:not([data-theme="dark"]) .ci th {
+    background: #f7f9f8
+}
+:root:not([data-theme="dark"]) .ci .score-cell.below {
+    background: #fff3e6
+}
+:root:not([data-theme="dark"]) .ci .score-cell.near {
+    background: #faf8ec
+}
+:root:not([data-theme="dark"]) .ci .score-cell.reached {
+    background: #ecf9f2
+}
+:root:not([data-theme="dark"]) .ci .score-cell.missing {
+    background: #f6f7f6
+}
+:root:not([data-theme="dark"]) .ci .highlight {
+    background: #eaf9f1
+}
+:root:not([data-theme="dark"]) .ci .member-menu {
+    background: #fff
+}
+:root:not([data-theme="dark"]) .ci .feedback {
+    background: #ecfdf5
+}
+:root:not([data-theme="dark"]) .member-detail-window .ci-drawer .directory-list label:has(input:checked) {
+    background: #ecfdf5
+}
