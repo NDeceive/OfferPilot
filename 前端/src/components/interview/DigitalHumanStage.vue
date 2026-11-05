@@ -98,6 +98,7 @@ const INTERVIEW_AVATAR_ASSETS = {
 const frameRef = ref(null)
 const waitingRef = ref(null)
 const openingRef = ref(null)
+const emit = defineEmits(['ready'])
 const stage = ref('WAITING')
 const avatarReady = ref(false)
 const waitingFailed = ref(false)
@@ -121,11 +122,11 @@ function sayClosing(text) {
 }
 
 const statusText = computed(() => ({
-  connecting: '正在连接数字人',
+  connecting: 'AI 面试官正在审阅你的资料，请稍候…',
   ready: stage.value === 'OPENING' ? 'AI 面试官已就绪' : stage.value === 'LIVE' ? '数字人已连接' : '正在准备 AI 面试官…',
   speaking: '数字人播报中',
   error: '数字人连接异常，请重新连接',
-})[connectionState.value] || '正在连接数字人')
+})[connectionState.value] || 'AI 面试官正在准备中，请稍候…')
 
 function handleWaitingEnded() {
   if (stage.value !== 'WAITING') return
@@ -217,6 +218,7 @@ function enterLive() {
   stage.value = 'LIVE'
   clearTimeout(speechTimer)
   liveReady = false
+  emit('ready')
   speechTimer = setTimeout(() => {
     liveReady = true
     tryFlush()

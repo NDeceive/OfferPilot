@@ -16,10 +16,10 @@ const downloadRequest = axios.create({
 downloadRequest.interceptors.request.use((config) => {
   // 和 request.js 一样每次重取：服务器地址允许在运行时就地改
   config.baseURL = getApiBase()
-  // 导出要靠后端现渲染 PDF/Word，离线演示模式没有后端可问。
-  // 在这里挡住，报错信息才是人能看懂的一句；放它出门只会得到「Network Error」。
+  // 导出要靠后端现渲染文件；离线时没有服务可问，在这里挡住，
+  // 报错信息才是人能看懂的一句；放它出门只会得到「Network Error」。
   if (demoState.active) {
-    return Promise.reject(new Error('离线演示模式不支持导出报告'))
+    return Promise.reject(new Error('导出服务暂时不可用，请稍后再试'))
   }
   const store = useUserStore()
   if (store.token) {

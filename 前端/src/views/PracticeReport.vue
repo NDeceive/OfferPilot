@@ -6,7 +6,6 @@
       <div v-if="loading" class="report-state" role="status"><h2>正在加载练习报告…</h2><p>正在整理本次作答与判题记录。</p></div>
       <div v-else-if="error" class="report-state" role="alert"><h2>报告暂时无法加载</h2><p>{{ error }}</p><button @click="load">重新加载</button></div>
       <template v-else-if="report">
-        <p v-if="report.demoMode" class="notice">样例演示：编程题采用本地粗略检查，结算结果仅用于功能展示。</p>
         <p v-if="report.settlementStatus === 'PROCESSING'" class="notice" role="status">结算处理中，还有 {{ report.pendingCount || '部分' }} 个任务未结束；当前统计不是最终结果。<button class="text-button" @click="load">刷新状态</button></p>
         <p v-if="systemFailures" class="system-notice" role="alert">{{ systemFailures }} 个判题请求异常，不计为学生答错。已保留可用作答，可在题目详情中核实并重新练习。</p>
         <p v-if="report.status === 'ONGOING'" class="notice">练习仍在进行，当前为阶段记录。<router-link :to="`/learning/session/${sessionId}`">继续练习 →</router-link></p>
@@ -20,11 +19,11 @@
             <p v-if="legacyRetryCount" class="muted legacy-retry-note">包含 {{ legacyRetryCount }} 道历史关键词建议复习题，不计入正确率。</p>
           </div>
           <div class="overview-score">
-            <p class="muted">{{ feedbackAvailable ? '本次判定正确率' : '练习结束后统一结算' }}</p>
+            <p class="muted">{{ feedbackAvailable ? '已判定正确率' : '练习结束后统一结算' }}</p>
             <strong class="score">{{ feedbackAvailable ? metrics.score ?? '—' : '—' }}<small v-if="feedbackAvailable && metrics.score != null">%</small></strong>
-            <div class="progress-track" :role="metrics.score != null && feedbackAvailable ? 'progressbar' : undefined" aria-label="本次判定正确率" :aria-valuenow="feedbackAvailable ? metrics.score : undefined" :aria-valuemin="0" :aria-valuemax="100"><span :style="{ width: `${feedbackAvailable ? metrics.score || 0 : 0}%` }"></span></div>
+            <div class="progress-track" :role="metrics.score != null && feedbackAvailable ? 'progressbar' : undefined" aria-label="已判定正确率" :aria-valuenow="feedbackAvailable ? metrics.score : undefined" :aria-valuemin="0" :aria-valuemax="100"><span :style="{ width: `${feedbackAvailable ? metrics.score || 0 : 0}%` }"></span></div>
             <b v-if="feedbackAvailable">{{ metrics.correct }} / {{ metrics.evaluated }} 道题判定正确</b>
-            <p v-if="feedbackAvailable" class="muted">{{ metrics.selfReview ? `另有 ${metrics.selfReview} 道普通题待自评（不计入正确率）` : '仅统计客观题与编程题的有效自动判定' }}</p><p v-else class="muted">作答期间不显示判定与解析。</p>
+            <p v-if="feedbackAvailable" class="muted">{{ metrics.selfReview ? `另有 ${metrics.selfReview} 道普通题待自评（不计入正确率）` : '按已判定的客观题与编程题计算' }}</p><p v-else class="muted">作答期间不显示判定与解析。</p>
           </div>
         </section>
         <template v-if="feedbackAvailable">
@@ -52,7 +51,7 @@
               <div v-if="!filteredRows.length" class="report-state"><h3>{{ rows.length ? '没有符合筛选条件的题目' : '本次练习暂无题目记录' }}</h3><p>{{ rows.length ? '可以调整关键词、题型或复习状态，查看其他题目。' : '返回学习资源创建新的专项题单。' }}</p><button v-if="rows.length" @click="resetFilters">清除筛选</button><router-link v-else to="/learning">创建专项题单 →</router-link></div>
             </div>
           </section>
-          <details class="statistics"><summary>报告统计说明</summary><div><p>提交率 {{ metrics.total ? `${ratio(metrics.submitted,metrics.total)}%` : '—' }} · 未提交 {{ Math.max(0,metrics.total-metrics.submitted) }} 题 · 历史关键词评价 {{ metrics.legacyReview }} 题</p><p>判题中 {{ report.pendingCount || 0 }} 个请求 · 系统判题异常 {{ systemFailures }} 个请求</p><p>正确率 = 判定正确的客观题与编程题 ÷ 这两类题目的有效判定数。未提交、判题中、系统异常、普通题自评及历史关键词评价均不计入分母。题型卡片展示全部题目数量；“未判定”包含未提交、判题中与判题异常。</p><p>复习状态与历史判题结果独立。重练范围沿用现有规则：未通过且尚未完成复习的题目，以及所有待复习题。重新作答会新建原题练习并定位所选题目，不覆盖本报告。</p><p>开始于 {{ formatPracticeDate(report.startedAt) }} · {{ elapsed ? `总历时 ${elapsed}，包含离开页面的时间。` : '练习结束后显示总历时。' }} 所有时间按北京时间显示。</p><p>普通题通过对照参考答案自评；当前接口不记录自评分数。{{ report.demoMode ? '编程结果为本地文本规则粗判，未执行真实编译或测试用例。' : '' }}</p></div></details>
+
         </template>
         <p v-else class="notice">本次练习采用统一结算。请先完成或结束练习，再查看判定与解析。</p>
       </template>

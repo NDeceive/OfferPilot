@@ -60,6 +60,7 @@
             ref="digitalHumanRef"
             :text="digitalHumanText"
             :speech-key="digitalHumanSpeechKey"
+            @ready="dhReady = true"
           />
           <span class="stage-caption">AI 面试官</span>
         </div>
@@ -71,9 +72,9 @@
             @expression-sample="recordExpression" @expression-state="liveExpression = $event" @retry-clock="syncExpressionClock" />
         </div>
 
-        <p v-if="isMobile && latestQuestion" class="mobile-question">
+        <p v-if="isMobile && visibleLatestQuestion" class="mobile-question">
           <span class="mq-label">当前题目</span>
-          <span class="mq-text">{{ latestQuestion }}</span>
+          <span class="mq-text">{{ visibleLatestQuestion }}</span>
         </p>
         <div v-if="interviewPlan" class="interview-plan-status" role="status">
           <span>核心问题 {{ interviewPlan.completedCoreQuestions }}/{{ interviewPlan.totalCoreQuestions }}</span>
@@ -94,8 +95,11 @@
             >{{ showTranscript ? '收起问答记录' : '展开问答记录' }}</button>
           </div>
           <div id="interview-transcript" v-show="showTranscript" class="conversation-scroll" ref="messagesRef">
+            <div v-if="!dhReady" class="conversation-entry ai opening-placeholder">
+              <p>面试即将开始，请稍做准备……</p>
+            </div>
             <div
-              v-for="(msg, i) in messages"
+              v-for="(msg, i) in visibleMessages"
               :key="i"
               :class="['conversation-entry', msg.role]"
             >
@@ -124,7 +128,7 @@
             ref="microphoneRef"
             :session-id="sessionId"
             :transcript="answer"
-            :disabled="isSubmitting || isPaused || pauseChanging || expressionEnding || needsNextQuestion || !sessionId"
+            :disabled="!dhReady || isSubmitting || isPaused || pauseChanging || expressionEnding || needsNextQuestion || !sessionId"
             :paused="isPaused || pauseChanging"
             :allow-skip="!route.query.assignmentId && interviewStage !== 'SELF_INTRODUCTION'"
             @transcript="appendSpeechTranscript"
@@ -207,6 +211,8 @@ function syncQuestion(question, stage) {
 }
 const jobTitle = ref('前端开发工程师')
 const currentQuestion = ref(1)
+// 同一题内第几段回答的录音：0 主回答，1 起是追问回答
+const answerSeq = ref(0)
 const totalDuration = ref(1800)
 const timeLeft = ref(1800)
 const interviewPlan = ref(null)
@@ -249,6 +255,7 @@ let pendingSkipRequest = null
 watch(sessionId, sid => { if (sid) syncExpressionClock() })
 // 换题就重开一段录音；同一题的追问不打断
 watch([currentQuestion, currentQuestionId, sessionFinished], ([round, id, finished]) => {
+  answerSeq.value = 0
   if (id == null || finished || (!voiceEnabled.value && interviewStage.value !== 'SELF_INTRODUCTION') || !sessionId.value) return
   answerAudio.start({ sessionId: sessionId.value, roundNo: round, questionId: id })
 })
@@ -327,6 +334,14 @@ const latestQuestion = computed(() => {
   }
   return ''
 })
+
+// 数字人还没露脸之前，先把第一题压住，别让人还没出现题目就砸下来了
+const dhReady = ref(false)
+const visibleMessages = computed(() => {
+  if (dhReady.value) return messages.value
+  return messages.value.filter((msg, i) => !(i === 0 && msg.role === 'ai'))
+})
+const visibleLatestQuestion = computed(() => (dhReady.value ? latestQuestion.value : ''))
 
 let timerInterval = null
 let autoFinished = false
@@ -465,7 +480,7 @@ async function submitAnswerFn() {
       pendingAnswerRequest = { questionId: currentQuestionId.value, questionInstanceId: currentPromptId.value, roundNo: currentQuestion.value, answer: userAnswer, requestId: crypto.randomUUID() }
     }
     if (interviewStage.value === 'SELF_INTRODUCTION' && !pendingAnswerRequest.audioId) {
-      const uploaded = await answerAudio.stopAndUpload({ required: true })
+      const uploaded = await answerAudio.stopAndUpload({ required: true, answerSeq: answerSeq.value })
       if (!uploaded?.audioId) throw new Error('录音尚未保存，请重试提交')
       pendingAnswerRequest.audioId = uploaded.audioId
     }
@@ -481,8 +496,12 @@ async function submitAnswerFn() {
     interviewStage.value = res.interviewStage || interviewStage.value
 
     isAiTyping.value = false
-    // 追问还是同一题，继续录；进入下一题才把这一段传上去
-    if (res.nextAction !== 'FOLLOWUP') await answerAudio.stopAndUpload()
+    // 每段回答单独落盘：先把这一段封口上传，追问时再为下一段重开录音
+    await answerAudio.stopAndUpload({ answerSeq: answerSeq.value })
+    answerSeq.value += 1
+    if (res.nextAction === 'FOLLOWUP' && sessionId.value) {
+      answerAudio.start({ sessionId: sessionId.value, roundNo: currentQuestion.value, questionId: currentQuestionId.value })
+    }
 
     if (res.nextAction === 'FOLLOWUP' && res.followupQuestion) {
       const followupText = normalizeFollowupQuestion(res.followupQuestion)

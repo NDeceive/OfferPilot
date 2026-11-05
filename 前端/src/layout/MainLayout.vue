@@ -114,7 +114,7 @@ const notificationCount = ref(0)
 // 学生端菜单
 const studentNav = [
   { path: '/home', label: '首页', icon: HomeFilled },
-  { path: '/jobs', label: '面试准备', icon: EditPen },
+  { path: '/interview/ai', label: '面试准备', icon: EditPen },
   { path: '/interview', label: '模拟面试', icon: VideoCamera },
   { path: '/history', label: '面试记录', icon: Tickets },
   { path: '/report', label: '能力报告', icon: DataAnalysis },

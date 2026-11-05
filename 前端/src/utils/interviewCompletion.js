@@ -1,5 +1,5 @@
 export const INTERVIEW_CLOSING_SECONDS = 30
-export const INTERVIEW_CLOSING_TEXT = '好，那我们今天就先聊到这里。谢谢你的分享，辛苦了。'
+export const INTERVIEW_CLOSING_TEXT = '好，那我们今天就先聊到这里。谢谢你的分享。'
 
 export async function presentInterviewClosing(show, play, wait = ms => new Promise(resolve => setTimeout(resolve, ms))) {
   show(INTERVIEW_CLOSING_TEXT)

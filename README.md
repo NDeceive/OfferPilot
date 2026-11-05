@@ -67,7 +67,7 @@ OfferPilot/
 - **MySQL 8**
 - **Python 3.10**（数字人首次启动时自动创建 `.venv`）
 - **Maven Wrapper**：仓库内置 `后端/mvnw.cmd`，无需单独安装 Maven
-- **API Key**：DeepSeek 大模型使用 `DEEPSEEK_API_KEY`，智谱语音转写使用独立的 `ZHIPU_API_KEY`；严禁写入前端或仓库
+- **API Key**：DeepSeek 大模型使用 `DEEPSEEK_API_KEY`；语音识别使用浏览器自带能力，不需要密钥；严禁把任何密钥写入前端或仓库
 
 ### 拉取更新后的前端依赖
 
@@ -87,7 +87,7 @@ npm run dev
 
 安装上述 JDK、Node.js、MySQL 和 Python 3.10，按下方说明初始化数据库后，双击根目录的 `一键启动网页.bat`。统一启动链路为 `一键启动网页.bat → scripts/dev-start.ps1 → scripts/start-web.ps1`：先检查或启动本地 Praat 语音分析服务，再检查或启动后端、数字人和前端；已有服务只有探活通过才复用。
 
-语音分析默认监听 `127.0.0.1:8020`，Python 环境需安装 `numpy` 和 `praat-parselmouth`（`python -m pip install numpy praat-parselmouth`）。启动器优先使用 `数字人/envs/speech/Scripts/python.exe`，不存在时使用 PATH 中的 `python.exe`。可通过 `INTERVIEW_VOICE_URL` 指定已有服务，或用 `INTERVIEW_VOICE_ENABLED=false` 关闭表达分析。Praat 只做本地声学分析；浏览器缺少原生语音识别 API 时，回退转写需要有可用额度的智谱账户。浏览器识别运行中报错会明确提示，不会静默改用云端。
+语音分析默认监听 `127.0.0.1:8020`，Python 环境需安装 `numpy` 和 `praat-parselmouth`（`python -m pip install numpy praat-parselmouth`）。启动器优先使用 `数字人/envs/speech/Scripts/python.exe`，不存在时使用 PATH 中的 `python.exe`。可通过 `INTERVIEW_VOICE_URL` 指定已有服务，或用 `INTERVIEW_VOICE_ENABLED=false` 关闭表达分析。Praat 只做本地声学分析；语音转写统一走浏览器自带能力，浏览器不支持时会提示改用 Edge / Chrome 或文字作答。浏览器识别运行中报错会明确提示，不会静默改用其他服务。
 启动器检查数字人 Python 是否实际可执行，自动创建或修复项目内 `.venv`，缺少依赖时安装默认 Wav2Lip 所需的 `数字人/requirements-offerpilot.txt`。
 已有可用的 CUDA PyTorch 环境会继续使用；新环境可用 CPU 运行，速度取决于硬件。其他数字人引擎仍使用完整的 `requirements.txt`。
 如 Python 未被发现，可将 `OFFERPILOT_PYTHON` 设置为可用 Python 3.10 的 `python.exe` 完整路径。
@@ -107,7 +107,7 @@ npm run dev
 
 ### 简历 AI 使用 DeepSeek
 
-简历工作台的 AI 生成使用 DeepSeek 官方 API；面试智能追问使用 DEEPSEEK_API_KEY 或后端本地配置，语音识别使用智谱 ZHIPU_API_KEY。先在 [DeepSeek 平台](https://platform.deepseek.com/) 创建 API Key，再运行 `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\configure-resume-deepseek.ps1`，在本机隐藏输入框中设置 `DEEPSEEK_RESUME_API_KEY`。不要将密钥写入前端、仓库或聊天记录。默认模型为 `deepseek-flash`，可用 `DEEPSEEK_RESUME_MODEL` 调整；无需安装 DeepSeek Harness。后端重启后，简历工作台会显示“已配置”状态。没有密钥时仍可手工填写简历，事例示例会回退为规则模板。仅做回滚时，可设置 `RESUME_DEEPSEEK_ENABLED=false` 恢复简历 AI 使用共享的 AI 客户端。
+简历工作台的 AI 生成使用 DeepSeek 官方 API；面试智能追问使用 DEEPSEEK_API_KEY 或后端本地配置，语音识别使用浏览器自带能力（Edge / Chrome）。先在 [DeepSeek 平台](https://platform.deepseek.com/) 创建 API Key，再运行 `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\configure-resume-deepseek.ps1`，在本机隐藏输入框中设置 `DEEPSEEK_RESUME_API_KEY`。不要将密钥写入前端、仓库或聊天记录。默认模型为 `deepseek-flash`，可用 `DEEPSEEK_RESUME_MODEL` 调整；无需安装 DeepSeek Harness。后端重启后，简历工作台会显示“已配置”状态。没有密钥时仍可手工填写简历，事例示例会回退为规则模板。仅做回滚时，可设置 `RESUME_DEEPSEEK_ENABLED=false` 恢复简历 AI 使用共享的 AI 客户端。
 
 只有简历 AI 所需的当前事实和岗位文本会发送至 DeepSeek，不会发送原始简历文件；提交前请检查敏感信息。API 调用可能计费或受额度限制，是否可用须在配置密钥后完成真实生成验证。接口参照 [DeepSeek 官方 API 文档](https://api-docs.deepseek.com/)。
 
@@ -117,7 +117,7 @@ npm run dev
 powershell -NoProfile -ExecutionPolicy Bypass -File .\数字人\start_offerpilot_digital_human.ps1 -CheckOnly
 ```
 
-仅 GLM-ASR 回退转写需要自己的智谱 API Key；浏览器原生语音识别的服务可用性取决于浏览器及网络。数字人播报使用在线 EdgeTTS，需要能访问微软语音服务。
+浏览器原生语音识别的服务可用性取决于浏览器及网络。数字人播报使用在线 EdgeTTS，需要能访问微软语音服务。
 
 启动回归检查（先完成资源下载，使用缓存 ZIP 在独立目录检查首次安装和缺失修复）：
 
@@ -131,25 +131,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-startup.ps1
 
 在后端目录运行 `$env:RUN_DEEPSEEK_SMOKE="true"; .\mvnw.cmd -Dtest=DeepSeekIntegrationTest test` 可执行真实追问验证（会调用 API）。
 
-### 配置智谱 API Key（语音识别）
+### 语音识别（无需密钥）
 
-1. 在智谱开放平台创建你自己的 API Key，并了解对应模型的计费规则。
-2. 智谱 ASR 的免费 key 已写入 `后端/src/main/resources/application.yml` 的 `asr.api-key` 默认值，开箱即用；需要用别的 key 时，设置环境变量 `ZHIPU_API_KEY` 覆盖即可，不必改文件。
-3. 启动器会将密钥保存到**当前 Windows 用户环境变量**，供下次启动使用，并传给本次启动的后端。用户环境变量仍是本机可读取的凭据，请只在可信电脑上使用。更换密钥后须重启后端。
-4. 如果手动启动后端，可在同一个 PowerShell 窗口用隐藏输入设置仅当前窗口有效的环境变量，再运行 `cd 后端` 和 `.\mvnw.cmd spring-boot:run`：
+面试作答的语音转写使用浏览器自带能力（Edge / Chrome 的 Web Speech API），不需要配置任何密钥，也不会把音频上传到本项目的后端。
 
-   ```powershell
-   $secureKey = Read-Host '智谱 API Key' -AsSecureString
-   $keyPointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureKey)
-   try {
-       $env:ZHIPU_API_KEY = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($keyPointer)
-   } finally {
-       [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($keyPointer)
-       Remove-Variable secureKey, keyPointer -ErrorAction SilentlyContinue
-   }
-   ```
-
-若启动器发现后端已经运行，它不能给正在运行的进程补充密钥；请关闭后端后重新启动。没有配置密钥时，动态追问会回退到 RULE，但语音转写无法使用。**不要把密钥填入前端 `.env`、提交到 GitHub，或发给他人。**
+Firefox 等不支持该能力的浏览器会提示改用文字作答；需要语音输入时请换用 Edge 或 Chrome。语音分析（语速、停顿、音量）仍由本地 Praat 服务完成，与转写相互独立。
 
 ## 数据库初始化
 
@@ -200,10 +186,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\test-startup.ps1
 | `DB_PASSWORD` | 数据库密码 | `123456`（仅本地） | **必须注入，无默认值** |
 | `JWT_SECRET` | JWT 签名密钥（HS256，≥32 字符） | 开发占位值 | **必须注入，无默认值** |
 | `DEEPSEEK_API_KEY` | DeepSeek 大模型密钥 | 空（追问回退 RULE） | **必须注入，无默认值** |
-| `ZHIPU_API_KEY` | 智谱语音转写密钥 | 空（语音转写不可用） | **必须注入，无默认值** |
 | `AI_MODEL` | 共享 AI 客户端模型名称 | `deepseek-chat` | 可覆盖 |
 | `AI_BASE_URL` | 共享 AI 客户端 API 地址 | `https://api.deepseek.com` | 可覆盖 |
-| `ZHIPU_ASR_MODEL` | 智谱语音识别模型 | `glm-asr-2512` | 可覆盖 |
 | `INTERVIEW_VOICE_ENABLED` | 是否启用本地表达分析 | `true` | 按需配置 |
 | `INTERVIEW_VOICE_URL` | Praat 语音分析服务地址 | `http://127.0.0.1:8020` | 指向已部署的服务 |
 | `INTERVIEW_VOICE_TIMEOUT_MS` | 语音分析请求超时（毫秒） | `20000` | 按需配置 |
@@ -226,7 +210,7 @@ cd 后端
 
 - 使用默认 profile（`application.yml`），数据库密码等敏感项有本地默认值，开箱即用。
 - 日志仅输出到控制台。
-- 若未配置 `DEEPSEEK_API_KEY` 或大模型调用失败，动态追问自动回退到 RULE；语音转写需要独立的 `ZHIPU_API_KEY`。
+- 若未配置 `DEEPSEEK_API_KEY` 或大模型调用失败，动态追问自动回退到 RULE；语音转写使用浏览器自带能力，无需密钥。
 - 后端会检查 `8010` 端口；数字人未运行时自动启动 `数字人/start_offerpilot_digital_human.bat`。
 - 数字人首次启动会从项目 GitHub Release 下载 Wav2Lip 模型、基础头像和当前使用的 `offerpilot_interviewer_v2` 头像资源（这些大文件不进入 Git 历史），随后创建 Python 3.10 虚拟环境并安装依赖，耗时较长；进度见 `后端/logs/digital-human.log`。
 - 后端关闭时，只关闭由本次后端启动的数字人实例。
@@ -245,7 +229,6 @@ $env:DB_USERNAME            = "<db-user>"
 $env:DB_PASSWORD            = "<db-password>"
 $env:JWT_SECRET             = "<至少32字符的随机密钥>"
 $env:DEEPSEEK_API_KEY       = "<your-deepseek-api-key>"
-$env:ZHIPU_API_KEY          = "<your-zhipu-api-key>"
 $env:CORS_ALLOWED_ORIGINS   = "https://your-frontend-domain"
 $env:LOG_PATH               = "logs"
 
@@ -253,7 +236,7 @@ cd 后端
 .\mvnw.cmd spring-boot:run
 ```
 
-> 生产 profile 对 `DB_PASSWORD` / `JWT_SECRET` / `DEEPSEEK_API_KEY` / `ZHIPU_API_KEY` 不提供默认值——未注入则启动失败（快速失败），避免带弱默认值上线。
+> 生产 profile 对 `DB_PASSWORD` / `JWT_SECRET` / `DEEPSEEK_API_KEY` 不提供默认值——未注入则启动失败（快速失败），避免带弱默认值上线。
 
 ## 前端启动
 
@@ -318,7 +301,7 @@ Authorization: Bearer <token>
 
 ## 安全注意事项
 
-- **严禁提交真实 `DEEPSEEK_API_KEY` 或 `ZHIPU_API_KEY`** 到仓库、前端代码、截图或聊天记录。
+- **严禁提交真实 `DEEPSEEK_API_KEY`** 到仓库、前端代码、截图或聊天记录。
 - **严禁提交生产数据库密码 `DB_PASSWORD`**。
 - **严禁提交 `JWT_SECRET`**；生产环境必须使用足够强度的随机密钥（HS256 要求 ≥32 字符）。
 - 公开注册接口仅创建 **STUDENT** 角色，无法自助提权。

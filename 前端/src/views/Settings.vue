@@ -25,17 +25,13 @@
           <h2 class="card-title">通用设置</h2>
 
           <p v-if="meError" class="inline-alert" role="alert">
-            {{ meError }}，下面显示的是本机缓存的信息。
+            {{ meError }}，下面显示的是缓存的信息。
           </p>
 
           <div class="setting-group">
             <label class="setting-label">头像</label>
             <div class="avatar-row">
               <div class="avatar-preview"><span>{{ avatarLetter }}</span></div>
-              <div class="avatar-side">
-                <button class="btn-outline" disabled>更换头像</button>
-                <span class="setting-note">头像上传接口尚未开通，先按昵称首字显示。</span>
-              </div>
             </div>
           </div>
 
@@ -77,7 +73,6 @@
                 </button>
               </div>
             </div>
-            <p class="setting-note">偏好保存在本机浏览器，推送通道接入后按此设置生效。</p>
           </div>
 
           <button class="btn-primary" :disabled="saving || meLoading" @click="saveSettings">
@@ -105,17 +100,6 @@
                 <strong>AI 数字人面试官</strong>
                 <span>开场、念题与追问都由数字人播报，面试中实时驱动。</span>
               </div>
-            </div>
-          </div>
-
-          <div class="setting-group">
-            <label class="setting-label">语音偏好</label>
-            <div class="toggle-item is-disabled">
-              <div>
-                <span class="toggle-name">音色与语速</span>
-                <span class="toggle-desc">由数字人服务侧统一配置，暂未开放用户自定义</span>
-              </div>
-              <span class="soon-tag">即将开放</span>
             </div>
           </div>
 
@@ -158,32 +142,6 @@
             </button>
           </div>
 
-          <div class="setting-group">
-            <label class="setting-label">绑定手机</label>
-            <div class="bind-row">
-              <span class="bind-value" :class="{ 'is-empty': !boundPhone }">{{ boundPhone || '未绑定' }}</span>
-              <span class="soon-tag">即将开放</span>
-            </div>
-          </div>
-
-          <div class="setting-group">
-            <label class="setting-label">绑定邮箱</label>
-            <div class="bind-row">
-              <span class="bind-value" :class="{ 'is-empty': !boundEmail }">{{ boundEmail || '未绑定' }}</span>
-              <span class="soon-tag">即将开放</span>
-            </div>
-          </div>
-
-          <div class="danger-zone">
-            <h3 class="danger-title">危险操作</h3>
-            <div class="danger-item">
-              <div>
-                <span class="danger-name">注销账号</span>
-                <span class="danger-desc">自助注销尚未开放，需要删除账号请联系管理员</span>
-              </div>
-              <button class="btn-danger" disabled>注销账号</button>
-            </div>
-          </div>
         </div>
 
         <!-- Appearance -->
@@ -236,13 +194,6 @@
             </div>
           </div>
 
-          <div class="setting-group">
-            <label class="setting-label">语言</label>
-            <select class="setting-select" disabled>
-              <option>简体中文</option>
-            </select>
-            <p class="setting-note">当前版本仅提供简体中文。</p>
-          </div>
         </div>
 
         <!-- Data -->
@@ -274,7 +225,7 @@
 
           <div class="setting-group">
             <label class="setting-label">清除本地缓存</label>
-            <p class="setting-desc">清除本机保存的通知偏好与专项刷题进度，不影响登录状态和个人资料。</p>
+            <p class="setting-desc">清除已保存的通知偏好与专项刷题进度，不影响登录状态和个人资料。</p>
             <button class="btn-outline btn-warning" :disabled="clearing" @click="clearCache">清除缓存</button>
           </div>
         </div>
@@ -296,18 +247,12 @@
               </div>
             </div>
           </div>
-
-          <div class="setting-group">
-            <label class="setting-label">问题反馈</label>
-            <p class="setting-desc">{{ isStaff ? '在线反馈通道尚未接入，遇到问题请联系管理员。' : '在线反馈通道尚未接入，遇到问题可先在「常见问题」里查找，或联系管理员。' }}</p>
-            <div class="toggle-item is-disabled">
-              <div>
-                <span class="toggle-name">提交问题与建议</span>
-                <span class="toggle-desc">支持附当前页面截图，接入后可直接提交</span>
-              </div>
-              <span class="soon-tag">即将开放</span>
-            </div>
+          <!-- 教师/企业没有学生 FAQ，但帮助入口仍在；给一条能照着做的说明，不留空卡片 -->
+          <div v-else class="setting-group">
+            <label class="setting-label">需要帮助</label>
+            <p class="setting-note">账号、班级或权限问题请联系学校管理员；遇到页面异常，请说明操作步骤并附上截图，便于排查。</p>
           </div>
+
         </div>
       </div>
     </div>
@@ -470,7 +415,7 @@ async function saveSettings() {
   persistPrefs() // 偏好只有本机一份，无论昵称改没改都要落盘
 
   if (nickname === (me.value?.nickname || '')) {
-    flash('已保存本机偏好')
+    flash('已保存偏好')
     return
   }
 
@@ -491,9 +436,6 @@ async function saveSettings() {
 }
 
 /* ==================== 账号安全 ==================== */
-const boundPhone = computed(() => me.value?.phone || '')
-const boundEmail = computed(() => me.value?.email || '')
-
 const pwdForm = reactive({ next: '', confirm: '' })
 const pwdSaving = ref(false)
 
@@ -620,7 +562,7 @@ const faqs = [
   },
   {
     q: '专项刷题是怎么判题的？',
-    a: '当前版本用本机规则快速校验解题思路，结果仅供参考，不代表真实评测机的完整用例判定。题目与训练进度保存在本机浏览器，清除浏览器数据会一并丢失。',
+    a: '系统自动校验解题思路，结果仅供参考。',
   },
   {
     q: '数字人面试官连不上怎么办？',

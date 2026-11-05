@@ -31,10 +31,9 @@
             </section>
           </template>
           <template v-else-if="tab === '题目解析'">
-            <section><h3>参考分析</h3><p class="pre-wrap">{{ row.q.referenceAnswer || latest?.result?.referenceAnswer || '题库暂未提供解析。可以查看题面和本次判题反馈，或重新练习。' }}</p></section>
+            <section><h3>参考分析</h3><p class="pre-wrap">{{ row.q.referenceAnswer || latest?.result?.referenceAnswer || '暂无解析。' }}</p></section>
             <section v-if="row.q.tags?.length"><h3>相关知识点</h3><p>{{ row.q.tags.join(' · ') }}</p></section>
             <section v-if="['self','self_done'].includes(row.outcome.key)"><h3>对照参考答案完成自评</h3><p>检查关键概念、推理过程与边界条件，再选择下方自评结果。</p></section>
-            <a v-if="row.q.source?.url" :href="row.q.source.url" target="_blank" rel="noopener noreferrer">查看题目来源 ↗</a>
           </template>
           <template v-else>
             <p v-if="historyLoading && !history.length" role="status">正在加载提交历史…</p>
@@ -44,7 +43,7 @@
             <button v-if="history.length < historyTotal && !historyError" :disabled="historyLoading" @click="loadHistory(historyPage + 1)">{{ historyLoading ? '加载中…' : '加载更多提交' }}</button>
           </template>
         </div>
-        <section v-if="canSelfAssess && latest?.status === 'SELF_REVIEW' && tab !== '提交历史'" class="self-assessment"><h3>自评结果</h3><p>自评不计入正确率。“需要巩固”会加入待复习。</p><div class="self-assessment-actions"><button :disabled="busy" :aria-pressed="row.q.selfAssessment?.state === 'MASTERED'" @click="$emit('self-assess', 'MASTERED')">已掌握</button><button :disabled="busy" :aria-pressed="row.q.selfAssessment?.state === 'NEEDS_REVIEW'" @click="$emit('self-assess', 'NEEDS_REVIEW')">需要巩固</button></div><p v-if="row.q.selfAssessment" role="status">自评已保存：{{ row.q.selfAssessment.state === 'MASTERED' ? '已掌握' : '需要巩固' }}。可重新选择。</p><p class="muted">结果保存在当前浏览器的样例练习中，刷新后仍保留。</p></section>
+        <section v-if="canSelfAssess && latest?.status === 'SELF_REVIEW' && tab !== '提交历史'" class="self-assessment"><h3>自评结果</h3><p>“需要巩固”会加入待复习。</p><div class="self-assessment-actions"><button :disabled="busy" :aria-pressed="row.q.selfAssessment?.state === 'MASTERED'" @click="$emit('self-assess', 'MASTERED')">已掌握</button><button :disabled="busy" :aria-pressed="row.q.selfAssessment?.state === 'NEEDS_REVIEW'" @click="$emit('self-assess', 'NEEDS_REVIEW')">需要巩固</button></div><p v-if="row.q.selfAssessment" role="status">自评已保存：{{ row.q.selfAssessment.state === 'MASTERED' ? '已掌握' : '需要巩固' }}。可重新选择。</p></section>
         <p v-if="actionError" class="detail-error action-message" role="alert">{{ actionError }}</p>
         <footer class="drawer-actions"><button :disabled="busy" @click="$emit('review', row.q)">{{ row.reviewState === 'PENDING' ? '标记复习完成' : '加入待复习' }}</button><button class="primary" :disabled="busy || !canRetry" title="新建原题练习并定位本题，历史报告保留" @click="$emit('retry', row.q)">{{ busy ? '处理中…' : '重新作答' }}</button></footer>
       </aside>

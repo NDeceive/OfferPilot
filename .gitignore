@@ -90,3 +90,6 @@ Thumbs.db
 # Versioned practice workflow verification tools
 !/scripts/check-practice-judge.py
 !/scripts/check-practice-browser.cjs
+
+# 前端动效调参时的本地回滚备份（不参与版本控制）
+/前端/.ui-backup/

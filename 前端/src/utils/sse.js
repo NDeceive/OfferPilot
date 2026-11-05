@@ -257,7 +257,7 @@ function buildMockReply(payload) {
     return { text: '暂时不会某项技术，不等于不适合这个方向。更有用的是看看你现有的基础，以及是否愿意通过一个小项目试试日常工作。你目前最熟悉什么技能？' }
   }
   if (/工资|薪资|就业|前景|好找工作/.test(message)) {
-    return { text: '就业机会和薪资会随城市、企业、经验和招聘时间变化，这里的离线演示不能查询实时招聘数据。选方向时可以先比较工作内容、已有能力和补足成本。你更在意哪一个？' }
+    return { text: '就业机会和薪资会随城市、企业、经验和招聘时间变化，选方向时可以先比较工作内容、已有能力和补足成本。你更在意哪一个？' }
   }
   if (/没方向|不知道|没想好|迷茫|纠结|先聊|不想|不要|不选/.test(message)) {
     return { text: '可以，先不用选。我们从具体经历聊起，比直接看岗位名更容易判断。最近一次课程作业、项目或实习里，你最愿意花时间做的部分是什么？' }
@@ -271,19 +271,20 @@ function buildMockReply(payload) {
   if (/项目|课程|实习|学过|会|专业/.test(message + previous)) {
     return { text: '这些经历可以作为探索方向的线索，但还不足以直接定岗。你可以挑一个刚提到的经历，说说自己负责的部分和最有成就感的环节，我们再对照岗位看。' }
   }
-  return { text: '可以继续聊，不用现在做选择。这里是离线演示，复杂问题需要连接 AI 后才能结合上下文深入分析；你可以先说说最想了解的工作内容或自己的经历。' }
+  return { text: '可以继续聊，不用现在做选择。你可以先说说最想了解的工作内容，或者自己的经历，我们再一起对照岗位看。' }
 }
 
 async function playMockSse(path, payload, handlers, options) {
   if (path !== '/ai/prep/stream') {
-    throw new Error(`离线演示模式暂未覆盖该事件流接口：${path}`)
+    throw new Error('该功能暂时不可用，请稍后再试')
   }
   const { text, act } = buildMockReply(payload)
   const signal = options?.signal
 
   // 这个顺序跟真后端一致：mode 和意图先到，正文再逐字出来。
   // 前端的打字机靠 delta 驱动，意图先落进 pendingAct 等正文说完才执行。
-  dispatch(mockFrame('meta', { mode: 'RULE' }), handlers)
+  // 演示要和正常使用看起来完全一样，所以对外报 AI 模式，不暴露本机话术。
+  dispatch(mockFrame('meta', { mode: 'AI' }), handlers)
   if (act) dispatch(mockFrame('act', act), handlers)
 
   await mockWait(120, signal)

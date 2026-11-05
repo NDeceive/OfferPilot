@@ -415,6 +415,60 @@ function taskView(task, includeAssignments) {
   }
 }
 
+/**
+ * 学生视角的单条分配：字段口径照后端 TeachingService.progressFrom。
+ * 任务详情页直接读这些字段（有效次数、可开始与否、个人截止），缺一个就会退化成
+ * 「该功能暂不可用」或空进度条，所以这里要算全。
+ */
+function studentAssignmentView(task, assignment) {
+  const attempts = (assignment.attempts || []).map((p) => ({ ...p }))
+  const validCount = attempts.filter((p) => p.state === 'READY').length
+  const minAttempts = Number(task.minAttempts) || 1
+  const maxAttempts = Number(task.maxAttempts) || 1
+  const exempt = !!assignment.exempt
+  const ongoing = attempts.some((p) => p.state === 'ONGOING')
+  const generating = attempts.some((p) => p.state === 'GENERATING')
+  let reason = null
+  if (task.archived || task.endedAt) reason = '任务已结束，历史训练与报告保留'
+  else if (lifecycleOf(task) === 'SCHEDULED') reason = '尚未到任务开始时间'
+  else if (!ongoing && stampMs(task.deadline) <= Date.now() && !task.allowLate) reason = '任务已截止，当前不允许补交'
+  else if (!ongoing && generating) reason = '上一份报告正在生成，请等待结果'
+  else if (!ongoing && attempts.length >= maxAttempts) reason = '训练次数已用完，可联系教师安排补练'
+  return {
+    ...assignment,
+    attempts,
+    memberState: 'JOINED',
+    validCount,
+    exempt,
+    extraAttempts: 0,
+    overrideReason: '',
+    effectiveMaxAttempts: maxAttempts,
+    effectiveDeadline: task.deadline,
+    completionStatus: exempt
+      ? 'EXEMPT'
+      : validCount >= minAttempts
+        ? 'COMPLETED'
+        : generating
+          ? 'PENDING_VALIDATION'
+          : attempts.length
+            ? 'IN_PROGRESS'
+            : 'NOT_STARTED',
+    startEligibility: { allowed: reason === null, reason: reason || '' },
+    task: taskView(task, false),
+  }
+}
+
+/** 当前演示身份能看到的已发布任务分配（学生端「教学任务」） */
+function studentAssignments() {
+  const studentId = demoAccount().id
+  return teachingStore.tasks
+    .filter((task) => task.publishedAt)
+    .flatMap((task) => (task.assignments || [])
+      .filter((a) => a.studentId === studentId)
+      .map((a) => studentAssignmentView(task, a)))
+    .sort((a, b) => b.id - a.id)
+}
+
 function newAssignment(member) {
   return {
     id: (teachingStore.seq.assignment += 1),
@@ -425,6 +479,42 @@ function newAssignment(member) {
     completionStatus: 'NOT_STARTED',
     validCount: 0,
     attempts: [],
+  }
+}
+
+/**
+ * 草稿的评分方案：照后端 buildScorePlan 的算法生成——名次权重池 30/25/20/15/10，
+ * 并列组均分组内权重池，全并列直接均分；目标线按等级 65/75/85。
+ * 少了这一步，演示里教师新建的任务详情会退化成「旧版默认方案」。
+ */
+function buildDemoScorePlan(scoreModules) {
+  const items = (Array.isArray(scoreModules) && scoreModules.length
+    ? scoreModules
+    : MOCK_MODULES.map((m) => ({ code: m.code, rank: 1, level: 2 })))
+    .map((m) => ({ code: String(m.code), rank: Number(m.rank) || 1, level: Number(m.level) || 2 }))
+  const groups = new Map()
+  for (const item of items) groups.set(item.rank, [...(groups.get(item.rank) || []), item])
+  const pool = [0.3, 0.25, 0.2, 0.15, 0.1]
+  const weights = {}
+  for (const [rank, group] of groups) {
+    const each = groups.size === 1
+      ? 1 / items.length
+      : pool.slice(rank - 1, rank - 1 + group.length).reduce((sum, w) => sum + w, 0) / group.length
+    for (const item of group) weights[item.code] = Math.round(each * 10000) / 10000
+  }
+  const names = new Map(MOCK_MODULES.map((m) => [m.code, m.name]))
+  const targets = { 1: 65, 2: 75, 3: 85 }
+  return {
+    source: 'TEACHER_TASK',
+    version: 1,
+    modules: [...items].sort((a, b) => a.rank - b.rank).map((m) => ({
+      code: m.code,
+      name: names.get(m.code) || m.code,
+      rank: m.rank,
+      level: m.level,
+      weight: weights[m.code],
+      target: targets[m.level] || 75,
+    })),
   }
 }
 
@@ -607,11 +697,15 @@ const ROUTES = [
   })],
 
   ['get', /^\/user\/stats$/, () => ({
-    totalInterviews: 7 + sessions.size,
+    finishedInterviews: MOCK_OVERVIEW.summary.completedCount + sessions.size,
+    ongoingInterviews: 0,
     averageScore: MOCK_OVERVIEW.summary.averageScore,
-    streakDays: MOCK_OVERVIEW.summary.streakDays,
-    bestScore: MOCK_OVERVIEW.summary.bestScore,
+    highestScore: MOCK_OVERVIEW.summary.bestScore,
+    reportCount: MOCK_OVERVIEW.summary.completedCount + sessions.size,
+    skillCount: 8,
   })],
+
+  ['get', /^\/resume-workbench\/versions$/, () => []],
 
   ['get', /^\/user\/dashboard\/profile$/, () => ({
     nickname: demoAccount().nickname,
@@ -833,6 +927,17 @@ const ROUTES = [
 
   ['get', /^\/teaching\/students$/, () => peopleView()],
 
+  // ---- 学生端：教师分配给我的任务 ----
+  // 离线演示以「展示完整」为先：这些接口以前没覆盖，学生点「教学任务」只能看到
+  // 兜底的「该功能暂不可用」。现在直接返回种子数据里属于当前学生的分配。
+  ['get', /^\/teaching\/assignments$/, () => studentAssignments()],
+  ['get', /^\/teaching\/assignments\/(\d+)$/, (m) => {
+    const found = studentAssignments().find((a) => a.id === Number(m[1]))
+    if (!found) throw Object.assign(new Error('教学任务不存在或无权查看'), { demoCode: 404 })
+    return found
+  }],
+  ['post', /^\/teaching\/sessions\/(\d+)\/retry$/, () => null],
+
   ['get', /^\/teaching\/tasks$/, (_, config) => {
     // includeAssignments 走查询参数：GET 的 params 不在 config.url 里，只能读 config.params
     const include = String(config?.params?.includeAssignments) === 'true'
@@ -864,7 +969,7 @@ const ROUTES = [
       questions: Array.isArray(body.questions) && body.questions.length
         ? body.questions.map((q) => String(q))
         : DEMO_QUESTION_TEXT.slice(0, 3),
-      scorePlan: {},
+      scorePlan: buildDemoScorePlan(body.scoreModules),
       assignments: [],
     }
     allocate(task, body)
@@ -894,6 +999,10 @@ const ROUTES = [
     if (body.startTime) task.startTime = body.startTime
     if (body.deadline) task.deadline = body.deadline
     if (Array.isArray(body.questions) && body.questions.length) task.questions = body.questions.map((q) => String(q))
+    if (Array.isArray(body.scoreModules) && body.scoreModules.length) {
+      // 后端每次保存方案都会递增 config_version，页面上的「版本 N」跟着走
+      task.scorePlan = { ...buildDemoScorePlan(body.scoreModules), version: (task.scorePlan?.version || 0) + 1 }
+    }
     allocate(task, body)
     return null
   }],
@@ -1105,7 +1214,7 @@ export default function demoAdapter(config) {
   if (!hit) {
     // 不静默成功：没覆盖到的接口要能被看见，否则只是页面某块空着，很难倒查到是 mock 缺项
     console.warn(`[离线演示] 未覆盖的接口：${method.toUpperCase()} ${path}`)
-    return sleep(LATENCY).then(() => respond(config, ERR(`该功能暂不可用：${path}`, 404)))
+    return sleep(LATENCY).then(() => respond(config, ERR('该功能暂不可用。', 404)))
   }
 
   const [, pattern, handler, delay = LATENCY] = hit

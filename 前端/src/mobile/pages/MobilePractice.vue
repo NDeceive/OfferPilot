@@ -1,16 +1,24 @@
 <template>
-  <MobileShell title="专项刷题" subtitle="围绕岗位和薄弱点，选择下一项训练">
+  <MobileShell title="专项刷题">
     <label class="mobile-search">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><span class="sr-only">搜索知识点</span>
-      <input v-model.trim="query" type="search" placeholder="搜索知识点，如：JVM、Redis、MySQL" />
+      <input v-model.trim="query" type="search" placeholder="搜索知识点，如 JVM、Redis" />
     </label>
 
     <MobileSkeleton v-if="loading" variant="card" :rows="3" label="正在加载学习资源" />
+    <MobileState
+      v-else-if="loadError"
+      kind="error"
+      title="刷题资源暂时打不开"
+      :description="loadError"
+      action="重新加载"
+      @action="loadResources"
+    />
     <template v-else>
       <section class="mobile-role-card">
         <span class="mobile-square-icon">岗</span>
         <div class="mobile-grow"><small>当前岗位</small><strong>{{ currentRole?.name || '尚未选择岗位' }}</strong></div>
-        <router-link to="/jobs">切换 →</router-link>
+        <router-link to="/practice/role">切换 →</router-link>
       </section>
 
       <section v-if="recentSession" class="mobile-section">
@@ -25,22 +33,19 @@
       <nav class="mobile-chip-row" aria-label="个人题库"><router-link to="/learning/library/mistakes">错题本</router-link><router-link to="/learning/library/favorites">我的收藏</router-link><router-link to="/learning/library/recent">最近练习</router-link></nav>
 
       <section class="mobile-section">
-        <header class="mobile-section-heading"><h2>知识体系</h2><span>选择后开始训练</span></header>
-        <label class="company-choice">目标公司<select v-model="preferredCompany"><option value="">不限公司</option><option v-for="item in companies.filter(c => c.name !== '不限公司')" :key="item.name" :value="item.name">{{ item.name }}</option></select></label>
+        <header class="mobile-section-heading"><h2>知识体系</h2></header>
+        <label class="company-choice">目标公司<select v-model="preferredCompany"><option value="">不限公司</option><option v-for="item in companyChoices" :key="item.name" :value="item.name">{{ item.name }}</option></select></label>
         <p v-if="catalog && !catalog.ready" role="status">练习配置暂时无法加载，暂不能创建题单。<button :disabled="refreshingCatalog" @click="refreshCatalog">重新加载配置</button></p>
-        <p v-else role="status">{{ companyNote }}</p>
         <div class="mobile-chip-row" role="list">
           <button v-for="topic in visibleTopics" :key="topic" type="button" :class="{ active: topic === selectedTopic }" @click="selectedTopic = topic">{{ topic }}</button>
         </div>
         <div class="mobile-chip-row" aria-label="练习题型">
           <button v-for="type in availableTypes" :key="type" type="button" :aria-pressed="questionType === type" :class="{ active: questionType === type }" @click="questionType = type">{{ typeNames[type] }}</button>
         </div>
-        <p v-if="questionType === 'coding'">编程专项本次提供 10 道 Java 题。</p>
-        <p v-if="questionType === 'all'">混合题单中编程题占 20%–30%，每次至少 2 道。</p>
         <div v-if="visibleTopics.length" class="mobile-topic-list">
           <button v-for="(topic, index) in visibleTopics.slice(0, 6)" :key="topic" type="button" :disabled="starting || !catalog?.ready" @click="startTopic(topic)">
             <span class="mobile-topic-index">{{ String(index + 1).padStart(2, '0') }}</span>
-            <div class="mobile-grow"><strong>{{ topic }}</strong><small>围绕 {{ topic }} 核心考点练习</small></div><b>›</b>
+            <div class="mobile-grow"><strong>{{ topic }}</strong></div><b>›</b>
           </button>
         </div>
         <MobileState v-else title="没有匹配的知识点" description="换个关键词试试。" />
@@ -60,6 +65,7 @@ import MobileSkeleton from '../components/MobileSkeleton.vue'
 
 const router = useRouter()
 const loading = ref(true)
+const loadError = ref('')
 const starting = ref(false)
 const query = ref('')
 const roles = ref([])
@@ -69,32 +75,44 @@ const recentSession = ref(null)
 const overviewAvailable = ref(false), refreshingOverview = ref(false)
 const catalog = ref(null)
 const refreshingCatalog = ref(false)
-const companyNote = computed(() => {
- const name = preferredCompany.value
- if (!name || name === '不限公司') return '不限公司时按岗位和专项组题。'
- const matched = catalog.value?.companies?.some(c => c.name === name || c.aliases?.includes(name))
- return matched ? `${name}：已有公开文化资料，按相关专项匹配情境题。` : `${name}：暂无已审核专项资料，按岗位和专项组题。`
-})
+// 只在确实有资料时说明；没有资料就什么都不写，不要用「暂无」占一行。
 const selectedTopic = ref('')
 const questionType = ref('all')
 const typeNames = practiceTypeNames
+// 目标公司来自职业档案，可能不在内置公司列表里（如演示数据「星屿科技」）。
+// 不补进选项的话，select 有值却没有对应 option，会渲染成空白框。
+const companyChoices = computed(() => {
+  const list = companies.filter(item => item.name !== '不限公司')
+  const current = preferredCompany.value
+  if (current && !list.some(item => item.name === current)) return [{ name: current, industry: '' }, ...list]
+  return list
+})
 const availableTypes = computed(() => topicQuestionTypes(selectedTopic.value, currentRole.value, catalog.value))
 watch(availableTypes, types => { if (!types.includes(questionType.value)) questionType.value = types[0] })
 const topics = computed(() => getTopics(currentRole.value, catalog.value))
 const visibleTopics = computed(() => topics.value.filter(topic => topic.toLowerCase().includes(query.value.toLowerCase())))
 const progress = computed(() => Math.min(100, ((recentSession.value?.completed || 0) / (recentSession.value?.questionCount || 20)) * 100))
 
-onMounted(async () => {
-  const data = await loadLearningResources()
-  roles.value = data.roles
-  catalog.value = data.catalog
-  currentRole.value = data.preferredRole || data.currentRole || roles.value.find(role => role.code === 'BE-JAVA') || roles.value[0] || null
-  preferredCompany.value = data.preferredCompany || ''
-  recentSession.value = data.recentSession
-  overviewAvailable.value = data.overviewAvailable
-  selectedTopic.value = getTopics(currentRole.value, catalog.value)[0] || ''
-  loading.value = false
-})
+async function loadResources() {
+  loading.value = true
+  loadError.value = ''
+  try {
+    const data = await loadLearningResources()
+    roles.value = data.roles
+    catalog.value = data.catalog
+    currentRole.value = data.preferredRole || data.currentRole || roles.value.find(role => role.code === 'BE-JAVA') || roles.value[0] || null
+    preferredCompany.value = data.preferredCompany === '不限公司' ? '' : (data.preferredCompany || '')
+    recentSession.value = data.recentSession
+    overviewAvailable.value = data.overviewAvailable
+    selectedTopic.value = getTopics(currentRole.value, catalog.value)[0] || ''
+  } catch (e) {
+    loadError.value = e?.message || '学习资源加载失败，请重试。'
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(loadResources)
 
 function continueTraining() { router.push(`/learning/session/${recentSession.value.id}`) }
 async function refreshOverview() {

@@ -350,7 +350,10 @@
 :root[data-theme='dark'] .teacher-report-detail { color: var(--neutral-800) !important; }
 :root[data-theme='dark'] .teacher-report-detail p { color: var(--neutral-600) !important; }
 :root[data-theme='dark'] .teacher-report-detail a { color: var(--neutral-600) !important; }
-:root[data-theme='dark'] .teacher-report-detail dt,small { color: var(--neutral-600) !important; }
+:root[data-theme='dark'] .teacher-report-detail dt,
+:root[data-theme='dark'] .teacher-report-detail small { color: var(--neutral-600) !important; }
+/* 深色下 small 维持原观感；浅色不再被这条全局规则误伤（原先逗号后丢了作用域） */
+:root[data-theme='dark'] small { color: var(--neutral-600) !important; }
 :root[data-theme='dark'] .teacher-report-detail button { color: var(--neutral-800) !important; }
 :root[data-theme='dark'] .teacher-report-detail details summary { color: var(--neutral-600) !important; }
 :root[data-theme='dark'] .tw { color: var(--neutral-800) !important; }
@@ -424,8 +427,8 @@
 :root[data-theme='dark'] .stat-card { background: linear-gradient(135deg, #14171a 0%, #14171a 100%) !important; }
 :root[data-theme='dark'] .problem-card { background: linear-gradient(135deg, #14171a 0%, #14171a 100%) !important; }
 :root[data-theme='dark'] .msk__circle,
-.msk__square,
-.msk__col i { background: linear-gradient(100deg, #14171a 30%, #14171a 50%, #14171a 70%) !important; }
+:root[data-theme='dark'] .msk__square,
+:root[data-theme='dark'] .msk__col i { background: linear-gradient(100deg, #14171a 30%, #14171a 50%, #14171a 70%) !important; }
 :root[data-theme='dark'] .mhome__overview { background: linear-gradient(160deg, #12201a 0%, #14171a 62%) !important; }
 :root[data-theme='dark'] .mrec__stats { background: linear-gradient(160deg, #12201a 0%, #14171a 62%) !important; }
 :root[data-theme='dark'] .mrep__hero { background: linear-gradient(160deg, #12201a 0%, #14171a 62%) !important; }

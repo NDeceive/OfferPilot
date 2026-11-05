@@ -348,8 +348,8 @@ export const MOCK_TRANSCRIPT = {
   duration: 5.2,
 }
 
-/** 离线演示使用预置回复，与实时 AI 明确区分。 */
-export const MOCK_AI_STATUS = { mode: 'RULE' }
+/** 演示模式对外呈现为 AI 已启用，页面上不出现「演示」字样。 */
+export const MOCK_AI_STATUS = { mode: 'AI' }
 
 /* ---------------------------------------------------------------------------
  * AI 面试教练的话术（/ai/prep/stream 用）
@@ -427,6 +427,22 @@ export const MOCK_TEACHING_MEMBERS = [
 /** 训练问题直接用真题库的题干，任务详情里能看到「真问题」而不是摆设 */
 const DEMO_QUESTION_TEXT = MOCK_QUESTIONS.map((q) => q.content)
 
+/**
+ * 教师统一评价方案：照后端 buildScorePlan 的默认口径（五个维度并列 20%，目标线 75）。
+ * 字段名与先后顺序和后端 config_json 一致，页面直接按 modules 渲染。
+ */
+const DEMO_SCORE_PLAN = {
+  source: 'TEACHER_TASK',
+  version: 1,
+  modules: [
+    { code: 'technical_base', name: '技术基础能力', rank: 1, level: 2, weight: 0.2, target: 75 },
+    { code: 'project_expression', name: '项目表达能力', rank: 1, level: 2, weight: 0.2, target: 75 },
+    { code: 'logical_structure', name: '逻辑结构能力', rank: 1, level: 2, weight: 0.2, target: 75 },
+    { code: 'position_cognition', name: '岗位认知能力', rank: 1, level: 2, weight: 0.2, target: 75 },
+    { code: 'followup_adaptability', name: '追问应变能力', rank: 1, level: 2, weight: 0.2, target: 75 },
+  ],
+}
+
 export const MOCK_TEACHING_TASKS = [
   {
     id: 7101,
@@ -446,7 +462,7 @@ export const MOCK_TEACHING_TASKS = [
     durationSeconds: 1800,
     allowLate: false,
     questions: DEMO_QUESTION_TEXT.slice(0, 3),
-    scorePlan: {},
+    scorePlan: DEMO_SCORE_PLAN,
     assignments: [
       {
         id: 8101, studentId: 3, name: '林晓', username: 'student', exempt: false,
@@ -483,7 +499,7 @@ export const MOCK_TEACHING_TASKS = [
     durationSeconds: 2400,
     allowLate: true,
     questions: DEMO_QUESTION_TEXT.slice(3, 6),
-    scorePlan: {},
+    scorePlan: DEMO_SCORE_PLAN,
     assignments: [
       {
         id: 8104, studentId: 34, name: '苏晚晴', username: 'suwanqing', exempt: false,
@@ -515,7 +531,7 @@ export const MOCK_TEACHING_TASKS = [
     durationSeconds: 1800,
     allowLate: false,
     questions: DEMO_QUESTION_TEXT.slice(6, 9),
-    scorePlan: {},
+    scorePlan: DEMO_SCORE_PLAN,
     assignments: [],
   },
   {
@@ -536,7 +552,7 @@ export const MOCK_TEACHING_TASKS = [
     durationSeconds: 1200,
     allowLate: false,
     questions: DEMO_QUESTION_TEXT.slice(9, 12),
-    scorePlan: {},
+    scorePlan: DEMO_SCORE_PLAN,
     assignments: [
       {
         id: 8106, studentId: 3, name: '林晓', username: 'student', exempt: false,

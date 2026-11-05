@@ -1,13 +1,13 @@
 <template>
   <div class="judge-result">
-    <p v-if="deferred" role="status">{{ result.submitted ? '答案已记录，练习结束后统一查看结果。' : '样例运行已完成，判定与解析在练习结束后统一展示。' }}</p>
+    <p v-if="deferred" role="status">{{ result.submitted ? '已提交，交卷后统一查看结果。' : '运行完成，判定与解析在交卷后统一展示。' }}</p>
     <template v-else>
-    <p v-if="!coding || result.demoMode || active !== '编译信息'" role="status">{{ result.demoMode && coding ? result.passed ? '样例粗判通过' : '样例粗判未通过' : judgeStatusLabel(result.status) }}<template v-if="result.compilerVersion && !infrastructureFailure"> · {{ result.compilerVersion }}</template></p>
+    <p v-if="!coding || result.demoMode || active !== '编译信息'" role="status">{{ result.demoMode && coding ? result.passed ? '检查通过' : '检查未通过' : judgeStatusLabel(result.status) }}<template v-if="result.compilerVersion && !infrastructureFailure"> · {{ result.compilerVersion }}</template></p>
     <p v-if="showMessage && result.message && result.status !== 'COMPILE_ERROR'">{{ result.message }}</p>
     <nav v-if="coding && !infrastructureFailure && !result.demoMode" aria-label="结果详情"><button v-for="tab in tabs" :key="tab" :aria-pressed="active === tab" @click="active=tab">{{ tab }}</button></nav>
     <p v-if="coding && infrastructureFailure">尚未获得编译或运行结果，本次不计入正式提交。</p>
-    <template v-else-if="result.demoMode && coding"><p>编程题只进行了文本规则粗判，未调用真实编译器，也未执行测试用例。</p><pre v-if="result.compileOutput">{{ result.compileOutput }}</pre></template>
-    <template v-else-if="!coding"><p v-if="result.correctAnswer && !result.referenceAnswer">正确答案：{{ result.correctAnswer === 'true' ? '正确' : result.correctAnswer === 'false' ? '错误' : result.correctAnswer }}</p><p v-if="result.referenceAnswer && result.status?.startsWith('OBJECTIVE_')" class="objective-explanation">{{ result.referenceAnswer }}</p><p v-if="result.score != null">历史关键词覆盖得分：{{ result.score }}（不代表客观正确率）</p><p v-if="result.matchedKeywords?.length">已覆盖：{{ result.matchedKeywords.join('、') }}</p></template>
+    <template v-else-if="result.demoMode && coding"><pre v-if="result.compileOutput">{{ result.compileOutput }}</pre></template>
+    <template v-else-if="!coding"><p v-if="result.correctAnswer && !result.referenceAnswer">正确答案：{{ result.correctAnswer === 'true' ? '正确' : result.correctAnswer === 'false' ? '错误' : result.correctAnswer }}</p><p v-if="result.referenceAnswer && result.status?.startsWith('OBJECTIVE_')" class="objective-explanation">{{ result.referenceAnswer }}</p><p v-if="result.score != null">关键词覆盖得分：{{ result.score }}</p><p v-if="result.matchedKeywords?.length">已覆盖：{{ result.matchedKeywords.join('、') }}</p></template>
     <template v-else-if="active === '编译信息'">
       <p>{{ result.status === 'COMPILE_ERROR' ? '编译未通过' : pendingJudgeStatuses.has(result.status) ? '尚无最终编译结果' : ['ACCEPTED','WRONG_ANSWER','RUNTIME_ERROR','TIME_LIMIT_EXCEEDED','MEMORY_LIMIT_EXCEEDED','OUTPUT_LIMIT_EXCEEDED'].includes(result.status) ? '编译通过' : '编译结果未确认' }}<template v-if="result.compilerVersion && !infrastructureFailure"> · {{ result.compilerVersion }}</template></p>
       <div v-if="result.compileOutput"><pre>{{ result.compileOutput }}</pre><button @click="copy(result.compileOutput)">复制编译日志</button></div><p v-else>暂无编译日志。</p>

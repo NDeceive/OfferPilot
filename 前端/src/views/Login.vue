@@ -7,6 +7,15 @@
       <div class="bg-glow" :style="{ left: mouse.x + 'px', top: mouse.y + 'px' }"></div>
     </div>
 
+    <!-- 离线演示：右上角小按钮，点一下直接进，不占首屏也不给说明面板 -->
+    <button
+      type="button"
+      class="demo-chip"
+      @click="onDemoChip"
+    >
+      {{ demoState.active ? '退出演示' : '离线演示' }}
+    </button>
+
     <!-- Left: Interactive AI Stage -->
     <div class="stage-panel">
       <div class="stage-content">
@@ -14,8 +23,6 @@
           <BrandLogo variant="bilingual" :width="210" />
         </div>
 
-        <h1 class="stage-title">把准备落实到<br /><span class="title-accent">每一次回答</span></h1>
-        <p class="stage-desc">围绕目标岗位完成模拟问答，在复盘中看清表达与能力之间的差距。</p>
         <AuthShowcase :initial-slide="0" />
 
       </div>
@@ -24,13 +31,6 @@
     <!-- Right: Login Form -->
     <div class="form-panel">
       <div class="form-card">
-        <router-link to="/" class="back-link">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M19 12H5M12 19l-7-7 7-7"/>
-          </svg>
-          返回首页
-        </router-link>
-
         <div class="form-header">
           <h1 class="form-title">欢迎回来</h1>
           <p class="form-sub">{{ formSub }}</p>
@@ -100,32 +100,6 @@
             </template>
           </button>
         </form>
-
-        <!-- 离线演示入口：现场没网/后端起不来时的兜底。放在登录按钮正下方、默认可见
-             （之前只藏在折叠的「服务器设置」里，手机上根本找不着）。点开先给一句说明
-             再确认进入，避免误触把演示数据当成真实结果。身份跟上面的端 tab 走：
-             选「教师端」进来就是教师演示数据。 -->
-        <div class="demo-entry">
-          <template v-if="!demoState.active">
-            <button type="button" class="demo-entry-toggle" @click="demoPanelOpen = !demoPanelOpen">
-              {{ demoPanelOpen ? '收起离线演示' : '没有网络？进入离线演示' }}
-            </button>
-            <div v-if="demoPanelOpen" class="demo-panel">
-              <p>不连接服务器，用内置演示数据以「{{ activeRoleLabel }}」身份进入，完整体验{{ demoScope }}。</p>
-              <button type="button" class="demo-enter" @click="enterOfflineDemo">
-                以「{{ activeRoleLabel }}」身份进入离线演示
-              </button>
-              <p class="demo-panel-hint">想换身份，先在上方的「学生端 / 教师端 / 企业端」里切换再进入。</p>
-            </div>
-          </template>
-          <div v-else class="demo-panel is-on">
-            <p><strong>离线演示模式已开启</strong>，登录与数据都来自内置演示数据，不连服务器。</p>
-            <button type="button" class="demo-enter" @click="enterOfflineDemo">
-              以「{{ activeRoleLabel }}」身份进入
-            </button>
-            <button type="button" class="demo-exit" @click="exitOfflineDemo">退出演示模式</button>
-          </div>
-        </div>
 
         <p class="form-foot">
           还没有账号?<router-link to="/register" class="reg-link">立即注册</router-link>
@@ -236,18 +210,12 @@ const ROLE_SUBS = {
 const formSub = computed(() => ROLE_SUBS[activeRole.value] || ROLE_SUBS.student)
 
 /* ---------- 离线演示入口 ---------- */
-const demoPanelOpen = ref(false)
 
-const ROLE_LABELS = { student: '学生端', teacher: '教师端', enterprise: '企业端' }
-const activeRoleLabel = computed(() => ROLE_LABELS[activeRole.value] || ROLE_LABELS.student)
-
-/** 当前端在演示模式里能走到的东西，给进入前的说明用 */
-const ROLE_DEMO_SCOPE = {
-  student: '岗位选择、AI 模拟面试、评分报告与复盘',
-  teacher: '教学班管理、成员审核、训练任务与站内消息',
-  enterprise: '会议中心、创建会议与查看面试建议',
+/** 右上角小按钮：未开演示 → 直接进；已开 → 退出 */
+function onDemoChip() {
+  if (demoState.active) exitOfflineDemo()
+  else enterOfflineDemo()
 }
-const demoScope = computed(() => ROLE_DEMO_SCOPE[activeRole.value] || ROLE_DEMO_SCOPE.student)
 
 /** 进入演示：先开模式、按当前端定好假登录角色，再走正常登录流程跳转 */
 function enterOfflineDemo() {
@@ -372,28 +340,6 @@ async function handleLogin() {
   font-weight: 600;
   letter-spacing: 0.1em;
   color: var(--neutral-500);
-}
-
-.stage-title {
-  font-family: var(--font-display);
-  font-size: clamp(2rem, 4vw, 3rem);
-  font-weight: 700;
-  color: var(--neutral-900);
-  line-height: 1.2;
-  letter-spacing: -0.03em;
-  margin-bottom: var(--space-4);
-}
-
-.title-accent {
-  color: var(--accent-600);
-}
-
-.stage-desc {
-  font-size: var(--text-base);
-  color: var(--neutral-500);
-  line-height: 1.7;
-  margin-bottom: var(--space-10);
-  max-width: 380px;
 }
 
 /* === Interactive Scene === */
@@ -604,18 +550,6 @@ async function handleLogin() {
   box-shadow: var(--shadow-lg);
   backdrop-filter: blur(20px);
 }
-
-.back-link {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: var(--text-sm);
-  color: var(--neutral-400);
-  text-decoration: none;
-  margin-bottom: var(--space-6);
-  transition: color var(--duration-fast);
-}
-.back-link:hover { color: var(--accent-600); }
 
 .form-header { margin-bottom: var(--space-6); }
 
@@ -920,106 +854,56 @@ async function handleLogin() {
   color: var(--neutral-400);
 }
 
-/* === 离线演示入口（默认可见，与折叠的服务器设置区分开） === */
-.demo-entry {
-  margin-top: var(--space-5);
-  padding-top: var(--space-4);
-  border-top: 1px dashed var(--neutral-200);
-}
-.demo-entry-toggle {
-  width: 100%;
-  min-height: 44px;
-  padding: 10px 14px;
-  background: transparent;
-  border: 1.5px dashed var(--neutral-300);
-  border-radius: var(--radius-md);
+/* === 离线演示：右上角小胶囊，悬在页面之上，不参与布局 === */
+.demo-chip {
+  position: fixed;
+  top: max(12px, env(safe-area-inset-top));
+  right: 12px;
+  z-index: 20;
+  min-height: 30px;
+  padding: 5px 10px;
+  border: 1px solid var(--neutral-200);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(8px);
   color: var(--neutral-500);
   font-family: inherit;
-  font-size: var(--text-sm);
+  font-size: 12px;
+  line-height: 1;
   cursor: pointer;
   transition: color var(--duration-fast), border-color var(--duration-fast), background var(--duration-fast);
 }
-.demo-entry-toggle:hover {
+.demo-chip:hover {
   color: var(--accent-600);
-  border-color: var(--accent-400);
-  background: rgba(16, 185, 129, 0.04);
+  border-color: var(--accent-300);
+  background: #fff;
 }
-.demo-panel {
-  margin-top: var(--space-3);
-  padding: var(--space-4);
-  background: var(--neutral-50);
-  border: 1px solid var(--neutral-200);
-  border-radius: var(--radius-sm);
-  text-align: left;
-}
-.demo-panel.is-on {
-  margin-top: 0;
-  background: var(--surface-soft);
-  border-color: #f5d9a8;
-}
-.demo-panel p {
-  margin: 0;
-  color: var(--neutral-500);
-  font-size: var(--text-xs);
-  line-height: 1.6;
-}
-.demo-panel.is-on p {
-  color: #7c4a03;
-}
-.demo-enter {
-  width: 100%;
-  min-height: 44px;
-  margin-top: var(--space-3);
-  background: var(--accent-500);
-  border: none;
-  border-radius: var(--radius-md);
-  color: #fff;
-  font-family: inherit;
-  font-size: var(--text-sm);
-  font-weight: 600;
-  cursor: pointer;
-  transition: background var(--duration-fast);
-}
-.demo-enter:hover { background: var(--accent-600); }
-.demo-panel-hint {
-  margin-top: var(--space-2) !important;
-  color: var(--neutral-400) !important;
-}
-.demo-exit {
-  width: 100%;
-  min-height: 40px;
-  margin-top: var(--space-2);
-  background: transparent;
-  border: 1px solid var(--neutral-300);
-  border-radius: var(--radius-md);
-  color: var(--neutral-600);
-  font-family: inherit;
-  font-size: var(--text-sm);
-  cursor: pointer;
-  transition: border-color var(--duration-fast);
-}
-.demo-exit:hover { border-color: var(--neutral-400); }
 
 /* === Responsive === */
 @media (max-width: 900px) {
   .login-page {
+    min-height: 100dvh;
     flex-direction: column;
   }
+  /* 手机端先给登录表单：舞台只保留品牌标志，插画会占掉首屏。 */
   .stage-panel {
     flex: 0 0 auto;
-    padding: var(--space-8) var(--space-6) var(--space-4);
+    padding: 14px 24px 2px;
   }
-  .stage-title {
-    font-size: var(--text-2xl);
-  }
+  .stage-content { display: flex; flex-direction: column; align-items: center; }
+  .stage-logo { margin-bottom: 10px; }
+  .stage-content :deep(.showcase) { display: none; }
   .scene { height: 200px; }
   .q-bubble { font-size: 11px; padding: 4px 10px; }
-  .form-panel { padding: var(--space-4) var(--space-6) var(--space-8); }
+  .form-panel { padding: 8px 20px 14px; }
+  .server-setting { margin-top: var(--space-3); }
   .form-card {
-    padding: var(--space-6);
+    padding: 20px;
     box-shadow: none;
     border: 1px solid var(--neutral-200);
   }
+  .form-header { margin-bottom: 16px; }
+  .role-tabs { margin-bottom: 16px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

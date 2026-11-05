@@ -1,5 +1,4 @@
 import { createRouter, createWebHistory, createWebHashHistory } from 'vue-router'
-import { prepareInterviewCamera, releaseInterviewCamera } from '../utils/interviewCamera'
 
 const AdaptiveStudentView = () => import('../mobile/AdaptiveStudentView.vue')
 const AdaptiveTeacherView = () => import('../mobile/AdaptiveTeacherView.vue')
@@ -36,21 +35,30 @@ const routes = [
 
   // Student portal
   { path: '/home', name: 'Dashboard', component: AdaptiveStudentView, meta: { mobileSurface: 'home' } },
-  // AI 对话式面试入口（默认）：只覆盖「选岗位 + 传简历」，之后接力到 /jobs
-  { path: '/interview/ai', name: 'AiPrep', component: AdaptiveStudentView, meta: { mobileSurface: 'aiPrep' } },
-  { path: '/jobs', name: 'JobSelect', component: AdaptiveStudentView, meta: { mobileSurface: 'jobSetup' } },
-  { path: '/resume', name: 'Resume', component: AdaptiveStudentView, meta: { mobileSurface: 'jobSetup' } },
-  { path: '/resume/builder', name: 'ResumeBuilder', component: () => import('../views/ResumeBuilder.vue') },
-  { path: '/interview', name: 'Interview', component: () => import('../views/Interview.vue') },
-  { path: '/history', name: 'History', component: AdaptiveStudentView, meta: { mobileSurface: 'records' } },
-  { path: '/history/session/:sessionId', name: 'SessionReport', component: () => import('../views/HistoryDetail.vue') },
-  { path: '/history/:id', name: 'HistoryDetail', component: AdaptiveStudentView, meta: { mobileSurface: 'report' } },
-  { path: '/report', name: 'Report', component: AdaptiveStudentView, meta: { mobileSurface: 'report' } },
-  { path: '/followup-records', name: 'FollowupRecords', component: () => import('../views/History.vue') },
+  // 手机端只保留刷题/经验/查缺补漏；完整面试链路仍保留给桌面端。
+  // desktopOnly 由全局守卫在申请摄像头之前拦截，手机直接回角色首页。
+  { path: '/interview/ai', name: 'AiPrep', component: AdaptiveStudentView, meta: { mobileSurface: 'aiPrep', desktopOnly: true } },
+  { path: '/jobs', name: 'JobSelect', component: AdaptiveStudentView, meta: { mobileSurface: 'jobSetup', desktopOnly: true } },
+  { path: '/resume', name: 'Resume', component: AdaptiveStudentView, meta: { mobileSurface: 'jobSetup', desktopOnly: true } },
+  { path: '/resume/builder', name: 'ResumeBuilder', component: () => import('../views/ResumeBuilder.vue'), meta: { desktopOnly: true } },
+  { path: '/interview', name: 'Interview', component: () => import('../views/Interview.vue'), meta: { desktopOnly: true } },
+  { path: '/history', name: 'History', component: AdaptiveStudentView, meta: { mobileSurface: 'records', desktopOnly: true } },
+  { path: '/history/session/:sessionId', name: 'SessionReport', component: () => import('../views/HistoryDetail.vue'), meta: { desktopOnly: true } },
+  { path: '/history/:id', name: 'HistoryDetail', component: AdaptiveStudentView, meta: { mobileSurface: 'report', desktopOnly: true } },
+  { path: '/report', name: 'Report', component: AdaptiveStudentView, meta: { mobileSurface: 'report', desktopOnly: true } },
+  { path: '/followup-records', name: 'FollowupRecords', component: () => import('../views/History.vue'), meta: { desktopOnly: true } },
   { path: '/learning', name: 'LearningResources', component: AdaptiveStudentView, meta: { mobileSurface: 'practice' } },
-  { path: '/learning/session/:sessionId', name: 'TrainingSession', component: () => import('../views/TrainingSession.vue') },
-  { path: '/learning/library/:kind', name: 'PracticeLibrary', component: () => import('../views/PracticeLibrary.vue') },
-  { path: '/learning/session/:sessionId/report', name: 'PracticeReport', component: () => import('../views/PracticeReport.vue') },
+  // 手机端查缺补漏：按知识点聚合错题，只属于移动端，桌面不提供该路由。
+  { path: '/learning/weak', name: 'PracticeWeakPoints', component: () => import('../mobile/pages/MobileWeakPoints.vue') },
+  // 手机端岗位切换：替代原来指向桌面 /jobs 的入口（/jobs 带 desktopOnly，手机点了会被弹回）。
+  { path: '/practice/role', name: 'PracticeRolePicker', component: () => import('../mobile/pages/MobileRolePicker.vue') },
+  // 手机端练习会话/报告走独立页面，桌面端仍由 AdaptiveStudentView 映射到原组件。
+  { path: '/learning/session/:sessionId', name: 'TrainingSession', component: AdaptiveStudentView, meta: { mobileSurface: 'practiceSession' } },
+  { path: '/learning/library/:kind', name: 'PracticeLibrary', component: AdaptiveStudentView, meta: { mobileSurface: 'practiceLibrary' } },
+  { path: '/learning/session/:sessionId/report', name: 'PracticeReport', component: AdaptiveStudentView, meta: { mobileSurface: 'practiceReport' } },
+  { path: '/experience', name: 'Experience', component: () => import('../mobile/pages/MobileExperience.vue') },
+  { path: '/experience/new', name: 'ExperienceEditor', component: () => import('../mobile/pages/MobileExperienceEditor.vue') },
+  { path: '/experience/:id', name: 'ExperienceDetail', component: () => import('../mobile/pages/MobileExperienceDetail.vue') },
   { path: '/profile', name: 'Profile', component: AdaptiveStudentView, meta: { mobileSurface: 'profile' } },
   { path: '/settings', name: 'Settings', component: () => import('../views/Settings.vue') },
   { path: '/member', redirect: '/home' },
@@ -109,6 +117,15 @@ const router = createRouter({
   routes,
 })
 
+// 摄像头模块只在真正进入桌面面试时才加载，避免手机包体为首屏背摄像头逻辑。
+let interviewCameraPrepared = false
+
+function releasePreparedInterviewCamera() {
+  if (!interviewCameraPrepared) return
+  interviewCameraPrepared = false
+  import('../utils/interviewCamera').then(module => module.releaseInterviewCamera()).catch(() => {})
+}
+
 router.beforeEach(async (to, from, next) => {
   const token = localStorage.getItem('token')
 
@@ -136,6 +153,12 @@ router.beforeEach(async (to, from, next) => {
     return
   }
 
+  // 手机端不再承载完整面试流程。这里先于摄像头准备拦截，避免手机误触权限弹窗。
+  if (to.meta.desktopOnly && isMobileViewport()) {
+    next({ path: roleHome(currentRole()), query: { notice: 'desktop-only' }, replace: true })
+    return
+  }
+
   if (to.meta.roles) {
     const role = currentRole()
     if (to.meta.roles.includes(role)) {
@@ -151,7 +174,9 @@ router.beforeEach(async (to, from, next) => {
 
   if (to.name === 'Interview' && from.name !== 'Interview') {
     try {
-      await prepareInterviewCamera()
+      const camera = await import('../utils/interviewCamera')
+      await camera.prepareInterviewCamera()
+      interviewCameraPrepared = true
     } catch (error) {
       if (error.code !== 'CAMERA_CONSENT_DECLINED') window.alert(error.message)
       next(from.matched.length ? false : { path: '/jobs', replace: true })
@@ -162,8 +187,8 @@ router.beforeEach(async (to, from, next) => {
 })
 
 router.afterEach((to, from, failure) => {
-  if (failure || to.name !== 'Interview') {
-    releaseInterviewCamera()
+  if (interviewCameraPrepared && (failure || to.name !== 'Interview')) {
+    releasePreparedInterviewCamera()
   }
 })
 

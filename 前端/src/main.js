@@ -5,6 +5,11 @@ import router from './router'
 import { DEMO_TOKEN } from './utils/demoAdapter'
 import { initTheme } from './composables/useTheme'
 import './assets/styles/main.css'
+import './assets/styles/motion.css'
+import './assets/styles/interactions.css'
+import './assets/styles/surface.css'
+import { reveal } from './directives/reveal'
+import { tilt } from './directives/tilt'
 import './assets/styles/select.css'
 import './assets/styles/controls.css'
 import './assets/styles/dark-overrides.css'
@@ -29,6 +34,15 @@ try {
 initTheme()
 
 const app = createApp(App)
+app.directive('reveal', reveal)
+app.directive('tilt', tilt)
+// 质感档位：?surface=off|soft|strong 可临时覆盖，方便对比
+const surfaceParam = new URLSearchParams(window.location.search).get('surface')
+if (surfaceParam === 'off' || surfaceParam === 'soft' || surfaceParam === 'strong') {
+  document.documentElement.dataset.surface = surfaceParam
+} else if (!document.documentElement.dataset.surface) {
+  document.documentElement.dataset.surface = 'soft'
+}
 app.use(createPinia())
 app.use(router)
 app.mount('#app')

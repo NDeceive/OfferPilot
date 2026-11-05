@@ -28,13 +28,11 @@
             <div ref="questionScroll" class="question-content" @scroll="captureScroll">
               <template v-if="leftTab === '题目'">
                 <div class="question-meta"><span>{{ question.subtype === 'CULTURE' ? '企业情境' : practiceTypeLabel(question.type) }}</span><span v-if="question.difficulty">{{ difficultyLabel(question.difficulty) }}</span><span v-if="question.frequency">{{ question.frequency }}</span><button :disabled="favoriteBusy" :aria-pressed="Boolean(question.favorite)" @click="favorite">{{ question.favorite ? '★ 已收藏' : '☆ 收藏' }}</button></div>
-                <p v-if="session.matching?.notice" class="muted">{{ session.matching.notice }}</p>
                 <h2>{{ question.title }}</h2>
-                <p v-if="question.source?.url" class="muted"><a :href="question.source.url" target="_blank" rel="noopener noreferrer">{{ question.subtype === 'CULTURE' ? '企业公开资料依据' : '题目来源' }}</a> · {{ question.source.license === 'OfferPilot-original' ? '原创题目' : question.source.license }}<template v-if="question.source.author"> · {{ question.source.author }}</template><br />{{ question.source.adaptation }}</p>
                 <p class="pre-wrap">{{ question.description || question.content }}</p>
                 <template v-if="question.background"><h3>背景材料</h3><p class="pre-wrap">{{ question.background }}</p></template>
                 <ol v-if="question.subQuestions?.length"><li v-for="item in question.subQuestions" :key="item">{{ item }}</li></ol>
-                <template v-if="question.constraints?.length"><h3>{{ isCoding ? '要求与约束' : isObjective ? '作答说明' : '回答要求' }}</h3><ul><li v-for="item in question.constraints" :key="item">{{ item }}</li></ul></template>
+                <template v-if="question.constraints?.length"><h3>{{ isCoding ? '要求与约束' : '回答要求' }}</h3><ul><li v-for="item in question.constraints" :key="item">{{ item }}</li></ul></template>
                 <pre v-if="isCoding && question.signature"><code>{{ question.signature }}</code></pre>
                 <article v-for="(example,n) in question.examples || []" :key="n" class="example"><h3>示例 {{ n + 1 }}</h3><p>输入</p><pre>{{ example.input }}</pre><p>输出</p><pre>{{ example.expected }}</pre><p v-if="example.explanation">{{ example.explanation }}</p></article>
                 <div v-if="question.tags?.length" class="tags"><span v-for="tag in question.tags" :key="tag">{{ tag }}</span></div>
@@ -48,7 +46,7 @@
               </template>
               <template v-else>
                 <h2>我的提交</h2><p v-if="historyError" role="alert">{{ historyError }} <button @click="loadHistory">重新加载</button></p><p v-else-if="!questionSubmissions.length">本题暂无正式提交记录，运行代码不计入提交。</p>
-                <article v-for="item in questionSubmissions" :key="item.id" class="submission"><strong>{{ feedbackAvailable ? judgeStatusLabel(item.status) : '已提交，练习结束后统一结算' }}</strong><span>{{ formatDate(item.createdAt) }}</span><p v-if="feedbackAvailable && item.score != null">关键词覆盖得分：{{ item.score }}</p><pre v-if="item.answerText || item.sourceCode">{{ item.answerText || item.sourceCode }}</pre></article>
+                <article v-for="item in questionSubmissions" :key="item.id" class="submission"><strong>{{ feedbackAvailable ? judgeStatusLabel(item.status) : '已提交，交卷后统一结算' }}</strong><span>{{ formatDate(item.createdAt) }}</span><p v-if="feedbackAvailable && item.score != null">关键词覆盖得分：{{ item.score }}</p><pre v-if="item.answerText || item.sourceCode">{{ item.answerText || item.sourceCode }}</pre></article>
                 <button v-if="historyTotal > historyItems.length" :disabled="historyLoading" @click="loadHistory(true)">加载更多提交</button>
               </template>
             </div>
@@ -81,7 +79,7 @@
               <button class="result-heading" :aria-expanded="resultOpen" @click="toggleResult"><strong>{{ isCoding ? '运行与提交结果' : '提交反馈' }}</strong><span role="status">{{ resultSummary }}</span><span>{{ resultOpen ? '收起 ▾' : '展开 ▴' }}</span></button>
               <div ref="resultScroll" class="result-content" @scroll="captureScroll">
                 <p v-if="current.error" class="error" role="alert">{{ current.error }} <button v-if="!isCoding || judgeCapability.ready" :disabled="anyBusy" @click="execute(current.lastAction)">重试</button><button v-else @click="refreshCapability">检查判题服务</button></p>
-                <p v-if="!current.result && !current.error">{{ isCoding ? '本题尚未运行或提交。运行代码只检查用例，提交答案才计入练习进度。' : '本题尚未提交。你的回答会作为本机草稿保留。' }}</p>
+                <p v-if="!current.result && !current.error">{{ isCoding ? '本题尚未运行或提交。' : '本题尚未提交。你的回答会自动保存。' }}</p>
                 <PracticeResult v-if="current.result" :result="current.result" :coding="isCoding" :deferred="!feedbackAvailable" :show-message="!current.error" @reveal="revealDiagnostic" />
                 <button v-if="isCoding" @click="restoreResultSize">恢复结果区高度</button>
                 <p v-if="isCoding && !judgeCapability.ready && !current.error && !['SYSTEM_ERROR','SERVICE_UNAVAILABLE'].includes(current.result?.status)" role="status">{{ judgeCapability.notice }} <button @click="refreshCapability">检查判题服务</button></p>
@@ -159,7 +157,7 @@ async function loadHistory(more=false) {
   finally { if(sequence===historyRequest) historyLoading.value=false }
 }
 watch([leftTab,() => question.value.id],()=>{historyRequest++;if(leftTab.value==='提交记录')loadHistory();else {historyItems.value=[];historyTotal.value=0}})
-const resultSummary = computed(() => current.value.result ? !feedbackAvailable.value ? current.value.result.submitted ? '已提交，练习结束后统一结算' : '样例运行已完成，结束后查看结果' : `${current.value.result.submitted ? '已提交 · ' : ''}${judgeStatusLabel(current.value.result.status)}` : current.value.busy ? '请求处理中…' : current.value.error ? '操作失败，请重试' : '暂无结果')
+const resultSummary = computed(() => current.value.result ? !feedbackAvailable.value ? current.value.result.submitted ? '已提交，交卷后统一结算' : '运行完成，结束后查看结果' : `${current.value.result.submitted ? '已提交 · ' : ''}${judgeStatusLabel(current.value.result.status)}` : current.value.busy ? '请求处理中…' : current.value.error ? '操作失败，请重试' : '暂无结果')
 function difficultyLabel(value) { return ({1:'基础',2:'中等',3:'困难'})[value] || value }
 function formatDate(value) { return String(value || '').replace('T',' ').slice(0,19) }
 
@@ -168,7 +166,7 @@ async function loadSession() {
   try {
     const loaded = await getTrainingSession(sessionId)
     let stored = {}
-    try { stored = readPracticeDraft(localStorage,ownerId,sessionId) } catch { throw new Error('本机草稿无法读取。请检查浏览器存储后重新加载；已有草稿未被覆盖。') }
+    try { stored = readPracticeDraft(localStorage,ownerId,sessionId) } catch { throw new Error('草稿无法读取，请重新加载；已有草稿未被覆盖。') }
     session.value = loaded
     session.value.submissions ||= []
     split.value = Math.max(35,Math.min(55,Number(stored.split) || 45))
@@ -182,8 +180,8 @@ async function loadSession() {
     const requestedIndex = questions.value.findIndex(q => String(q.id) === String(route.query.questionId))
     if (requestedIndex >= 0) index.value = requestedIndex
     refreshCapability()
-    getSessionTasks(sessionId).then(tasks => { for(const task of tasks) { if(!drafts[task.questionId]) continue; applyTask(task.questionId,task); if(pendingJudgeStatuses.has(task.status)) resumeTask(task.questionId,task.id) } }).catch(() => { saveError.value = '任务状态未能加载，可重试加载题单；本机草稿保留。' })
-    saveLabel.value = saveError.value ? '草稿未保存' : stored.questions ? '已保存到本机' : '本机草稿'
+    getSessionTasks(sessionId).then(tasks => { for(const task of tasks) { if(!drafts[task.questionId]) continue; applyTask(task.questionId,task); if(pendingJudgeStatuses.has(task.status)) resumeTask(task.questionId,task.id) } }).catch(() => { saveError.value = '任务状态未能加载，可重试加载题单；草稿保留。' })
+    saveLabel.value = saveError.value ? '草稿未保存' : stored.questions ? '已保存' : '草稿'
   } catch (error) { loadError.value = error.message || '题单加载失败，请重试。' }
   finally { loading.value = false; await nextTick(); measure(); restorePosition() }
 }

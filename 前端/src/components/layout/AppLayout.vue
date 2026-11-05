@@ -195,8 +195,8 @@ const studentNav = [
     icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
   },
   {
-    // 默认进手动录入；对话填写与它互为切换，都算「面试准备」这一项
-    path: '/jobs',
+    // 默认进对话录入；手动填写与它互为切换，都算「面试准备」这一项
+    path: '/interview/ai',
     label: '面试准备',
     activePaths: ['/interview/ai', '/jobs', '/resume'],
     icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>',
@@ -241,7 +241,18 @@ const mainNav = computed(() => {
   if (isTeacherRoute.value || isTeacherUser) return teacherNav
   return studentNav
 })
-const allNav = computed(() => [...mainNav.value])
+// 手机端学生菜单：只保留刷题/经验/补漏/会议。桌面端 allNav 仍等于 mainNav，
+// 面试准备、面试记录等入口只在桌面出现；手机改从底部四标签或这里进入练习。
+const mobileStudentNav = [
+  { path: '/learning', label: '专项刷题', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg>' },
+  { path: '/experience', label: '面试经验', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 1 6.5 18H20"/></svg>' },
+  { path: '/learning/library/mistakes', label: '错题本', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 11 2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>' },
+  { path: '/meeting', label: '视频会议', icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m23 7-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>' },
+]
+const allNav = computed(() => {
+  const studentMobileShell = isMobile.value && !isTeacherShell.value && !(isEnterpriseUser && isEnterpriseShell.value)
+  return studentMobileShell ? mobileStudentNav : [...mainNav.value]
+})
 
 const isActive = (path) => route.path === path || route.path.startsWith(path + '/')
 

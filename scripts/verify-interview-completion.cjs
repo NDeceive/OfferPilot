@@ -5,7 +5,7 @@ const assert = require('node:assert/strict')
 const path = require('node:path')
 const { spawn } = require('node:child_process')
 const base = process.env.INTERVIEW_QA_URL || 'http://127.0.0.1:5186'
-const closing = '好，那我们今天就先聊到这里。谢谢你的分享，辛苦了。'
+const closing = '好，那我们今天就先聊到这里。谢谢你的分享。'
 
 async function verify(browser, mode) {
   const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, permissions: ['camera', 'microphone'] })

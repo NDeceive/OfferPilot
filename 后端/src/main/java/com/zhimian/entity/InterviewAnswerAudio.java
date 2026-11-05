@@ -17,6 +17,8 @@ public class InterviewAnswerAudio {
 
     private Long sessionId;
     private Integer roundNo;
+    /** 同一题内的第几段作答：0 主回答，1 起为追问回答 */
+    private Integer answerSeq;
     private Long questionId;
     /** 相对存储根目录的路径，如 12/3.wav */
     private String filePath;

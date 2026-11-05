@@ -72,18 +72,6 @@ export const deleteInterview = (sessionId) => request.delete(`/interview/${sessi
 export const batchDeleteInterview = (sessionIds) => request.post('/interview/batch-delete', { sessionIds })
 export const submitFollowUp = (data) => request.post('/interview/follow-up', data, { timeout: 90000 })
 
-/* ==================== Speech ==================== */
-export const transcribeSpeech = (audioBlob, sessionId, duration) => {
-  const formData = new FormData()
-  formData.append('file', audioBlob, `speech-${Date.now()}.wav`)
-  formData.append('sessionId', String(sessionId))
-  formData.append('duration', String(duration))
-  return request.post('/speech/transcribe', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-    timeout: 65000,
-  })
-}
-
 /* ==================== Follow-up Records ==================== */
 export const getFollowUpRecords = (params) => request.get('/interview/follow-up-records', { params })
 export const getFollowUpStats = () => request.get('/interview/follow-up-records/stats')

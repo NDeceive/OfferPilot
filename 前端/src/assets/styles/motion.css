@@ -1,0 +1,131 @@
+/* 动效底座：时长与缓动只在这里改，全站跟着变。
+   数据属性 data-motion 挂在 <html> 上，可选 full / calm / off。 */
+:root {
+  --dur-tap: 120ms;
+  --dur-hover: 160ms;
+  --dur-enter: 220ms;
+  --dur-leave: 140ms;
+  --dur-scene: 480ms;
+  --ease-standard: cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+html[data-motion='calm'] {
+  --dur-tap: 90ms;
+  --dur-hover: 120ms;
+  --dur-enter: 150ms;
+  --dur-leave: 100ms;
+  --dur-scene: 260ms;
+}
+
+html[data-motion='off'] *,
+html[data-motion='off'] *::before,
+html[data-motion='off'] *::after {
+  animation-duration: 0s !important;
+  animation-delay: 0s !important;
+  transition-duration: 0s !important;
+}
+
+/* 系统级「减少动画」：位移和缩放全部收掉，只留极短的淡入 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* L1 页面切换：App.vue 里声明了 transition name="page"，这里才真正给它样式 */
+.page-enter-active {
+  transition: opacity var(--dur-enter) var(--ease-out-quart);
+}
+
+.page-leave-active {
+  transition: opacity var(--dur-leave) ease;
+}
+
+.page-enter-from {
+  opacity: 0;
+}
+
+.page-leave-to {
+  opacity: 0;
+}
+
+
+
+/* L3 报告页：能力条从左往右长出来，按行错开 */
+@keyframes dim-grow {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+.score-track i,
+.module-track i {
+  transform-origin: left center;
+  animation: dim-grow var(--dur-scene) var(--ease-out-quart) both;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+
+
+/* L3 报告页：滚到视口才出现 */
+[data-reveal] {
+  opacity: 0;
+  transition: opacity calc(var(--dur-scene) * 1.2) var(--ease-out-quart) var(--reveal-delay, 0ms);
+}
+
+[data-reveal].is-revealed {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal] { opacity: 1; }
+}
+
+html[data-motion='off'] [data-reveal] { opacity: 1; }
+
+/* L3 逐题回顾：展开高度用 grid-rows 过渡，比 max-height 准 */
+.answer-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--dur-scene) var(--ease-out-quart);
+}
+
+.answer-body.open {
+  grid-template-rows: 1fr;
+}
+
+.answer-body > .answer-body__inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+
+/* 行级错开：容器出现后，内部一行一行亮起来（只有透明度，不做位移） */
+@keyframes row-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.is-row {
+  animation: row-in 420ms var(--ease-out-quart) both;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .is-row { animation: none; opacity: 1; }
+}
+
+html[data-motion='off'] .is-row { animation: none; opacity: 1; }
+
+
+/* 逐行观察模式下，容器本身不淡，由行自己控制 */
+[data-reveal][data-stagger] { opacity: 1; }
+
+.row-pending { opacity: 0; }
+
+.is-row {
+  animation-delay: 0ms !important;
+}

@@ -71,6 +71,7 @@ async function performUpload(item) {
   const form = new FormData()
   form.append('file', item.blob, 'answer.wav')
   if (item.questionId != null) form.append('questionId', item.questionId)
+  form.append('answerSeq', String(item.answerSeq || 0))
   const result = await request.post('/interview/' + item.sessionId + '/answers/' + item.roundNo + '/audio', form)
   item.context.uploaded = result
   item.context.pending = null
@@ -127,7 +128,7 @@ export function useAnswerAudio() {
   }
 
   /** 停止并上传当前这一题的录音 */
-  function stopAndUpload({ required = false } = {}) {
+  function stopAndUpload({ required = false, answerSeq = 0 } = {}) {
     if (ctx?.saving) return ctx.saving
     if (!recorder || !ctx) {
       if (ctx?.uploaded) return Promise.resolve(ctx.uploaded)
@@ -135,6 +136,7 @@ export function useAnswerAudio() {
       return required ? Promise.reject(new Error('录音未就绪，请重新开启麦克风')) : Promise.resolve()
     }
     const current = ctx
+    current.answerSeq = answerSeq
     const currentRecorder = recorder
     const parts = chunks
     const currentStream = stream

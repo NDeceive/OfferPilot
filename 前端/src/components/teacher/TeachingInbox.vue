@@ -57,7 +57,8 @@ import {computed,ref,watch} from 'vue'
 import {teaching} from '../../services/teachingApi'
 const props=defineProps({messages:{type:Array,default:()=>[]},teacher:Boolean})
 const category=ref('all'),search=ref(''),order=ref('newest'),selected=ref([]),opened=ref(null),page=ref(1),busy=ref(false),operationError=ref(''),pageSize=12
-const folders=[{key:'all',label:'全部消息'},{key:'unread',label:'未读消息'},{key:'class',label:'班级与成员'},{key:'task',label:'任务通知'},{key:'report',label:'报告与点评'}]
+// 「班级与成员」是教师视角的说法；学生看到的只是班级通知，标签要跟分类实际过滤的内容一致。
+const folders=computed(()=>[{key:'all',label:'全部消息'},{key:'unread',label:'未读消息'},{key:'class',label:props.teacher?'班级与成员':'班级通知'},{key:'task',label:'任务通知'},{key:'report',label:'报告与点评'}])
 function type(message){return /报告|点评|反馈/.test(message.title)?'report':/班级|成员|申请|邀请/.test(message.title)?'class':'task'}
 const typeLabel=m=>({report:'报告反馈',class:'班级通知',task:'任务通知'}[type(m)])
 function matches(m,key){return key==='all'||key==='unread'&&!m.isRead||type(m)===key}
@@ -72,7 +73,7 @@ const shortDate=v=>new Date(timestamp(v)).toLocaleString('zh-CN',{timeZone:'Asia
 function setCategory(key){category.value=key;opened.value=null;selected.value=[];page.value=1}
 function selectPage(checked){selected.value=checked?[...new Set([...selected.value,...pageItems.value.map(m=>m.id)])]:selected.value.filter(id=>!pageItems.value.some(m=>m.id===id))}
 function safeLink(link){return typeof link==='string'&&/^\/(teacher|my)\//.test(link)&&!link.includes('//')?link:props.teacher?'/teacher/dashboard':'/my/tasks'}
-const destinationLabel=m=>/reports|history/.test(m.link||'')?'查看报告与点评':/classes/.test(m.link||'')?'查看班级与成员':'查看任务详情'
+const destinationLabel=m=>/reports|history/.test(m.link||'')?'查看报告与点评':/classes/.test(m.link||'')?(props.teacher?'查看班级与成员':'查看我的班级'):'查看任务详情'
 async function open(message){opened.value=message;operationError.value='';if(message.isRead)return;try{await teaching.read(message.id);message.isRead=true}catch(e){operationError.value=e.message||'已读状态保存失败，请重试。'}}
 async function markSelected(){busy.value=true;operationError.value='';const items=props.messages.filter(m=>selected.value.includes(m.id)&&!m.isRead);const results=await Promise.allSettled(items.map(async m=>{await teaching.read(m.id);m.isRead=true}));const failed=results.filter(r=>r.status==='rejected').length;if(failed)operationError.value=`${failed} 条消息未能保存已读状态，请重试。`;else selected.value=[];busy.value=false}
 watch([search,order],()=>{page.value=1;selected.value=[]})

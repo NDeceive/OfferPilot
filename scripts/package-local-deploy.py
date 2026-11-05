@@ -89,14 +89,12 @@ $env:DIGITAL_HUMAN_PORT = '8010'
 # $env:MYSQL_BIN = 'C:/your-mysql/bin/mysql.exe'
 # $env:DEEPSEEK_BASE_URL = 'https://api.deepseek.com'
 # $env:DEEPSEEK_MODEL = 'deepseek-flash'
-# $env:ZHIPU_ASR_BASE_URL = 'https://open.bigmodel.cn/api/paas/v4'
 # $env:JUDGE_ENABLED = 'true'
 # $env:JUDGE_BASE_URL = 'http://your-judge:2358'
 # $env:JUDGE_LANGUAGE_JAVA = 'your-installed-java-language-id'
 # Password is requested securely at startup when this variable is omitted.
 # $env:DB_PASSWORD = 'your-database-password'
 # $env:DEEPSEEK_API_KEY = 'your-api-key'
-# $env:ZHIPU_API_KEY = 'your-api-key'
 ''')
 write('start-team.ps1', '''$ErrorActionPreference = 'Stop'
 $localConfig = Join-Path $PSScriptRoot 'local.env.ps1'
@@ -211,7 +209,7 @@ python .\\部署\\init_database.py
 
 ## AI 配置
 
-在本机 `部署/local.env.ps1` 设置 DEEPSEEK_API_KEY、ZHIPU_API_KEY。未配置大模型密钥时可展示规则回退流程，语音识别需自己的智谱密钥；默认 EdgeTTS 需要联网。真实编译判题服务尚未启用。
+在本机 `部署/local.env.ps1` 设置 DEEPSEEK_API_KEY。未配置大模型密钥时可展示规则回退流程；语音识别走浏览器自带能力（需 Edge / Chrome），默认 EdgeTTS 需要联网。真实编译判题服务尚未启用。
 
 ## 仅前后端演示 / 手动启动
 
@@ -282,14 +280,13 @@ python .\\部署\\init_database.py
 | DIGITAL_HUMAN_BASE_URL / DIGITAL_HUMAN_LAUNCHER_ENABLED | 远程数字人地址；连接远程服务时关闭自动启动 |
 | OFFERPILOT_PYTHON / OFFERPILOT_BATCH_SIZE | Python 3.10 完整路径、数字人批大小 |
 | DEEPSEEK_API_KEY / DEEPSEEK_BASE_URL / DEEPSEEK_MODEL | 自己的大模型密钥、兼容接口地址与模型名称 |
-| ZHIPU_API_KEY / ZHIPU_ASR_BASE_URL / ZHIPU_ASR_MODEL | 自己的语音识别服务 |
 | JUDGE_ENABLED / JUDGE_BASE_URL / JUDGE_LANGUAGE_JAVA / JUDGE_AUTH_TOKEN | 可选的自部署 Judge0；默认关闭 |
 
 本地 JWT 密钥首次启动自动生成并保存于 `部署/.jwt-secret`，便于重启后保持登录有效；也可自行配置 JWT_SECRET。不要将 local.env.ps1、.jwt-secret 和后端 config/ai.local.properties 再次转发。
 
 ## 可选服务与功能边界
 
-数字人启用前安装 Python 3.10，首次运行会创建本机虚拟环境并安装依赖，已有模型和默认头像无需重复下载。默认 EdgeTTS 播报需要联网；没有可用音视频设备或浏览器权限时可使用文字训练。未配置 DeepSeek 密钥时动态追问使用规则回退；语音转写需要自己的智谱密钥。
+数字人启用前安装 Python 3.10，首次运行会创建本机虚拟环境并安装依赖，已有模型和默认头像无需重复下载。默认 EdgeTTS 播报需要联网；没有可用音视频设备或浏览器权限时可使用文字训练。未配置 DeepSeek 密钥时动态追问使用规则回退；语音转写使用浏览器自带能力（需 Edge / Chrome）。
 
 学习资源截图中的样例模式保存在浏览器，编程结果为本地粗略检查。正式题库与作答由数据库保存；真实编译判题需另行部署 Judge0，按 `infra/practice-judge/README.md` 配置后启用。视频会议需要连接后端与 WebSocket；移动端会议页可展示入口和界面，当前会议室实现会引导到电脑浏览器，跨设备视频还取决于 HTTPS、网络和 ICE 连通性。
 

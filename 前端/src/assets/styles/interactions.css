@@ -1,0 +1,39 @@
+/* L2 交互态：只调节奏和反馈，不改配色与尺寸 */
+button,
+[role='button'],
+.primary-btn,
+.secondary-btn,
+.ghost-btn,
+.btn-send,
+.btn-ghost {
+  transition:
+    background-color var(--dur-hover) var(--ease-standard),
+    border-color var(--dur-hover) var(--ease-standard),
+    color var(--dur-hover) var(--ease-standard),
+    box-shadow var(--dur-hover) var(--ease-standard),
+    transform var(--dur-tap) var(--ease-standard);
+}
+
+/* 按下时轻微下沉，替代浏览器默认的「没反应」 */
+button:not(:disabled):active,
+[role='button']:not(:disabled):active {
+  transform: translateY(1px);
+}
+
+/* 主要动作悬停抬一像素，只给这几个，避免整站都在飘 */
+.primary-btn:hover:not(:disabled),
+.btn-send:hover:not(:disabled),
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px -8px color-mix(in srgb, var(--accent-600, #059669) 55%, transparent);
+}
+
+/* 输入类控件聚焦时边框平滑过渡 */
+input,
+select,
+textarea {
+  transition:
+    border-color var(--dur-hover) var(--ease-standard),
+    box-shadow var(--dur-hover) var(--ease-standard),
+    background-color var(--dur-hover) var(--ease-standard);
+}

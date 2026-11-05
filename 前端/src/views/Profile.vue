@@ -236,7 +236,7 @@ const nickname = computed(
 const avatarChar = computed(() => (nickname.value.trim().charAt(0) || '用').toUpperCase())
 const accountLine = computed(() => {
   const username = me.value?.username || userStore.username
-  return username ? `@${username}` : '求职训练用户'
+  return !username || username === 'student' ? '学生' : `@${username}`
 })
 const finishedRate = computed(() => {
   const total = stats.value.finishedInterviews + stats.value.ongoingInterviews
@@ -359,7 +359,7 @@ onMounted(async () => {
       role: meRes.value?.role,
     })
   } else {
-    error.value = '个人信息加载失败，显示的是本机缓存的账号信息。'
+    error.value = '个人信息加载失败，显示的是缓存的账号信息。'
   }
 
   // 企业账号分支里后五个任务不存在，用 ?. 跳过（企业视图也不渲染这些卡片）

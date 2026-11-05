@@ -1,0 +1,70 @@
+/* 表面质感：极低强度的噪点，让大块纯色不那么"平"。
+   想关掉：把 --surface-noise 设为 0，或者删掉 main.js 里这行 import。 */
+:root {
+  --surface-noise: 0.08;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  opacity: var(--surface-noise);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+  mix-blend-mode: multiply;
+}
+
+:root[data-theme='dark'] body::after {
+  opacity: calc(var(--surface-noise) * 1.6);
+  mix-blend-mode: screen;
+}
+
+/* 数字类统一等宽数字，滚动和计数时不会左右跳 */
+.score-block strong,
+.dimension-score,
+.eval-val,
+.metric-value,
+.tabler-num {
+  font-variant-numeric: tabular-nums;
+}
+
+
+/* 卡片顶部一层很浅的高光，给平面一点体积感（深色主题下会变成一层白雾，只给浅色用） */
+:root:not([data-theme='dark'])[data-surface='soft'] :is(.quick-card, .conclusion-panel, .analysis-section, .action-section, .insight-column, .info-card, .mobile-info-card) {
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0) 64px);
+  background-repeat: no-repeat;
+}
+
+:root[data-surface='off'] {
+  --surface-noise: 0;
+}
+:root[data-surface='off'] :is(.quick-card, .conclusion-panel, .analysis-section, .action-section, .insight-column, .info-card, .mobile-info-card) {
+  background-image: none;
+}
+
+
+/* 页面底色：改在真正铺底的那层（.app-layout / 页面 ::before），body 会被它盖住。
+   这套渐变是浅色主题的皮肤；深色主题下必须让位给 --surface-primary，
+   否则切到深色后整页仍是一层浅绿白，正文变亮字直接看不清。 */
+:root:not([data-theme='dark'])[data-surface='soft'] .app-layout,
+:root:not([data-theme='dark'])[data-surface='strong'] .app-layout {
+  background-image:
+    radial-gradient(1200px 520px at 50% -10%, rgba(16, 185, 129, 0.07), transparent 60%),
+    linear-gradient(180deg, #ffffff 0%, #f5faf7 48%, #ebf3ee 100%);
+  background-attachment: fixed;
+  background-color: transparent;
+}
+
+:root:not([data-theme='dark'])[data-surface='soft'] .dashboard::before,
+:root:not([data-theme='dark'])[data-surface='strong'] .dashboard::before {
+  background: transparent;
+}
+
+:root[data-surface='soft'] :is(.quick-card, .conclusion-panel, .analysis-section, .action-section, .insight-column, .info-card, .mobile-info-card),
+:root[data-surface='strong'] :is(.quick-card, .conclusion-panel, .analysis-section, .action-section, .insight-column, .info-card, .mobile-info-card) {
+  /* card-lift */
+  border-color: color-mix(in srgb, var(--accent-500, #10b981) 10%, transparent);
+  box-shadow: 0 1px 2px rgba(15, 42, 32, 0.04), 0 10px 26px -14px rgba(15, 42, 32, 0.22);
+}

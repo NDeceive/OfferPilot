@@ -14,12 +14,12 @@ test('跟随系统按系统偏好取反', () => {
   assert.equal(resolveTheme('system', false), 'light')
 })
 
-test('未知取值一律回落跟随系统', () => {
+test('未知取值一律回落浅色（新账号/新设备默认浅色）', () => {
   assert.equal(normalizeMode('dark'), 'dark')
   assert.equal(normalizeMode('light'), 'light')
   assert.equal(normalizeMode('system'), 'system')
-  assert.equal(normalizeMode('weird'), 'system')
-  assert.equal(normalizeMode(null), 'system')
-  assert.equal(normalizeMode(undefined), 'system')
+  assert.equal(normalizeMode('weird'), 'light')
+  assert.equal(normalizeMode(null), 'light')
+  assert.equal(normalizeMode(undefined), 'light')
   assert.deepEqual(THEME_MODES, ['light', 'dark', 'system'])
 })

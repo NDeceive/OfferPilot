@@ -61,19 +61,15 @@ const props = defineProps({
   homePath: { type: String, default: '/home' },
   messagePath: { type: String, default: '/my/messages' },
   profilePath: { type: String, default: '/profile' },
-  // null = 学生默认「我的班级 / 教学任务」两条；传 [] 隐藏；传数组则按数组渲染
-  navLinks: { type: Array, default: null },
+  // 传数组则渲染教学联动条；默认不显示，入口收在「我的」里，避免每页都占一行
+  navLinks: { type: Array, default: () => [] },
   // 透传给 MobileTabBar；null 时它就是学生默认五项
   tabItems: { type: Array, default: null },
   // 企业壳没有消息中心页（AppLayout 里也对学生/企业/教师分别收过口），传 false 隐藏铃铛
   messages: { type: Boolean, default: true },
 })
 
-const studentLinks = [
-  { path: '/my/classes', label: '我的班级' },
-  { path: '/my/tasks', label: '教学任务' },
-]
-const links = computed(() => props.navLinks === null ? studentLinks : props.navLinks)
+const links = computed(() => props.navLinks || [])
 </script>
 
 <style scoped>
@@ -94,7 +90,9 @@ const links = computed(() => props.navLinks === null ? studentLinks : props.navL
 }
 .mobile-message-trigger:focus-visible { outline: 2px solid var(--m-primary, #2f7458); outline-offset: 2px; }
 
-.mobile-teaching-links { display: flex; gap: 8px; padding: 12px 20px 0; }
+/* 底边留白不能省：.mobile-main 顶部没有内边距，留 0 会让这一排胶囊
+   直接贴住页面第一个控件（刷题页的搜索框），看起来像叠在一起。 */
+.mobile-teaching-links { display: flex; gap: 8px; padding: 12px 20px 16px; }
 .mobile-teaching-links a {
   display: inline-flex;
   min-height: 34px;

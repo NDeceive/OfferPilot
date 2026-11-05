@@ -11,7 +11,9 @@ import './styles/mobile.css'
 const route = useRoute()
 const isMobile = useIsMobile()
 
-// 两张表的 key 必须一一对应：桌面命中的是 desktopViews，漏一个 key 桌面就渲染空白。
+// 桌面表保留全部 surface；移动表只保留手机端实际承载的页面。
+// 面试/旧记录/旧报告已从手机端移除，由 router 的 desktopOnly 守卫在进入前拦截；
+// activeView 仍对缺失的移动 surface 回退桌面组件，避免运行中缩放窗口时白屏。
 const desktopViews = {
   home: defineAsyncComponent(() => import('../views/Dashboard.vue')),
   practice: defineAsyncComponent(() => import('../views/LearningResources.vue')),
@@ -20,16 +22,18 @@ const desktopViews = {
   aiPrep: defineAsyncComponent(() => import('../views/AiPrep.vue')),
   jobSetup: defineAsyncComponent(() => import('../views/JobSelect.vue')),
   report: defineAsyncComponent(() => import('../views/HistoryDetail.vue')),
+  practiceSession: defineAsyncComponent(() => import('../views/TrainingSession.vue')),
+  practiceReport: defineAsyncComponent(() => import('../views/PracticeReport.vue')),
+  practiceLibrary: defineAsyncComponent(() => import('../views/PracticeLibrary.vue')),
 }
 
 const mobileViews = {
   home: defineAsyncComponent(() => import('./pages/MobileHome.vue')),
   practice: defineAsyncComponent(() => import('./pages/MobilePractice.vue')),
-  records: defineAsyncComponent(() => import('./pages/MobileRecords.vue')),
   profile: defineAsyncComponent(() => import('./pages/MobileProfile.vue')),
-  aiPrep: defineAsyncComponent(() => import('./pages/MobileAiPrep.vue')),
-  jobSetup: defineAsyncComponent(() => import('./pages/MobileJobSetup.vue')),
-  report: defineAsyncComponent(() => import('./pages/MobileReport.vue')),
+  practiceSession: defineAsyncComponent(() => import('./pages/MobilePracticeSession.vue')),
+  practiceReport: defineAsyncComponent(() => import('./pages/MobilePracticeReport.vue')),
+  practiceLibrary: defineAsyncComponent(() => import('./pages/MobilePracticeLibrary.vue')),
 }
 
 // 企业账号没有移动学生页：/profile 一律走桌面视图（Profile.vue 里已是企业版个人中心），
@@ -39,7 +43,9 @@ const isEnterprise = (localStorage.getItem('role') || '').toUpperCase() === 'ENT
 
 const activeView = computed(() => {
   const surface = route.meta.mobileSurface
+  if (!surface) return undefined
   const useMobile = isMobile.value && !(isEnterprise && surface === 'profile')
-  return (useMobile ? mobileViews : desktopViews)[surface]
+  // 移动表缺 key 时回退桌面表：桌面页面运行中缩到手机宽度不会渲染空白。
+  return (useMobile ? mobileViews[surface] : null) || desktopViews[surface]
 })
 </script>

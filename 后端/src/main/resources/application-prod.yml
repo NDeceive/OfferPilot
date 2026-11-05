@@ -33,10 +33,6 @@ jwt:
 ai:
   api-key: ${DEEPSEEK_API_KEY}
 
-# 智谱 ASR 使用独立密钥
-asr:
-  api-key: ${ZHIPU_API_KEY}
-
 resume-ai:
   deepseek:
     api-key: ${DEEPSEEK_RESUME_API_KEY:}

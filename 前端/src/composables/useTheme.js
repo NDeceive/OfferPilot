@@ -21,14 +21,15 @@ export function resolveTheme(mode, prefersDark) {
 }
 
 export function normalizeMode(value) {
-  return THEME_MODES.includes(value) ? value : 'system'
+  // 默认浅色：新账号 / 新设备没有存过选择时直接进浅色，不跟随系统
+  return THEME_MODES.includes(value) ? value : 'light'
 }
 
 function readStoredMode() {
   try {
     return normalizeMode(localStorage.getItem(THEME_STORAGE_KEY))
   } catch {
-    return 'system'
+    return 'light'
   }
 }
 

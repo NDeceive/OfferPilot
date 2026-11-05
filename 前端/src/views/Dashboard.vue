@@ -46,7 +46,7 @@
               <p v-else class="coach-empty">完成首次面试后，这里会显示你的薄弱维度和改进建议。</p>
               <div class="action-row">
                 <router-link
-                  :to="overview.nextAction.route || '/jobs'"
+                  :to="overview.nextAction.route || '/interview/ai'"
                   class="primary-btn"
                 >
                   {{ nextActionLabel }}
@@ -91,7 +91,7 @@
             <div v-else class="review-empty">
               <strong>完成一次训练后生成复盘</strong>
               <p>报告会展示优势、薄弱维度和下一步练习建议。</p>
-              <router-link to="/jobs">开始训练</router-link>
+              <router-link to="/interview/ai">开始训练</router-link>
             </div>
           </section>
         </div>
@@ -100,7 +100,7 @@
           <section class="quick-panel panel reveal" style="--delay:100ms">
             <header class="quick-heading"><h2>快速开始</h2><p>选择一种方式进入下一次训练。</p></header>
             <div class="quick-grid">
-              <router-link to="/jobs" class="quick-card prediction">
+              <router-link to="/interview/ai" v-tilt class="quick-card prediction">
                 <header><strong>模拟面试</strong><span>›</span></header>
                 <div class="mini-ui">
                   <p><span>最近训练</span><b>{{ shortJob }}</b></p>
@@ -110,7 +110,7 @@
                 <small class="quick-action">选择岗位，配置本次面试 →</small>
               </router-link>
 
-              <router-link to="/jobs" class="quick-card prepare">
+              <router-link to="/interview/ai" v-tilt class="quick-card prepare">
                 <header><strong>准备新岗位</strong><span>›</span></header>
                 <div class="mini-ui">
                   <p><span>选择方向</span><b>确定目标岗位</b></p>
@@ -120,7 +120,7 @@
                 <small class="quick-action">填写资料，完成面试准备 →</small>
               </router-link>
 
-              <router-link to="/learning" class="quick-card drill">
+              <router-link to="/learning" v-tilt class="quick-card drill">
                 <header><strong>专项刷题</strong><span>›</span></header>
                 <div class="mini-ui">
                   <p><span>目标岗位</span><b>选择练习方向</b></p>
@@ -190,7 +190,7 @@
               <router-link :to="recordRoute(item)">{{ recordAction(item) }} <span>→</span></router-link>
             </article>
           </div>
-          <div v-else class="recent-empty"><span>暂无训练记录</span><router-link to="/jobs">开始第一次训练 →</router-link></div>
+          <div v-else class="recent-empty"><span>暂无训练记录</span><router-link to="/interview/ai">开始第一次训练 →</router-link></div>
         </section>
 
         <section class="overview-strip reveal" style="--delay:220ms">
@@ -363,7 +363,7 @@ onMounted(loadOverview)
 
 
 .review-card,.profile-card{min-height:292px;padding:20px 22px;overflow:hidden}.panel-head{position:relative;z-index:2;display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.panel-head h2,.quick-heading h2{margin:0;font-size:17px}.panel-head>div>strong{display:block;margin-top:10px;font-size:15px}.panel-head>a{color:#5d6b66;font-size:12px;font-weight:600;text-decoration:none}.review-list{margin-top:12px}.review-item{padding:7px 6px;transition:opacity .2s ease,background .2s ease}.review-list:hover .review-item{opacity:.7}.review-list .review-item:hover{opacity:1;background:rgba(47,186,136,.026)}.review-item.needs:hover{background:rgba(243,166,90,.04)}.review-item span{color:#71807a;font-size:10px}.review-item.needs span{color:#ef6c2f}.review-item.good span{color:#179c69}.review-item strong{display:block;margin:2px 0;font-size:13px}.review-item p{margin:0;color:#71807a;font-size:11px;line-height:1.45}.review-empty{min-height:205px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;color:#66746f}.review-empty strong{color:#24342e}.review-empty p{font-size:12px}.review-empty a{color:#168d61;font-size:12px;font-weight:700}
-.quick-panel{padding:14px 18px}.quick-heading{display:flex;align-items:baseline;gap:14px;margin-bottom:10px}.quick-heading p{margin:0;color:#7a8581;font-size:11px}.quick-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.quick-card{position:relative;min-width:0;height:182px;padding:14px;overflow:hidden;border:1px solid #dfe8e4;border-radius:9px;background:var(--surface-soft);color:#17201d;text-decoration:none;box-shadow:0 8px 18px rgba(30,75,61,.035);transition:border-color .2s ease,box-shadow .2s ease}.quick-card:hover{border-color:rgba(47,186,136,.3);box-shadow:0 13px 26px rgba(30,75,61,.07)}.quick-card>header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.quick-card>header strong{font-size:15px}.quick-card>header span{font-size:21px}.mini-ui,.question-list{padding:8px 10px;border:1px solid #e8edeb;border-radius:7px;background:color-mix(in srgb, var(--surface-elevated) 80%, transparent)}.mini-ui p,.question-list p{min-width:0;margin:0;padding:7px 0;display:flex;align-items:center;gap:8px;border-bottom:1px solid #edf0ef;font-size:10px}.mini-ui p:last-child,.question-list p:last-child{border-bottom:0}.mini-ui span{color:#74817c}.mini-ui b,.question-list span{margin-left:auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mini-ui i{font-style:normal}.prepare:hover .mini-ui p:first-child{box-shadow:inset 0 0 0 1px rgba(47,186,136,.35);border-radius:5px}.sorting{margin-top:8px;opacity:0;transition:opacity .3s ease}.prediction:hover .sorting{opacity:1}.sorting span{color:#6d7c76;font-size:9px}.sorting i{display:inline-block;width:38%;height:2px;margin-right:6px;background:#20aa75;vertical-align:middle;transform:scaleX(0);transform-origin:left;transition:transform .5s ease}.prediction:hover .sorting i{transform:scaleX(1)}.question-list b{color:#657872}.question-list span{display:block}.drill em{position:absolute;right:15px;bottom:12px;color:#178e63;font-size:11px;font-style:normal;font-weight:700;opacity:0;transition:opacity .2s ease}.drill:hover em{opacity:1}.drill:hover .question-list p:first-child{border-radius:4px;background:rgba(47,186,136,.05)}
+.quick-panel{padding:14px 18px}.quick-heading{display:flex;align-items:baseline;gap:14px;margin-bottom:10px}.quick-heading p{margin:0;color:#7a8581;font-size:11px}.quick-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.quick-card{position:relative;min-width:0;height:182px;padding:14px;overflow:hidden;border:1px solid #dfe8e4;border-radius:9px;background:var(--surface-soft);color:#17201d;text-decoration:none;box-shadow:0 8px 18px rgba(30,75,61,.035);transform:perspective(760px) rotateX(var(--tilt-x,0deg)) rotateY(var(--tilt-y,0deg)) translateY(var(--lift,0px));transition:transform .22s var(--ease-standard),border-color var(--dur-hover) var(--ease-standard),box-shadow var(--dur-hover) var(--ease-standard)}.quick-card:hover{--lift:-2px;border-color:rgba(47,186,136,.38);box-shadow:0 16px 30px rgba(30,75,61,.10)}.quick-card::after{content:'';position:absolute;inset:0;z-index:0;pointer-events:none;border-radius:inherit;background:radial-gradient(180px circle at var(--glow-x,50%) var(--glow-y,50%),rgba(47,186,136,.13),transparent 68%);opacity:0;transition:opacity .25s var(--ease-standard)}.quick-card:hover::after{opacity:1}.quick-card>*{position:relative;z-index:1}.quick-card em{z-index:1}.quick-card>header span{transition:transform var(--dur-hover) var(--ease-standard)}.quick-card:hover>header span{transform:translateX(3px)}.quick-card:hover .quick-action{color:var(--accent-600,#059669)}.quick-card>header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.quick-card>header strong{font-size:15px}.quick-card>header span{font-size:21px}.mini-ui,.question-list{padding:8px 10px;border:1px solid #e8edeb;border-radius:7px;background:color-mix(in srgb, var(--surface-elevated) 80%, transparent)}.mini-ui p,.question-list p{min-width:0;margin:0;padding:7px 0;display:flex;align-items:center;gap:8px;border-bottom:1px solid #edf0ef;font-size:10px}.mini-ui p:last-child,.question-list p:last-child{border-bottom:0}.mini-ui span{color:#74817c}.mini-ui b,.question-list span{margin-left:auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mini-ui i{font-style:normal}.sorting{margin-top:8px;opacity:0;transition:opacity .3s ease}.prediction:hover .sorting{opacity:1}.sorting span{color:#6d7c76;font-size:9px}.sorting i{display:inline-block;width:38%;height:2px;margin-right:6px;background:#20aa75;vertical-align:middle;transform:scaleX(0);transform-origin:left;transition:transform .5s ease}.prediction:hover .sorting i{transform:scaleX(1)}.question-list b{color:#657872}.question-list span{display:block}.drill em{position:absolute;right:15px;bottom:12px;color:#178e63;font-size:11px;font-style:normal;font-weight:700;opacity:0;transition:opacity .2s ease}.drill:hover em{opacity:1}.drill:hover .question-list p:first-child{border-radius:4px;background:rgba(47,186,136,.05)}
 .profile-card{position:relative}.profile-paper{position:absolute;z-index:0;right:-20px;bottom:6px;width:120px;height:175px;border:1px solid rgba(38,121,91,.08);border-radius:7px;background:color-mix(in srgb, var(--surface-elevated) 72%, transparent);transition:transform .45s cubic-bezier(.16,1,.3,1)}.profile-paper-one{transform:rotate(8deg) translateX(6px)}.profile-paper-two{right:10px;bottom:-3px;transform:rotate(13deg) translateX(18px);opacity:.65}.profile-card:hover .profile-paper-one{transform:rotate(8.4deg) translateX(9px)}.profile-card:hover .profile-paper-two{transform:rotate(13.8deg) translateX(24px)}.profile-title{position:relative;z-index:2;display:flex;align-items:center;gap:12px;margin-top:18px}.profile-title>strong{font-size:17px}.profile-title>span{padding:4px 9px;border-radius:999px;background:var(--surface-soft);color:#168d61;font-size:10px;font-weight:700}.tag-list{position:relative;z-index:2;display:flex;flex-wrap:wrap;gap:7px;margin:12px 0}.tag-list span{padding:5px 9px;border-radius:7px;background:var(--surface-soft);color:#5d6f68;font-size:10px}.resume-row{position:relative;z-index:2;width:72%;padding:10px 12px;display:flex;align-items:center;gap:10px;border:1px solid #dde6e2;border-radius:8px;background:color-mix(in srgb, var(--surface-elevated) 84%, transparent)}.resume-row svg{width:25px;fill:none;stroke:#71839b;stroke-width:1.7}.resume-row strong,.resume-row small{display:block}.resume-row strong{font-size:12px}.resume-row small{margin-top:2px;color:#84908b;font-size:9px}.profile-actions{position:relative;z-index:2;margin-top:12px}.profile-actions .primary-btn,.profile-actions .secondary-btn{min-height:36px;padding-inline:18px;font-size:12px}
 .recent-panel{padding:12px 20px;margin-bottom:12px}.training-list{margin-top:8px}.training-row{min-height:34px;display:grid;grid-template-columns:7px minmax(230px,1.2fr) minmax(160px,1fr) 110px 100px;align-items:center;gap:10px;border-top:1px solid #e8ecea;font-size:11px;transition:background .18s ease}.training-row:hover{background:rgba(47,186,136,.026)}.training-row>i{width:3px;height:18px;border-radius:2px;background:#94cdb8}.training-row>i.ongoing{background:#ff791f}.training-row>i.aborted{background:#c8ced0}.training-row>strong{transition:transform .18s ease}.training-row:hover>strong{transform:translateX(2px)}.training-row>span{color:#6d7975}.training-row>b{color:#168d61;font-size:13px}.training-row>a{justify-self:end;color:#586a64;font-weight:700;text-decoration:none}.training-row>a span{display:inline-block;transition:transform .18s ease}.training-row:hover>a span{transform:translateX(3px)}.generating{position:relative}.generating em{position:absolute;left:0;right:20px;bottom:-5px;height:2px;overflow:hidden;background:var(--surface-soft)}.generating em::after{content:"";display:block;width:45%;height:100%;background:#a8cfc0;animation:reportLoading 1.2s ease-in-out infinite}
 .overview-strip{min-height:62px;padding:10px 20px;display:grid;grid-template-columns:1.35fr repeat(4,.72fr) 1.35fr;align-items:center}.overview-label strong,.overview-label span{display:block}.overview-label strong{font-size:15px}.overview-label span{margin-top:3px;color:#71807a;font-size:10px}.metric{padding:0 18px;text-align:center;border-left:1px solid #dfe6e3}.metric strong,.metric span{display:block}.metric strong{font-size:15px}.metric span{margin-top:3px;color:#6d7975;font-size:10px}.metric.accent strong{color:#12875d}.overview-strip>p{margin:0;padding-left:22px;border-left:1px solid #dfe6e3;color:#5c6c67;font-size:11px}

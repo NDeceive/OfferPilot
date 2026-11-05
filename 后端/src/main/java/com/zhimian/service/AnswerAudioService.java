@@ -32,25 +32,32 @@ public class AnswerAudioService {
     private String rootDir;
 
     public InterviewAnswerAudio save(Long sessionId, int roundNo, Long questionId, byte[] bytes, int durationMs, Long userId) {
+        return save(sessionId, roundNo, 0, questionId, bytes, durationMs, userId);
+    }
+
+    /** answerSeq：同一题内的第几段作答，0 主回答，1 起为追问回答 */
+    public InterviewAnswerAudio save(Long sessionId, int roundNo, int answerSeq, Long questionId, byte[] bytes, int durationMs, Long userId) {
         InterviewSession session = sessionMapper.selectById(sessionId);
         if (session == null) throw new BizException("会话不存在");
         if (userId != null && !userId.equals(session.getUserId())) throw new BizException("无权上传该会话的录音");
 
-        String relative = sessionId + "/" + roundNo + ".wav";
-        Path file = Paths.get(rootDir, String.valueOf(sessionId), roundNo + ".wav");
+        String fileName = answerSeq <= 0 ? roundNo + ".wav" : roundNo + "-" + answerSeq + ".wav";
+        String relative = sessionId + "/" + fileName;
+        Path file = Paths.get(rootDir, String.valueOf(sessionId), fileName);
         try {
             Files.createDirectories(file.getParent());
             Files.write(file, bytes);
         } catch (IOException e) {
-            log.warn("[作答录音] 落盘失败 sessionId={}, round={}, err={}", sessionId, roundNo, e.getMessage());
+            log.warn("[作答录音] 落盘失败 sessionId={}, round={}, seq={}, err={}", sessionId, roundNo, answerSeq, e.getMessage());
             throw new BizException("录音保存失败");
         }
 
-        InterviewAnswerAudio row = findByRound(sessionId, roundNo);
+        InterviewAnswerAudio row = findByRound(sessionId, roundNo, answerSeq);
         if (row == null) {
             row = new InterviewAnswerAudio();
             row.setSessionId(sessionId);
             row.setRoundNo(roundNo);
+            row.setAnswerSeq(answerSeq);
             row.setQuestionId(questionId);
             row.setFilePath(relative);
             row.setDurationMs(durationMs);
@@ -69,9 +76,14 @@ public class AnswerAudioService {
     }
 
     public InterviewAnswerAudio findByRound(Long sessionId, int roundNo) {
+        return findByRound(sessionId, roundNo, 0);
+    }
+
+    public InterviewAnswerAudio findByRound(Long sessionId, int roundNo, int answerSeq) {
         List<InterviewAnswerAudio> rows = audioMapper.selectList(new LambdaQueryWrapper<InterviewAnswerAudio>()
                 .eq(InterviewAnswerAudio::getSessionId, sessionId)
                 .eq(InterviewAnswerAudio::getRoundNo, roundNo)
+                .eq(InterviewAnswerAudio::getAnswerSeq, answerSeq)
                 .last("LIMIT 1"));
         return rows.isEmpty() ? null : rows.get(0);
     }
@@ -98,7 +110,8 @@ public class AnswerAudioService {
     public List<InterviewAnswerAudio> listBySession(Long sessionId) {
         return audioMapper.selectList(new LambdaQueryWrapper<InterviewAnswerAudio>()
                 .eq(InterviewAnswerAudio::getSessionId, sessionId)
-                .orderByAsc(InterviewAnswerAudio::getRoundNo));
+                .orderByAsc(InterviewAnswerAudio::getRoundNo)
+                .orderByAsc(InterviewAnswerAudio::getAnswerSeq));
     }
 
     /** 读取时校验归属，别人的录音不给听 */

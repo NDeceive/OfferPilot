@@ -152,3 +152,18 @@ body button:active:not(:disabled) { filter: brightness(.97); }
 :root:not([data-theme="dark"]) body :is(.mail-search,.search-shell,.search-box,.search-input-wrapper):has(input) {
     background: white !important
 }
+
+/* 移动壳的搜索框：图标和输入框共享 .mobile-search 这一层边框。
+   上面的通用搜索规则会把 input 再画成一个独立的白底圆角框，视觉上叠成两层。
+   必须放在浅色主题补丁之后：那条白底规则用 :root:not([data-theme="dark"]) 提了
+   优先级，同样带 !important，只有位置更靠后才能压住它。 */
+:root body .mobile-search input:is([type="search"],[placeholder*="搜索"],[aria-label^="搜索"]) {
+  min-height: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--m-text, var(--neutral-800)) !important;
+  font-size: 14px !important;
+  outline: none !important;
+}

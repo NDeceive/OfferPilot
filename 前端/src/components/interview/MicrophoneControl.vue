@@ -8,6 +8,32 @@
         <span class="voice-only-hint">{{ recognitionMode }} · 语音文字显示在上方，可滚轮翻阅</span>
       </div>
 
+      <div class="mic-center">
+        <div
+          class="mic-shell"
+          :class="{ 'is-live': isMicOn }"
+          :style="{ '--voice-level': rippleLevel }"
+        >
+          <span class="mic-ring" aria-hidden="true"></span>
+          <span class="mic-ring" aria-hidden="true"></span>
+          <span class="mic-ring" aria-hidden="true"></span>
+          <button
+            type="button"
+            :class="['mic-control', { open: isMicOn, speaking: isSpeaking }]"
+            :disabled="isRequesting || disabled"
+            :title="statusText"
+            @click="handleToggleMicrophone"
+          >
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            <line x1="12" y1="19" x2="12" y2="23"/>
+              <line v-if="!isMicOn" x1="4" y1="4" x2="20" y2="20"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
       <div class="voice-actions">
         <button v-if="allowSkip" type="button" class="btn-ghost" :disabled="disabled" @click="requestSkip">
           跳过
@@ -23,21 +49,6 @@
             <path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/>
           </svg>
         </button>
-        <button
-          type="button"
-          :class="['mic-control', { open: isMicOn, speaking: isSpeaking }]"
-          :style="{ '--voice-level': level }"
-          :disabled="isRequesting || disabled"
-          :title="statusText"
-          @click="handleToggleMicrophone"
-        >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-            <line x1="12" y1="19" x2="12" y2="23"/>
-            <line v-if="!isMicOn" x1="4" y1="4" x2="20" y2="20"/>
-          </svg>
-        </button>
       </div>
     </div>
   </div>
@@ -45,7 +56,6 @@
 
 <script setup>
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
-import { transcribeSpeech } from '../../api'
 import { useMicrophone } from '../../composables/useMicrophone'
 
 const props = defineProps({
@@ -63,7 +73,7 @@ let uploadQueue = Promise.resolve()
 let generation = 0
 const submitRequested = ref(false)
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
-const recognitionMode = SpeechRecognition ? '浏览器语音识别' : '智谱语音识别（当前浏览器不支持）'
+const recognitionMode = SpeechRecognition ? '浏览器语音识别' : '当前浏览器不支持语音识别'
 let recognizer = null
 let speechStop = null
 let speechStopTimer = null
@@ -82,6 +92,8 @@ const {
 } = useMicrophone({ onSegment: queueTranscription, onAnswerEnd: requestAutoSubmit })
 
 const errorMessage = computed(() => recognitionError.value || deviceError.value)
+// 开麦就有呼吸感：静音时留一点底，说话时再随电平放大
+const rippleLevel = computed(() => Math.max(level.value, 0.14))
 const statusText = computed(() => {
   if (props.paused) return '面试已暂停，继续后可重新开启麦克风'
   if (isRequesting.value) return '正在申请麦克风权限...'
@@ -173,39 +185,12 @@ function muteMicrophone(options) {
 
 watch(isMicOn, on => { if (on) startSpeech(); else stopSpeech() }, { flush: 'sync' })
 
-function queueTranscription(blob, duration) {
+function queueTranscription() {
   if (!props.sessionId || props.paused) return
   if (SpeechRecognition) return
-  const currentGeneration = generation
-  pendingCount.value++
-  emit('processing', true)
-  uploadQueue = uploadQueue
-    .then(async () => {
-      const result = await transcribeSpeech(blob, props.sessionId, duration)
-      if (currentGeneration !== generation) return
-      if (!result?.text?.trim()) throw new Error('没有识别到该段语音，请重新录音后提交。')
-      emit('transcript', result.text)
-    })
-    .catch((error) => {
-      if (currentGeneration === generation) {
-        recognitionError.value = error.response?.data?.message || error.message || '语音识别失败，请重试。'
-        submitRequested.value = false
-      }
-    })
-    .finally(async () => {
-      if (currentGeneration !== generation) return
-      pendingCount.value = Math.max(0, pendingCount.value - 1)
-      if (pendingCount.value === 0) {
-        emit('processing', false)
-        if (submitRequested.value && !recognitionError.value) {
-          submitRequested.value = false
-          await nextTick()
-          if (currentGeneration !== generation) return
-          if (props.transcript.trim()) emit('submit')
-          else recognitionError.value = '没有识别到回答，请重新开麦后再试。'
-        }
-      }
-    })
+  recognitionError.value = '当前浏览器不支持语音识别，请换用 Edge / Chrome，或直接打字作答。'
+  submitRequested.value = false
+  emit('processing', false)
 }
 
 async function requestSubmit() {
@@ -241,6 +226,10 @@ function requestAutoSubmit() {
 async function handleToggleMicrophone() {
   if (speechStop) await speechStop
   if (props.disabled || props.paused) return
+  if (!SpeechRecognition) {
+    recognitionError.value = '当前浏览器不支持语音识别，请换用 Edge / Chrome，或直接打字作答。'
+    return
+  }
   if (!isMicOn.value) recognitionError.value = ''
   toggleMicrophone()
 }
@@ -279,20 +268,25 @@ onUnmounted(() => { generation++; cancelSpeech() })
 }
 
 .voice-footer {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-3);
-  min-height: 52px;
-  padding-top: 6px;
+  min-height: 104px;
+  padding: 6px 0 10px;
   border-top: 1px solid var(--neutral-100);
 }
+
+.mic-copy { justify-self: start; }
+.mic-center { justify-self: center; display: flex; align-items: center; justify-content: center; }
+.voice-actions { justify-self: end; }
 
 .mic-control {
   --voice-level: 0;
   position: relative;
-  width: 46px;
-  height: 46px;
+  z-index: 1;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
   border: 2px solid var(--neutral-300);
   background: var(--neutral-50);
@@ -308,7 +302,67 @@ onUnmounted(() => { generation++; cancelSpeech() })
   border-color: var(--accent-500);
   background: var(--accent-50);
   color: var(--accent-700);
-  box-shadow: 0 0 0 calc(5px + var(--voice-level) * 14px) rgba(16, 185, 129, 0.12);
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.12);
+}
+
+/* 音量涟漪：随麦克风电平向外扩散，外壳留够空间，别被按钮压住 */
+.mic-shell {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 104px;
+  height: 104px;
+  flex-shrink: 0;
+}
+
+.mic-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 64px;
+  height: 64px;
+  margin: -32px 0 0 -32px;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--accent-500) 72%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform, opacity;
+  z-index: 0;
+}
+
+.mic-shell.is-live .mic-ring {
+  animation: mic-ripple 2.2s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+}
+
+.mic-shell.is-live .mic-ring:nth-child(2) {
+  animation-delay: 0.73s;
+}
+
+.mic-shell.is-live .mic-ring:nth-child(3) {
+  animation-delay: 1.46s;
+}
+
+@keyframes mic-ripple {
+  0% {
+    transform: scale(1);
+    opacity: calc(0.22 + var(--voice-level) * 0.55);
+  }
+  65% {
+    opacity: calc(0.10 + var(--voice-level) * 0.2);
+  }
+  100% {
+    transform: scale(calc(1.25 + var(--voice-level) * 1.1));
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mic-shell.is-live .mic-ring {
+    animation: none;
+    opacity: 0.24;
+    transform: scale(1.32);
+  }
 }
 
 .mic-control.speaking {
@@ -332,7 +386,6 @@ onUnmounted(() => { generation++; cancelSpeech() })
   flex-direction: column;
   gap: 2px;
   min-width: 0;
-  flex: 1;
 }
 
 .voice-only-hint {
@@ -382,8 +435,12 @@ onUnmounted(() => { generation++; cancelSpeech() })
 
 @media (max-width: 640px) {
   .voice-footer {
+    display: flex;
+    flex-wrap: wrap;
     align-items: flex-end;
+    justify-content: space-between;
   }
+  .mic-center { margin-inline: auto; }
   .voice-only-hint {
     display: none;
   }

@@ -7,6 +7,7 @@ import router from '../router'
 import { useUserStore } from '../store/user'
 import { getApiBase } from './apiBase'
 import demoAdapter from './demoAdapter'
+import { practiceDemoAdapter } from '../services/practiceDemo'
 import { demoState, requestDemoFallback } from './offlineDemo'
 
 const request = axios.create({
@@ -18,8 +19,11 @@ request.interceptors.request.use((config) => {
   // 每次请求都重取一次：baseURL 允许在运行时就地改（登录页的「服务器设置」），
   // 只在 create 时取一次的话，改完得刷新页面才生效。
   config.baseURL = getApiBase()
-  // 离线演示模式：整个请求交给本地假后端，一步都不出网
-  if (demoState.active) config.adapter = demoAdapter
+  // 离线演示模式：整个请求交给本地假后端，一步都不出网。
+  // 练习接口由独立题库引擎承接，其余接口仍走通用演示数据。
+  if (demoState.active) {
+    config.adapter = config.url?.startsWith('/practice/') ? practiceDemoAdapter : demoAdapter
+  }
   const store = useUserStore()
   if (store.token) {
     config.headers.Authorization = `Bearer ${store.token}`

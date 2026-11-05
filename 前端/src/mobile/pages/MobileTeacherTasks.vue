@@ -4,8 +4,7 @@
     <template v-if="mode === 'editor'">
       <section class="mtt__hint">
         <span class="mtt__hint-icon" aria-hidden="true">▦</span>
-        <h2>任务创建与编辑请在电脑端完成</h2>
-        <p>题目批量录入、能力评价方案与参与学生勾选需要更大的屏幕。手机端可以查看任务详情、发布草稿，并在任务进行中提醒、延期或结束。</p>
+        <h2>任务编辑仅支持电脑端</h2>
       </section>
       <router-link v-if="editingId" :to="`/teacher/tasks/${editingId}`" class="mobile-primary-button mtt__hint-action">查看任务详情 <span>→</span></router-link>
       <router-link to="/teacher/tasks" class="mobile-secondary-button mtt__hint-action is-block">返回任务列表</router-link>

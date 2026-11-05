@@ -1,7 +1,9 @@
 import { getDashboardOverview, getJobList, getCareerProfile } from '../api'
-// PRACTICE_DEMO: restore request from '../utils/request' and remove the early return below.
-import { practiceDemoRequest as request, practiceDemoResources } from './practiceDemo'
-export { practiceDemoSelfAssessment as setPracticeSelfAssessment } from './practiceDemo' // PRACTICE_DEMO
+import request from '../utils/request'
+import { demoState } from '../utils/offlineDemo'
+import { practiceDemoResources } from './practiceDemo'
+// Only rendered when the local demo engine reports demoMode; real reports use backend review states.
+export { practiceDemoSelfAssessment as setPracticeSelfAssessment } from './practiceDemo'
 
 const roleSeed = [
   ['BE-JAVA', 'Java后端开发工程师', '后端开发', 'Java / JVM / Spring / 数据库 / 分布式'],
@@ -96,8 +98,6 @@ function fallbackRoles() {
 }
 
 export async function loadLearningResources() {
-  return practiceDemoResources(fallbackRoles(), roleFamilies, companies) // PRACTICE_DEMO
-  /* eslint-disable no-unreachable */
   let roles
   let overview = null
   try {
@@ -108,6 +108,9 @@ export async function loadLearningResources() {
   }
   try { overview = await getDashboardOverview() } catch { /* Optional context. */ }
   const profile = await getCareerProfile().catch(() => null)
+  // 离线演示的练习引擎是独立内存实例，创建题单前必须先把岗位名单交给它；
+  // 否则点「开始练习」会报“请先选择演示岗位”。真实后端不需要这一步。
+  if (demoState.active) practiceDemoResources(roles, roleFamilies, companies)
   const practice = await request.get('/practice/overview').catch(() => null)
   const catalog = await getPracticeCatalog().catch(() => ({ ready: false, companies: [], notice: '练习配置暂时无法加载，请重试。' }))
   return {
@@ -119,7 +122,8 @@ export async function loadLearningResources() {
     recentSession: practice?.recentSession || null,
     currentRole: roles.find(role => role.name === overview?.latestInsight?.jobName || role.name === overview?.recentInterviews?.[0]?.jobName) || null,
     currentFocus: overview?.latestInsight?.weakestDimension || '',
-    preferredRole: roles.find(role => role.id === profile?.targetJobId) || null,
+    // 岗位 id 在不同来源里可能是数字或字符串（后端 Long / 演示种子 / 兜底 code），统一按字符串比较。
+    preferredRole: roles.find(role => String(role.id) === String(profile?.targetJobId)) || null,
     preferredCompany: profile?.targetCompany || '',
     libraryCounts: practice?.libraryCounts || { mistakes: null, favorites: null, recent: null },
   }

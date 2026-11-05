@@ -10,7 +10,7 @@
               <strong class="chat__title">就业指导老师</strong>
               <span class="chat__mode" :title="modeHint">
                 <i class="chat__dot" :class="aiMode === 'AI' ? 'chat__dot--live' : 'chat__dot--demo'" />
-                {{ aiMode === 'AI' ? 'AI 实时生成' : '演示模式' }}
+                {{ aiMode === 'AI' ? 'AI 实时生成' : '基础模式' }}
               </span>
             </span>
           </div>
@@ -313,7 +313,7 @@ function scrollToEnd() {
 const modeHint = computed(() => {
   if (aiMode.value === 'AI') return '话术由 AI 实时生成'
   const why = FALLBACK_HINT[fallbackReason.value] || 'AI 未启用'
-  return `演示模式：${why}`
+  return `基础模式：${why}`
 })
 
 /**
@@ -949,25 +949,35 @@ onUnmounted(() => {
 /* 等待首字节时的三点，避免气泡是个空壳 */
 .dots {
   display: inline-flex;
-  gap: 4px;
+  gap: 5px;
   align-items: center;
   height: 20px;
 }
 
 .dots i {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
   border-radius: var(--radius-full);
   background: var(--neutral-400);
-  animation: ai-pulse 1.2s infinite ease-in-out;
+  transform-origin: center;
+  animation: ai-bounce 1.05s infinite ease-in-out both;
 }
 
-.dots i:nth-child(2) { animation-delay: 0.15s; }
-.dots i:nth-child(3) { animation-delay: 0.3s; }
+.dots i:nth-child(2) { animation-delay: 0.14s; }
+.dots i:nth-child(3) { animation-delay: 0.28s; }
+
+@keyframes ai-bounce {
+  0%, 70%, 100% { transform: translateY(0) scale(0.86); opacity: 0.45; }
+  30%           { transform: translateY(-4px) scale(1); opacity: 1; }
+}
 
 @keyframes ai-pulse {
   0%, 60%, 100% { opacity: 0.4; }
   30%           { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dots i { animation: ai-pulse 1.2s infinite ease-in-out; }
 }
 
 .caret {

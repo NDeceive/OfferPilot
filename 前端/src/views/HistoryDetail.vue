@@ -15,7 +15,7 @@
       </div>
 
       <template v-else>
-        <section v-if="trainingContext" class="report-source-context"><strong>{{trainingContext.source==='TEACHING'?'教学任务':'自主训练'}}{{trainingContext.taskTitle?' · '+trainingContext.taskTitle:''}}</strong><p>{{trainingContext.className||''}} · {{trainingContext.scorePlan?.source==='TEACHER_TASK'?'教师统一评分方案':trainingContext.scorePlan?.source==='STUDENT_SELECTED'?'学生自选评分方案':'旧版默认方案'}} · {{trainingContext.provenance?.ruleVersion||'历史未记录评分版本'}}</p><p v-if="trainingContext.source==='TEACHING'">{{trainingContext.state==='READY'?'本报告已计入任务有效次数。':trainingContext.failureReason||'请在教学任务中查看结果是否计入次数。'}}次数完成与能力目标达成分别判断。</p></section>
+        <section v-if="trainingContext" class="report-source-context" v-reveal><strong>{{trainingContext.source==='TEACHING'?'教学任务':'自主训练'}}{{trainingContext.taskTitle?' · '+trainingContext.taskTitle:''}}</strong><p>{{trainingContext.className||''}} · {{trainingContext.scorePlan?.source==='TEACHER_TASK'?'教师统一评分方案':trainingContext.scorePlan?.source==='STUDENT_SELECTED'?'学生自选评分方案':'旧版默认方案'}} · {{trainingContext.provenance?.ruleVersion||'历史未记录评分版本'}}</p><p v-if="trainingContext.source==='TEACHING'">{{trainingContext.state==='READY'?'本报告已计入任务有效次数。':trainingContext.failureReason||'请在教学任务中查看结果是否计入次数。'}}次数完成与能力目标达成分别判断。</p></section>
         <TeachingFeedback :report-id="reportId" :show-empty="!!route.query.assignmentId"/>
         <header class="report-hero">
           <div class="role-block">
@@ -32,20 +32,18 @@
           </div>
           <div class="score-block">
             <span>{{ hasMatchScore ? '训练目标匹配度' : '综合评分' }}</span>
-            <strong>{{ totalScore??'—' }}</strong>
+            <strong>{{ animatedScore??'—' }}</strong>
             <small>{{hasMatchScore?'%':'/ 100'}} · {{totalScore===null?'未提供评分':displayLevel||scoreRank}}</small>
           </div>
         </header>
 
-        <InterviewRecordings v-if="expressionSessionId" :session-id="expressionSessionId" />
-
-        <section class="conclusion-panel">
+        <section class="conclusion-panel" v-reveal>
           <div class="section-kicker">本次结论</div>
           <p>{{ summary || '报告已生成，请结合能力分布与逐题回顾制定下一步练习计划。' }}</p>
           <div v-if="profileTags.length" class="profile-tags"><span>岗位画像</span><i v-for="tag in profileTags" :key="tag">{{ tag }}</i></div>
         </section>
 
-        <section class="analysis-section">
+        <section class="analysis-section" v-reveal="{ stagger: '.dimension-row, .module-detail' }">
           <div class="section-heading">
             <div>
               <span class="section-kicker">能力拆解</span>
@@ -59,14 +57,14 @@
               <RadarChart :labels="radarLabels" :values="radarValues" :target-values="radarTargets" :show-dual-layer="radarTargets.length > 0" />
             </div>
             <div class="dimension-list">
-              <article v-for="dimension in dimensions" :key="dimension.dimension" class="dimension-row">
+              <article v-for="(dimension, dimIndex) in dimensions" :key="dimension.dimension" class="dimension-row">
                 <div class="dimension-score">{{ dimension.score }}</div>
                 <div>
                   <div class="dimension-title">
                     <strong>{{ dimension.dimension }}</strong>
                     <span>/ 100</span>
                   </div>
-                  <div class="score-track"><i :style="{ width: `${dimension.score}%` }"></i></div>
+                  <div class="score-track"><i :style="{ width: `${dimension.score}%`, '--i': dimIndex }"></i></div>
                   <p>{{ dimension.explanation || '结合逐题记录，继续补充更明确的事实与结果。' }}</p>
                 </div>
               </article>
@@ -99,7 +97,7 @@
           </div>
         </section>
 
-        <section v-if="isNewReport && improvementPriorities.length" class="priority-section">
+        <section v-if="isNewReport && improvementPriorities.length" class="priority-section" v-reveal="{ stagger: '.priority-list li' }">
           <div class="section-heading compact-heading">
             <div>
               <span class="section-kicker">提升顺序</span>
@@ -116,7 +114,7 @@
           </ol>
         </section>
 
-        <section class="insight-grid">
+        <section class="insight-grid" v-reveal="{ stagger: '.insight-column li' }">
           <article class="insight-column strength-column">
             <div class="section-kicker">值得保留</div>
             <h2>本次表现优势</h2>
@@ -135,7 +133,7 @@
           </article>
         </section>
 
-        <section class="action-section">
+        <section class="action-section" v-reveal="{ stagger: '.action-list li' }">
           <div class="section-heading compact-heading">
             <div>
               <span class="section-kicker">行动建议</span>
@@ -151,10 +149,14 @@
           </ol>
         </section>
 
-        <ExpressionUploadStatus :session-id="expressionSessionId" @uploaded="refreshExpressions" />
-        <ExpressionReport :data="expressions" :start-time="startTime" :can-review="true" @review-question="reviewExpressionQuestion" />
+        <div v-reveal>
+          <ExpressionUploadStatus :session-id="expressionSessionId" @uploaded="refreshExpressions" />
+        </div>
+        <div v-reveal="{ stagger: '.expression-report > *' }">
+          <ExpressionReport :data="expressions" :start-time="startTime" :can-review="true" @review-question="reviewExpressionQuestion" />
+        </div>
 
-        <section class="review-section">
+        <section class="review-section" v-reveal="{ stagger: '.question-item' }">
           <div class="section-heading">
             <div>
               <span class="section-kicker">逐题回顾</span>
@@ -179,7 +181,8 @@
                 </span>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
               </button>
-              <div v-if="expandedItems.includes(index)" class="answer-body">
+              <div class="answer-body" :class="{ open: expandedItems.includes(index) }">
+                <div class="answer-body__inner">
                 <div class="dialogue answer">
                   <span>你的回答</span>
                   <p>{{ record.answer || '本题未记录到有效回答。' }}</p>
@@ -194,13 +197,15 @@
                     <p>{{ record.followupAnswers[followupIndex] }}</p>
                   </div>
                 </template>
+                <InterviewRecordings v-if="expressionSessionId && expandedItems.includes(index)" inline :session-id="expressionSessionId" :round-no="record.roundNo" />
+                </div>
               </div>
             </article>
           </div>
           <div v-else class="empty-review">本次面试暂无可回顾的对话记录。</div>
         </section>
 
-        <footer class="report-actions">
+        <footer class="report-actions" v-reveal>
           <div>
             <label class="export-transcript"><input v-model="includeTranscript" type="checkbox">包含完整问答</label>
             <button type="button" class="secondary-btn" @click="handleExport('pdf')">导出 PDF</button>
@@ -208,6 +213,17 @@
           </div>
           <router-link to="/jobs" class="primary-btn">再次练习</router-link>
         </footer>
+
+        <transition name="hint-fade">
+          <button v-if="showScrollHint" type="button" class="scroll-hint" aria-label="向下滑动查看更多分析" @click="nudgeDown">
+            <span class="scroll-hint__ring">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 4v14" /><path d="m6 13 6 6 6-6" />
+              </svg>
+            </span>
+            <span class="scroll-hint__text">下滑查看完整分析</span>
+          </button>
+        </transition>
       </template>
     </main>
   </AppLayout>
@@ -218,6 +234,7 @@ import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { exportReport, getImprovementPath, getJobList, getReportDetail, getSessionMessages, getReportStatus, retryInterviewReport } from '../api'
 import { pollInterviewReport } from '../utils/interviewCompletion'
+import { useCountUp } from '../composables/useCountUp'
 import JobLogo from '../components/jobs/JobLogo.vue'
 import AppLayout from '../components/layout/AppLayout.vue'
 import TeachingFeedback from '../components/teacher/TeachingFeedback.vue'
@@ -232,10 +249,38 @@ let reportId = route.params.id
 const reportFailed = ref(false)
 let loadStarted = false
 let disposed = false
-onBeforeUnmount(() => { disposed = true })
+const showScrollHint = ref(false)
+let hintTimer = 0
+
+function hideScrollHint() {
+  showScrollHint.value = false
+  window.removeEventListener('scroll', onScrollHint)
+  clearTimeout(hintTimer)
+}
+
+function onScrollHint() {
+  if (window.scrollY > 80) hideScrollHint()
+}
+
+function nudgeDown() {
+  window.scrollBy({ top: Math.round(window.innerHeight * 0.8), behavior: 'smooth' })
+  hideScrollHint()
+}
+
+function armScrollHint() {
+  if (window.scrollY > 80) return
+  if (document.documentElement.scrollHeight < window.innerHeight * 1.2) return
+  showScrollHint.value = true
+  window.addEventListener('scroll', onScrollHint, { passive: true })
+  clearTimeout(hintTimer)
+  hintTimer = setTimeout(hideScrollHint, 9000)
+}
+
+onBeforeUnmount(() => { disposed = true; hideScrollHint() })
 const loading = ref(true)
 const loadError = ref('')
 const totalScore = ref(null)
+const animatedScore = useCountUp(totalScore, { duration: 900 })
 const hasMatchScore=ref(false)
 const summary = ref('')
 const jobName = ref('')
@@ -431,6 +476,7 @@ async function loadReport() {
         if (!disposed) followupRecords.value = groupMessages(Array.isArray(messages) ? messages : messages?.data || [])
       }).catch(error => console.warn('Failed to load conversation history:', error))
     }
+    setTimeout(armScrollHint, 400)
   } catch (error) {
     loadError.value = error.response?.data?.message || error.message || '请检查网络连接后重试。'
   } finally {
@@ -541,7 +587,9 @@ onMounted(loadReport)
 .question-copy strong { font-size: 14px; font-weight: 500; line-height: 1.55; }
 .question-trigger svg { color: var(--neutral-400); transition: transform .2s ease; }
 .expanded .question-trigger svg { transform: rotate(180deg); }
-.answer-body { display: grid; gap: 10px; padding: 4px 18px 18px 84px; background: var(--surface-elevated); }
+.answer-body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows var(--dur-scene) var(--ease-out-quart); background: var(--surface-elevated); }
+.answer-body.open { grid-template-rows: 1fr; }
+.answer-body__inner { min-height: 0; overflow: hidden; display: grid; gap: 10px; padding: 4px 18px 18px 84px; }
 .dialogue { padding: 15px 17px; border-radius: 10px; background: var(--surface-soft); }
 .dialogue.followup { background: var(--surface-soft); box-shadow: inset 0 0 0 1px #d8e8df; }
 .dialogue span { color: var(--neutral-500); font-size: 11px; font-weight: 700; }
@@ -636,5 +684,55 @@ onMounted(loadReport)
 }
 :root:not([data-theme="dark"]) .secondary-btn {
     background: white
+}
+
+/* 首次进入报告的向下引导 */
+.scroll-hint {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  z-index: 30;
+}
+.scroll-hint__ring {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 1.5px dashed var(--accent-600, #059669);
+  display: grid;
+  place-items: center;
+  color: var(--accent-700, #047857);
+  background: color-mix(in srgb, var(--surface-elevated, #fff) 90%, transparent);
+  box-shadow: 0 6px 18px rgba(16, 185, 129, 0.14);
+  animation: hint-bob 1.9s var(--ease-standard, ease-in-out) infinite;
+}
+.scroll-hint__text {
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  color: var(--accent-700, #047857);
+}
+@keyframes hint-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(5px); }
+}
+.hint-fade-enter-active,
+.hint-fade-leave-active {
+  transition: opacity var(--dur-enter, 220ms) var(--ease-standard, ease), transform var(--dur-enter, 220ms) var(--ease-standard, ease);
+}
+.hint-fade-enter-from,
+.hint-fade-leave-to {
+  opacity: 0;
+  transform: translate(-50%, 8px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .scroll-hint__ring { animation: none; }
 }
 </style>

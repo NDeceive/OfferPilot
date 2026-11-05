@@ -80,7 +80,7 @@
       </section>
 
       <p v-if="pendingReviews > 0" class="mth__review-note" role="status">
-        有 {{ pendingReviews }} 份学生报告等待点评，请在电脑端「数据分析 / 报告点评」中处理。
+        {{ pendingReviews }} 份报告待点评
       </p>
     </template>
   </MobileShell>

@@ -266,13 +266,18 @@
                         <p>{{ r.followupAnswers[fi].content }}</p>
                       </div>
                     </template>
-                    <div v-if="voiceAudio[r.roundNo]" class="round-voice">
-                      <span class="round-msg-label">原声回放</span>
-                      <audio :src="voiceAudio[r.roundNo]" controls preload="none"></audio>
-                      <small v-if="voiceOfRound(r.roundNo)">
-                        流畅 {{ Math.round(voiceOfRound(r.roundNo).fluency) }} · 音量 {{ Math.round(voiceOfRound(r.roundNo).volume) }}<template v-if="voiceOfRound(r.roundNo).confidence != null"> · 状态 {{ Math.round(voiceOfRound(r.roundNo).confidence) }}</template>
-                      </small>
-                    </div>
+                    <InterviewRecordings
+                      v-if="report.sessionId"
+                      inline
+                      hide-empty
+                      heading="原声回放"
+                      :session-id="report.sessionId"
+                      :round-no="r.roundNo"
+                      :refresh-key="recordingRefreshKey"
+                    />
+                    <small v-if="voiceOfRound(r.roundNo)" class="round-voice-score">
+                      流畅 {{ voiceScore(voiceOfRound(r.roundNo).fluency) }} · 音量 {{ voiceScore(voiceOfRound(r.roundNo).volume) }}<template v-if="voiceOfRound(r.roundNo).confidence != null"> · 状态 {{ voiceScore(voiceOfRound(r.roundNo).confidence) }}</template>
+                    </small>
                   </div>
                 </el-collapse-item>
               </el-collapse>
@@ -317,9 +322,10 @@ import {
   WarningFilled
 } from '@element-plus/icons-vue'
 import { getReportDetail, getInterviewRecords, exportReport, getSessionMessages } from '@/api'
-import { getApiBase } from '@/utils/apiBase'
 import request from '@/utils/request'
 import RadarChart from '@/components/ui/RadarChart.vue'
+import InterviewRecordings from '@/components/interview/InterviewRecordings.vue'
+import { invalidateRecordingList } from '@/utils/recordingListCache'
 
 const route = useRoute()
 const router = useRouter()
@@ -375,17 +381,21 @@ function moduleBarColor(score) {
 const qaMessages = ref([])
 const qaLoading = ref(false)
 const activeRounds = ref([])
-const voiceAudio = ref({})
 const voiceRounds = computed(() => report.value?.voice?.rounds || [])
+const recordingRefreshKey = ref(0)
 function voiceOfRound(roundNo) {
   return voiceRounds.value.find(x => Number(x.roundNo) === Number(roundNo)) || null
+}
+function voiceScore(value) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return '—'
+  return Math.round(Number(value))
 }
 async function deleteVoice() {
   if (!window.confirm('删除后本场录音和语音分析都无法恢复，面试记录与报告会保留。确定删除？')) return
   try {
     await request.delete('/interview/' + report.value.sessionId + '/voice')
-    Object.values(voiceAudio.value).forEach(url => URL.revokeObjectURL(url))
-    voiceAudio.value = {}
+    invalidateRecordingList(report.value.sessionId)
+    recordingRefreshKey.value += 1
     report.value = {
       ...report.value,
       voice: { ...report.value.voice, status: 'DELETED', rounds: [], overall: null, retention: null },
@@ -403,21 +413,6 @@ async function changeRetention(event) {
   } catch (e) {
     // 失败就保持原值，别把界面改乱了
     event.target.value = report.value?.voice?.retention?.retainDays ?? 30
-  }
-}
-
-async function loadVoiceAudio() {
-  for (const item of voiceRounds.value) {
-    if (!item.audioId || voiceAudio.value[item.roundNo]) continue
-    try {
-      const token = localStorage.getItem('token') || ''
-      const res = await fetch(getApiBase() + '/interview/audio/' + item.audioId, {
-        headers: token ? { Authorization: 'Bearer ' + token } : {},
-      })
-      if (!res.ok) continue
-      const blob = await res.blob()
-      voiceAudio.value = { ...voiceAudio.value, [item.roundNo]: URL.createObjectURL(blob) }
-    } catch (e) { /* 单题失败不影响其他题 */ }
   }
 }
 
@@ -591,7 +586,6 @@ const loadReport = async (reportId) => {
         qaLoading.value = false
       }
     }
-    loadVoiceAudio()
     await nextTick()
     renderRadar()
     window.addEventListener('resize', resizeChart)
@@ -890,9 +884,7 @@ onBeforeUnmount(() => {
 .voice-expire{font-size:12px;color:var(--neutral-500)}
 .voice-delete{padding:4px 10px;border-radius:8px;border:1px solid var(--color-error-bg);background:transparent;color:var(--color-error);font-size:12px;cursor:pointer}
 .voice-delete:hover{background:var(--color-error-bg)}
-.round-voice{margin-top:10px;padding-top:10px;border-top:1px dashed var(--neutral-200)}
-.round-voice audio{width:100%;height:36px;margin-top:6px}
-.round-voice small{display:block;margin-top:6px;color:var(--neutral-500);font-size:12px}
+.round-voice-score{display:block;margin-top:8px;color:var(--neutral-500);font-size:12px}
 .qa-rounds :deep(.el-collapse-item__header) {
   cursor: pointer;
   padding: 12px 16px;

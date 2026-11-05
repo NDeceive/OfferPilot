@@ -3,6 +3,7 @@ package com.zhimian.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.zhimian.config.VoiceProperties;
 import com.zhimian.entity.InterviewAnswerAudio;
 import com.zhimian.entity.InterviewVoiceAnalysis;
@@ -18,7 +19,9 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 报告生成前的批处理语音分析。
@@ -111,21 +114,33 @@ public class VoiceAnalysisService {
             return "FAILED";
         }
 
-        int ok = 0;
+        // 同一题可能有多段作答（主回答 + 多次追问），按题聚合后再落一行分析。
+        Map<Integer, List<JsonNode>> metricsByRound = new LinkedHashMap<>();
         for (InterviewAnswerAudio audio : usable) {
             try {
                 Path path = audioService.pathOf(audio).toAbsolutePath();
                 JsonNode m = client.analyze(path.toString());
                 if (!validMetrics(m)) throw new IllegalArgumentException("empty_or_invalid_audio_metrics");
+                metricsByRound.computeIfAbsent(audio.getRoundNo(), key -> new ArrayList<>()).add(m);
+            } catch (Exception e) {
+                log.warn("[语音分析] 单段失败 sessionId={}, round={}, seq={}, err={}",
+                        sessionId, audio.getRoundNo(), audio.getAnswerSeq(), e.getMessage());
+            }
+        }
+
+        int ok = 0;
+        for (Map.Entry<Integer, List<JsonNode>> entry : metricsByRound.entrySet()) {
+            try {
+                JsonNode m = aggregate(entry.getValue());
                 InterviewVoiceAnalysis row = new InterviewVoiceAnalysis();
                 row.setSessionId(sessionId);
-                row.setRoundNo(audio.getRoundNo());
+                row.setRoundNo(entry.getKey());
                 row.setMetricsJson(m.toString());
                 row.setFluency(bd(fluency(m)));
                 row.setVolumeScore(bd(volume(m)));
                 // Pitch is optional; an unavailable measurement must never become a default score.
                 row.setConfidenceEst(number(m, "f0_std") ? bd(confidence(m)) : null);
-                InterviewVoiceAnalysis exists = findOne(sessionId, audio.getRoundNo());
+                InterviewVoiceAnalysis exists = findOne(sessionId, entry.getKey());
                 if (exists != null) {
                     row.setId(exists.getId());
                     analysisMapper.updateById(row);
@@ -134,8 +149,8 @@ public class VoiceAnalysisService {
                 }
                 ok++;
             } catch (Exception e) {
-                log.warn("[语音分析] 单题失败 sessionId={}, round={}, err={}",
-                        sessionId, audio.getRoundNo(), e.getMessage());
+                log.warn("[语音分析] 单题聚合失败 sessionId={}, round={}, err={}",
+                        sessionId, entry.getKey(), e.getMessage());
             }
         }
 
@@ -182,6 +197,53 @@ public class VoiceAnalysisService {
         if (m == null || m.path("empty").asBoolean() || !number(m, key))
             throw new IllegalArgumentException("Missing or invalid audio metric: " + key);
         return m.path(key).doubleValue();
+    }
+
+    /**
+     * 把同一题的多段作答合并成一份指标：时长、顿数、帧数相加，
+     * 比率/均值按时长加权，最长停顿取最大值；只有所有分段都有音高时才保留 f0_std。
+     */
+    static JsonNode aggregate(List<JsonNode> segments) {
+        if (segments == null || segments.isEmpty())
+            throw new IllegalArgumentException("no_audio_metrics");
+        if (segments.size() == 1) return segments.get(0);
+        double duration = 0;
+        double speechRatio = 0;
+        double pauses = 0;
+        double longestPause = 0;
+        double rmsMean = 0;
+        double rmsStd = 0;
+        double frames = 0;
+        double f0 = 0;
+        boolean hasPitch = true;
+        for (JsonNode m : segments) {
+            if (!validMetrics(m)) throw new IllegalArgumentException("invalid_audio_metrics");
+            double d = metric(m, "duration");
+            duration += d;
+            speechRatio += metric(m, "speech_ratio") * d;
+            pauses += metric(m, "pause_count");
+            longestPause = Math.max(longestPause, metric(m, "longest_pause"));
+            rmsMean += metric(m, "rms_mean_db") * d;
+            rmsStd += metric(m, "rms_std_db") * d;
+            frames += metric(m, "frame_count");
+            if (number(m, "f0_std")) f0 += m.path("f0_std").asDouble() * d;
+            else hasPitch = false;
+        }
+        ObjectNode out = JSON.createObjectNode();
+        out.put("empty", false);
+        out.put("duration", round3(duration));
+        out.put("speech_ratio", round3(speechRatio / duration));
+        out.put("pause_count", Math.round(pauses));
+        out.put("longest_pause", round3(longestPause));
+        out.put("rms_mean_db", round3(rmsMean / duration));
+        out.put("rms_std_db", round3(rmsStd / duration));
+        out.put("frame_count", Math.round(frames));
+        if (hasPitch) out.put("f0_std", round3(f0 / duration));
+        return out;
+    }
+
+    private static double round3(double value) {
+        return Math.round(value * 1000.0) / 1000.0;
     }
 
     static double fluency(JsonNode m) {

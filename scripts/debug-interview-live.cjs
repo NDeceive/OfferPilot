@@ -164,7 +164,7 @@ async function main() {
   await embedded.evaluate(() => { debugAudio.peak = 0; debugAudio.nonSilentSamples = 0 })
   const beforeClosing = Date.now()
   await page.getByRole('button', { name: '结束面试', exact: true }).click()
-  await page.getByText('好，那我们今天就先聊到这里。谢谢你的分享，辛苦了。', { exact: true }).waitFor()
+  await page.getByText('好，那我们今天就先聊到这里。谢谢你的分享。', { exact: true }).waitFor()
   await embedded.waitForFunction(() => debugAudio.nonSilentSamples >= 5, { timeout: 18000 })
   result.phases.closing = await embedded.evaluate(() => ({ peak: debugAudio.peak, nonSilentSamples: debugAudio.nonSilentSamples }))
   await page.screenshot({ path: path.join(out, 'closing.png') })

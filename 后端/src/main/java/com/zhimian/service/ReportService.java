@@ -810,15 +810,28 @@ public class ReportService {
             double overall = voiceAnalysisService.overallScore(sessionId);
             out.put("overall", overall < 0 ? null : Math.round(overall * 1000) / 10.0);
 
-            java.util.Map<Integer, Long> audioIds = new java.util.HashMap<>();
+            java.util.Map<Integer, java.util.List<java.util.Map<String,Object>>> clipsByRound = new java.util.LinkedHashMap<>();
             for (com.zhimian.entity.InterviewAnswerAudio a : answerAudioService.listBySession(sessionId)) {
-                if ("OK".equals(a.getStatus())) audioIds.put(a.getRoundNo(), a.getId());
+                if (!"OK".equals(a.getStatus())) continue;
+                java.util.Map<String,Object> clip = new java.util.LinkedHashMap<>();
+                clip.put("audioId", a.getId());
+                clip.put("answerSeq", a.getAnswerSeq() == null ? 0 : a.getAnswerSeq());
+                clip.put("durationMs", a.getDurationMs());
+                clip.put("byteSize", a.getByteSize());
+                clipsByRound.computeIfAbsent(a.getRoundNo(), key -> new java.util.ArrayList<>()).add(clip);
+            }
+            for (java.util.List<java.util.Map<String,Object>> clips : clipsByRound.values()) {
+                clips.sort(java.util.Comparator.comparingInt(c -> ((Number) c.get("answerSeq")).intValue()));
             }
             java.util.List<java.util.Map<String,Object>> rounds = new java.util.ArrayList<>();
             for (com.zhimian.entity.InterviewVoiceAnalysis r : voiceAnalysisService.results(sessionId)) {
                 java.util.Map<String,Object> item = new java.util.LinkedHashMap<>();
+                java.util.List<java.util.Map<String,Object>> clips = clipsByRound.getOrDefault(
+                        r.getRoundNo(), java.util.List.of());
                 item.put("roundNo", r.getRoundNo());
-                item.put("audioId", audioIds.get(r.getRoundNo()));
+                // audioId 保留兼容，指向该题第一段（主回答）；完整分段在 clips 里。
+                item.put("audioId", clips.isEmpty() ? null : clips.get(0).get("audioId"));
+                item.put("clips", clips);
                 item.put("fluency", r.getFluency());
                 item.put("volume", r.getVolumeScore());
                 item.put("confidence", r.getConfidenceEst());

@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS interview_round_audio (
     id              BIGINT PRIMARY KEY AUTO_INCREMENT,
     session_id      BIGINT NOT NULL COMMENT '会话ID',
     round_no        INT NOT NULL COMMENT '第几题',
+    answer_seq      INT NOT NULL DEFAULT 0 COMMENT '同一题内第几段作答：0主回答，1起为追问回答',
     question_id     BIGINT COMMENT '题目ID',
     file_path       VARCHAR(255) NOT NULL COMMENT '音频相对路径',
     duration_ms     INT COMMENT '时长(毫秒)',
@@ -10,7 +11,7 @@ CREATE TABLE IF NOT EXISTS interview_round_audio (
     status          VARCHAR(20) NOT NULL DEFAULT 'OK' COMMENT 'OK / FAILED',
     failure_reason  VARCHAR(40) COMMENT 'mic_denied / upload_failed / empty_audio',
     create_time     DATETIME DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY uk_audio_session_round (session_id, round_no),
+    UNIQUE KEY uk_audio_session_round_seq (session_id, round_no, answer_seq),
     KEY idx_audio_session (session_id)
 ) ENGINE=InnoDB COMMENT='作答音频';
 

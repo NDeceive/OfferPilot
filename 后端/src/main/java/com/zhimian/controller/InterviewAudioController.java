@@ -49,7 +49,7 @@ public class InterviewAudioController {
         for(var audio:audioService.listBySession(sessionId)) {
             if(!"OK".equals(audio.getStatus()))continue;
             var item=new LinkedHashMap<String,Object>();
-            item.put("audioId",audio.getId());item.put("roundNo",audio.getRoundNo());
+            item.put("audioId",audio.getId());item.put("roundNo",audio.getRoundNo());item.put("answerSeq",audio.getAnswerSeq()==null?0:audio.getAnswerSeq());
             item.put("durationMs",audio.getDurationMs());item.put("byteSize",audio.getByteSize());
             item.put("available",Files.isRegularFile(audioService.pathOf(audio)));
             recordings.add(item);
@@ -61,7 +61,8 @@ public class InterviewAudioController {
     public Result<Map<String, Object>> upload(@PathVariable Long sessionId,
                                               @PathVariable int roundNo,
                                               @RequestParam("file") MultipartFile file,
-                                              @RequestParam(value = "questionId", required = false) Long questionId) {
+                                              @RequestParam(value = "questionId", required = false) Long questionId,
+                                              @RequestParam(value = "answerSeq", required = false, defaultValue = "0") int answerSeq) {
         Long userId = UserContext.getUserId();
         if (file == null || file.isEmpty()) throw new BizException("录音为空");
         if (file.getSize() > MAX_BYTES) throw new BizException("录音过大");
@@ -75,7 +76,7 @@ public class InterviewAudioController {
             throw new BizException("录音格式不正确");
         }
         int durationMs = wavDurationMs(bytes);
-        InterviewAnswerAudio row = audioService.save(sessionId, roundNo, questionId, bytes, durationMs, userId);
+        InterviewAnswerAudio row = audioService.save(sessionId, roundNo, answerSeq, questionId, bytes, durationMs, userId);
 
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("audioId", row.getId());

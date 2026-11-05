@@ -9,7 +9,7 @@ if ($backendProcess.Name -ne 'java.exe' -or -not $backendProcess.CommandLine.Con
 if ($avatarProcess.Name -ne 'python.exe' -or -not $avatarProcess.CommandLine.Contains((Join-Path $projectRoot '数字人/app.py'))) { throw '8010 is not this project digital human.' }
 if ($backendProcess.CommandLine -notmatch '^"[^"]+"\s+(.+)$') { throw 'Cannot preserve backend Java arguments.' }
 $javaArguments = $Matches[1]
-foreach ($setting in @('ZHIPU_API_KEY', 'DEEPSEEK_API_KEY')) {
+foreach ($setting in @('DEEPSEEK_API_KEY')) {
     if (-not [Environment]::GetEnvironmentVariable($setting, 'Process')) {
         [Environment]::SetEnvironmentVariable($setting, [Environment]::GetEnvironmentVariable($setting, 'User'), 'Process')
     }
