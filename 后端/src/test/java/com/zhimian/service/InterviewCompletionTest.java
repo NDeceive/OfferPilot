@@ -29,6 +29,7 @@ class InterviewCompletionTest {
     @Mock ReportJobService reports;
     @Mock InterviewStageService stages;
     @Mock InterviewPlanService plans;
+    @Mock InterviewMinutesService minutes;
     @InjectMocks InterviewFlowService flow;
 
     private InterviewSession session() {

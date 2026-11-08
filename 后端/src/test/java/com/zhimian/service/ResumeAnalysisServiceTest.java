@@ -19,7 +19,7 @@ class ResumeAnalysisServiceTest {
     @AfterEach void clear() { UserContext.clear(); }
     @Test void invalidEvidenceGetsOneRepairAndRepairedEvidenceIsStillValidated() throws Exception {
         var ai=mock(ResumeAiGateway.class);
-        var service=new ResumeAnalysisService(null,json,null,null,null,null,null,ai);
+        var service=new ResumeAnalysisService(null,json,null,null,null,null,null,ai,null);
         var candidate=json.readTree("""
             {"items":[
               {"kind":"IMPROVEMENT","priority":"HIGH","field":"skills","quote":"Java","title":"说明Java使用场景","reason":"原文仅列出技术","action":"准备一个真实案例","requiresFacts":true},
@@ -95,11 +95,31 @@ class ResumeAnalysisServiceTest {
         var jdbc=new JdbcTemplate() { @Override public <T> List<T> query(String sql,RowMapper<T> mapper,Object...args) {
             assertTrue(sql.contains("id=? AND user_id=?"));assertEquals(9L,args[0]);assertEquals(7L,args[1]);return List.of();
         }};
-        var service=new ResumeAnalysisService(jdbc,json,null,null,null,null,null,null);
+        var service=new ResumeAnalysisService(jdbc,json,null,null,null,null,null,null,null);
         assertThrows(BizException.class,()->service.report(9));
     }
     @Test void fingerprintsChangeWithMutableTextAndJob() {
         assertNotEquals(ResumeAnalysisService.hash("job1:text1"),ResumeAnalysisService.hash("job1:text2"));
         assertNotEquals(ResumeAnalysisService.hash("job1:text1"),ResumeAnalysisService.hash("job2:text1"));
+    }
+    @Test void confirmedTagsAreCapturedAndTagChangesInvalidateCachedReportInput() {
+        UserContext.set(7L,"STUDENT");
+        var resumes=mock(ResumeService.class);
+        var files=mock(ResumeFileService.class);
+        var jobs=mock(com.zhimian.mapper.JobPositionMapper.class);
+        var job=new com.zhimian.entity.JobPosition();job.setId(1L);job.setName("Java 后端");job.setStatus(1);
+        when(jobs.selectById(1L)).thenReturn(job);
+        var resume=new com.zhimian.entity.Resume();resume.setId(3L);resume.setRawText("原文只写了项目，技能已在上一步确认");
+        resume.setSkills("[\"Java\",\"SQL\"]");resume.setKeywords("[\"Java\"]");
+        when(resumes.getMine()).thenReturn(resume);
+        when(files.getFileProfile()).thenReturn(new com.zhimian.dto.ResumeFileProfileResponse());
+        var service=new ResumeAnalysisService(null,json,null,resumes,files,jobs,null,null,null);
+        var before=service.snapshot(1L,null);
+        assertEquals("Java\nSQL",before.fields().get("skillTags"));
+        resume.setSkills("[\"Redis\"]");resume.setKeywords("[]");
+        var after=service.snapshot(1L,null);
+        assertEquals("Redis",after.fields().get("skillTags"));
+        assertNotEquals(before.fingerprint(),after.fingerprint());
+        assertEquals("Java\nSQL",before.fields().get("skillTags"));
     }
 }

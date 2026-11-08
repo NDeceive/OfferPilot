@@ -34,6 +34,7 @@ public class ResumeAnalysisService {
     private final JobPositionMapper jobs;
     private final ModulePreferenceService modules;
     private final ResumeAiGateway ai;
+    private final ResumeSkillPredictionService skillPredictions;
     private final Object[] locks = makeLocks();
     private static Object[] makeLocks() { Object[] result=new Object[128]; Arrays.setAll(result,i->new Object()); return result; }
     public record Input(Long jobId, Long versionId, boolean force) {}
@@ -85,8 +86,22 @@ public class ResumeAnalysisService {
             }
         }
         if(fields.values().stream().mapToInt(String::length).sum()>30000) throw new BizException("简历超过 30000 字符，请精简后分析");
+        // Keep the exact confirmed tags in the immutable report input and its cache key.
+        LinkedHashSet<String> tags = new LinkedHashSet<>();
+        if (versionId != null) {
+            Arrays.stream(fields.getOrDefault("skills", "").split("[、,，;；\\n]"))
+                    .map(String::trim).filter(t -> !t.isBlank() && t.length() <= 40).limit(30).forEach(tags::add);
+        } else {
+            var profile = resumes.getMine();
+            if (profile != null) for (String encoded : List.of(text(profile.getSkills()), text(profile.getKeywords()))) {
+                try { var list = json.readTree(encoded); if (list != null && list.isArray()) for (var tag : list)
+                    if (tag.isTextual() && !tag.asText().isBlank() && tag.asText().length() <= 40 && tags.size() < 30) tags.add(tag.asText().trim());
+                } catch (Exception ignored) { /* Unreadable tags are not replaced by guessed tags. */ }
+            }
+        }
+        fields.put("skillTags", String.join("\n", tags));
         String evidence=job.getName()+"\n"+text(job.getDescription())+"\n"+text(job.getAbilities())+"\n"+text(job.getKeywords());
-        String fingerprint=hash(encode(List.of(jobId,evidence,kind,sourceId,fields)));
+        String fingerprint=hash(encode(List.of("skill-bank-prediction-v2-three",jobId,evidence,kind,sourceId,fields)));
         return new Snapshot(jobId,job.getName(),evidence,versionId,kind,sourceId,title,fields,fingerprint);
     }
     public Report latest(Long jobId, Long versionId) { return cached(snapshot(jobId,versionId)); }
@@ -136,6 +151,11 @@ public class ResumeAnalysisService {
                 log.warn("Resume analysis rejected: type={}, validation={}",e.getClass().getSimpleName(),e instanceof IllegalArgumentException ? e.getMessage() : "REQUEST_FAILED");
                 failure="AI 分析未能提供可核对的完整依据，当前仅展示基础检查。可重新分析；这些检查不代表完整的岗位评价。";
             }
+            // Only bank-backed questions can enter the technical section.
+            var bank = skillPredictions.predict(s, allowed);
+            items = new ArrayList<>(items.stream().filter(i -> !i.kind().equals("INTERVIEW") || isProjectInterview(i)).toList());
+            items.addAll(bank.items());
+            if (!bank.notice().isBlank()) failure = failure.isBlank() ? bank.notice() : failure + "；" + bank.notice();
             List<String> suggested=items.stream().map(Item::moduleCode).filter(allowed::contains).distinct().limit(5).toList();
             var older=jdbc.query("SELECT result_json FROM resume_analysis_report WHERE user_id=? AND job_id=? AND id<? AND status IN ('COMPLETED','PARTIAL') ORDER BY id DESC LIMIT 1",(rs,i)->decode(rs.getString(1)),uid,s.jobId(),id);
             List<String> stillOpen=older.isEmpty()?List.of():items.stream().filter(i->!i.kind().equals("STRENGTH")).map(Item::title)
@@ -143,7 +163,7 @@ public class ResumeAnalysisService {
             String evidenceSummary=items.stream().filter(i->i.kind().equals("STRENGTH")).findFirst().map(i->"已体现："+i.title()+"。").orElse("当前资料不足以确认明确的岗位优势。");
             String prioritySummary=items.stream().filter(i->i.kind().equals("IMPROVEMENT")).sorted(Comparator.comparingInt(i->List.of("HIGH","MEDIUM","LOW").indexOf(i.priority()))).findFirst().map(i->"优先处理："+i.title()+"。").orElse("请继续人工核查原文。");
             String summary=evidenceSummary+prioritySummary+"这不代表能力或录用评估。";
-            var result=new Report(id,source.equals("AI")?"COMPLETED":"PARTIAL",source,failure,summary,s,items,suggested,now,true,stillOpen);
+            var result=new Report(id,source.equals("AI") && failure.isBlank()?"COMPLETED":"PARTIAL",source,failure,summary,s,items,suggested,now,true,stillOpen);
             jdbc.update("UPDATE resume_analysis_report SET status=?,result_json=? WHERE id=? AND user_id=?",result.status(),encode(result),id,uid);
             return report(id);
             } catch(RuntimeException e) {
@@ -180,18 +200,24 @@ public class ResumeAnalysisService {
         INTERVIEW用于推测可能会出的题型，不是回答准备建议；未知事实必须标记requiresFacts。
         分析目标以面试准备为主，同时给出简历修改建议。先通读全部 fields，再对照岗位资料，不要只做关键词匹配。
         原文可能全部位于 raw 字段，raw 是完整简历，应直接分析其中的项目、职责与技术，不要要求用户先拆分字段。
-        优先输出2至3项可能出现的不同题型，以及有依据的优势、表达改进和岗位补充；资料不足时少给推测，不凑数。
+        优先输出1至2道基于真实项目或经历的面试题，以及有依据的优势、表达改进和岗位补充；资料不足时少给推测，不凑数。技术题由另一个流程按技能标签从题库筛选，此处禁止生成技能或技术原理题。
         每个标题点出原文中的具体项目、技术或表达问题，禁止使用“有岗位相关信息”“核对经历”“准备经历追问”等通用标题。
         reason 结合 quote 解释结论及其面试意义，明确已体现什么、还不能确认什么；action 给出可以执行的准备步骤。
-        INTERVIEW 的 title 写“题型 · 简历中的具体技术或经历”，例如技术原理题、项目深挖题、场景设计题、故障排查题或行为情境题；只选择有原文依据的题型。
+        INTERVIEW 的 title 写“题型 · 简历中的具体技术或经历”，例如项目深挖题、经历深挖题或行为情境题；只选择有原文依据的题型。
         INTERVIEW 的 reason 结合 quote 和实际岗位要求说明为什么可能出现该题型，不断言必考，不输出命中概率。
-        INTERVIEW 的 question 写该题型下1至2个可能的示例提问，围绕简历真实提到的技术选择、实现细节、故障排查或个人贡献，不问脱离原文的通用题。
-        INTERVIEW 的 action 写该题型可能考察的知识点、思考过程或能力，不写准备步骤、回答提纲或标准答案，不预设经历与结果。
+        INTERVIEW 的 question 写一道可以独立回答的具体面试题，围绕简历真实提到的技术选择、实现细节、故障排查或个人贡献，不问脱离原文的通用题。
+        INTERVIEW 的 action 写该题的回答思路：技能题解释核心原理、适用场景和技术取舍；项目题按背景、本人职责、方案选择及结果验证组织回答，未知经历与结果明确要求按真实情况补充，不代写虚构经历或成果。
         JOB_GAP 只分析岗位资料明确要求而简历没有充分展示的内容，说明应补充哪段真实经历或如何准备验证，不能断言没有能力。
         STRENGTH 必须有具体经历证据，不把只列出技术名当作熟练掌握；reason 说明该经历如何回应岗位要求。
         quote 保持简短且逐字连续复制，不能拼接两处原文或增加省略号；jobEvidence 同样逐字连续复制。
         非 SUGGESTION 的 suggestion 一律为空字符串，修改示例和补充提纲写进 action，并明确待用户核实的内容。
         """;
+    static boolean isProjectInterview(Item item) {
+        String type = item.title().split("[·：:]", 2)[0];
+        if (type.matches(".*(项目|经历|行为|情境).*")) return true;
+        if (type.matches(".*(技能|技术|原理|场景设计|故障).*")) return false;
+        return Set.of("projects", "experience").contains(item.field()) || item.moduleCode().contains("project");
+    }
     static List<Item> validate(JsonNode root, Snapshot s, Set<String> allowed) {
         JsonNode list=root.path("items"); if(!list.isArray() || list.isEmpty() || list.size()>20) throw new IllegalArgumentException("ITEMS_STRUCTURE");
         List<Item> out=new ArrayList<>();
@@ -258,7 +284,7 @@ public class ResumeAnalysisService {
         out.add(item("INTERVIEW","MEDIUM",field,excerpt(f.get(field)),
                 skillsOnly?"技术原理题 · 技能理解与应用":"经历深挖题 · 个人贡献与结果验证",
                 skillsOnly?"简历列出了相关技能，面试可能通过原理解释与应用场景检验理解。":"简历中的经历描述可能引出对本人职责、方案选择和结果验证的进一步提问。",
-                skillsOnly?"基本概念、实现原理、适用场景及技术取舍。":"个人职责边界、方案选择的理由、交付物及验证方法。",true,"",
+                skillsOnly?"先解释简历所列技能的基本概念与实现原理，再结合真实使用场景说明适用范围、技术取舍和限制。":"先交代项目背景，再说明本人负责的环节与方案选择理由，最后用真实交付物和验证方法说明结果；未核实的数据不要编造。",true,"",
                 skillsOnly?"你如何理解简历中列出的这项技能？它适合解决什么问题，有哪些使用限制？":"你在简历提到的经历中具体承担了什么？为什么采用该方案，如何验证结果？",
                 skillsOnly?"technical_base":"project_expression",allowed));
         return out;

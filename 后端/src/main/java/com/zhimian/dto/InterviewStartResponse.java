@@ -8,6 +8,7 @@ import lombok.Data;
 @Data
 public class InterviewStartResponse {
     private java.util.Map<String,Object> interviewPlan;
+    private java.util.Map<String,Object> minutes;
 
     private Long sessionId;
     private String jobName;

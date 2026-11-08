@@ -35,7 +35,7 @@ export const uploadResumeFile = (file) => {
 }
 export const getResumeFileProfile = () => request.get('/resume/file-profile')
 export const getResumeAnalysis = (params) => request.get('/resume-workbench/analysis', { params })
-export const createResumeAnalysis = (data) => request.post('/resume-workbench/analysis', data, { timeout: 200000 })
+export const createResumeAnalysis = (data) => request.post('/resume-workbench/analysis', data, { timeout: 300000 })
 export const getResumeAnalysisReport = (id) => request.get(`/resume-workbench/analysis/${id}`)
 export const updateResumeTags = (tags) => request.put('/resume/tags', { tags })
 export const getSkillTags = () => request.get('/tags')

@@ -377,7 +377,7 @@
         <!-- ========== Step 3: Resume review ========== -->
         <section v-show="currentStep === 2" key="step2" class="step-panel">
           <div class="resume-review card">
-            <ResumeAnalysisPanel v-if="currentStep === 2" preparation-flow :job-id="selectedJob?.id" :version-id="resumeVersionId || undefined" :available="Boolean(uploadedFile) && !resumeUploading && !resumeError" :source-key="uploadedFile?.name || ''" @report="resumeReview = $event" @edit="editAnalysis" @recommend="applyRecommendedModules" @previous="currentStep = 1" @next="currentStep = 3" />
+            <ResumeAnalysisPanel v-if="currentStep === 2" preparation-flow :job-id="selectedJob?.id" :version-id="resumeVersionId || undefined" :available="Boolean(uploadedFile) && !resumeUploading && !resumeError" :source-key="uploadedFile?.name || ''" @report="resumeReview = $event" @edit="editAnalysis" @recommend="applyRecommendedModules" @practice="currentStep = 3" @previous="currentStep = 1" @next="currentStep = 3" />
           </div>
         </section>
 
@@ -556,6 +556,10 @@
                 <p>本场会为每道题保留一段录音，结束后分析语速、停顿与音量，在报告里单列展示；不想录可以在开始前关掉。</p>
               </section>
 
+              <section class="voice-section">
+                <label class="voice-toggle"><input type="checkbox" v-model="minutesEnabled" /><span>开启本场面试纪要</span></label>
+                <p>记录开启期间的完整问答，结束后生成 AI 总结。关闭纪要不会停止正常作答、既有录音与评分。</p>
+              </section>
               <section class="before-start">
                 <h3>开始前</h3>
                 <ul><li>保持网络连接稳定</li><li>确保麦克风可正常使用</li><li>建议在安静环境中完成训练</li></ul>
@@ -728,8 +732,10 @@ const dragOverModuleCode = ref('')
 const sortAnnouncement = ref('')
 const startingInterview = ref(false)
 const startError = ref('')
+let pendingStart = null
 const durationSeconds = ref(1800)
 // 本场是否录制作答音频（默认开）
+const minutesEnabled = ref(false)
 const voiceEnabled = ref(true)
 const draftDuration = ref({ hours: 0, minutes: 30, seconds: 0 })
 const durationPickerOpen = ref(false)
@@ -1341,14 +1347,18 @@ async function handleStartInterview() {
   startError.value = ''
   try {
     await prepareInterviewCamera()
-    const res = await startInterview({
+    const startData = {
       jobId: selectedJob.value.id,
       durationSeconds: durationSeconds.value,
       modulePreferences: buildModulePreferences(),
       resumeVersionId: resumeVersionId.value || undefined,
       skipResume: !uploadedFile.value,
       voiceEnabled: voiceEnabled.value,
-    })
+      minutesEnabled: minutesEnabled.value,
+    }
+    const fingerprint = JSON.stringify(startData)
+    if (!pendingStart || pendingStart.fingerprint !== fingerprint) pendingStart = { fingerprint, requestId: crypto.randomUUID() }
+    const res = await startInterview({ ...startData, requestId: pendingStart.requestId })
     await router.push({
       path: '/interview',
       query: {

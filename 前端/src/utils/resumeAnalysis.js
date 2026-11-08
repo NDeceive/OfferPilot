@@ -8,6 +8,7 @@ export const analysisFields = {
   projects: "项目经历",
   experience: "实习经历",
   skills: "专业技能",
+  skillTags: "技能标签",
   awards: "荣誉奖项",
   raw: "文件原文",
 };
@@ -59,4 +60,30 @@ export function groupAnalysisItems(items) {
     improvements: items.filter((item) => ["ISSUE", "IMPROVEMENT", "SUGGESTION"].includes(item.kind) && !jobGap(item)).sort((a,b) => rank(a)-rank(b)),
     jobGaps: items.filter(jobGap).sort((a,b) => rank(a)-rank(b)),
   };
+}
+
+// Explicit question types take precedence over the resume field for old reports.
+export function groupInterviewQuestions(items) {
+  const groups = [
+    { key: "skills", title: "技能题", items: [] },
+    { key: "projects", title: "项目题", items: [] },
+  ];
+  for (const item of items.filter((item) => item.kind === "INTERVIEW")) {
+    const type = (item.title || "").split(/[·：:]/)[0];
+    const project = /项目|经历|行为|情境/.test(type) ? true
+      : /技能|技术|原理|场景设计|故障/.test(type) ? false
+      : ["projects", "experience"].includes(item.field) || /project/.test(item.moduleCode || "");
+    groups[project ? 1 : 0].items.push(item);
+  }
+  groups[0].items = groups[0].items.slice(0, 3);
+  return groups;
+}
+
+export function interviewQuestionText(groups, jobName = "") {
+  return ["面试押题", jobName, ...groups.flatMap((group) => [
+    "", group.title,
+    ...(group.items.length ? group.items.map((item, i) =>
+      `${i + 1}、${item.question || item.title}\n回答思路：${item.action || "暂无回答思路，请重新分析。"}`
+    ) : ["暂无相关题目"]),
+  ])].filter((line) => line !== undefined).join("\n");
 }

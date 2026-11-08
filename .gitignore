@@ -93,3 +93,6 @@ Thumbs.db
 
 # 前端动效调参时的本地回滚备份（不参与版本控制）
 /前端/.ui-backup/
+
+# 本地 PPT、截图及评审材料
+/slide-review/
