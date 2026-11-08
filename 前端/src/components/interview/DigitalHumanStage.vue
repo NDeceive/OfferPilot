@@ -187,7 +187,7 @@ function resolveTargetOrigin() {
 
 function withLayoutVersion(url) {
   const separator = url.includes('?') ? '&' : '?'
-  return `${url}${separator}offerpilotLayout=4`
+  return `${url}${separator}offerpilotLayout=5`
 }
 
 function speak(text, key = '') {
@@ -266,7 +266,7 @@ function applyEmbeddedLayout() {
       #video {
         width: 100% !important;
         height: 100% !important;
-        object-fit: contain !important;
+        object-fit: cover !important;
         object-position: center center !important;
       }
       .status { display: none !important; }

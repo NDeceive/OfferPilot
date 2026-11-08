@@ -47,6 +47,7 @@ public class InterviewController {
     private final InterviewSessionMapper sessionMapper;
     private final InterviewMessageMapper messageMapper;
     private final com.zhimian.service.ExpressionService expressionService;
+    private final com.zhimian.service.InterviewMinutesService minutes;
 
     @PostMapping("/{sessionId}/expressions")
     public Result<java.util.Map<String,Object>> expressions(@PathVariable long sessionId,
@@ -70,11 +71,17 @@ public class InterviewController {
     public Result<List<InterviewRecord>> records() {
         return Result.success(recordService.myRecords());
     }
+    @GetMapping("/minutes/by-report/{reportId}")
+    public Result<java.util.Map<String,Object>> minutesContext(@PathVariable long reportId) {
+        return Result.success(minutes.reportContext(reportId));
+    }
 
     /** 开始一次面试：创建会话并返回第一题 */
     @PostMapping("/start")
     public Result<InterviewStartResponse> start(@Valid @RequestBody StartInterviewRequest req) {
-        return Result.success(flowService.start(req));
+        var response=flowService.start(req);
+        response.setMinutes(minutes.state(response.getSessionId()));
+        return Result.success(response);
     }
 
     @GetMapping("/{sessionId}/resume")

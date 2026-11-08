@@ -13,6 +13,7 @@ public class InterviewRecord {
     private String taskTitle;
     private Long assignmentId;
     private String reportState;
+    private String minutesState;
     private Long sessionId;
     private Long jobId;
     private String jobName;

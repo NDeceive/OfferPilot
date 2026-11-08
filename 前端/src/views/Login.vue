@@ -261,6 +261,9 @@ async function handleLogin() {
 .login-page {
   min-height: 100dvh;
   display: flex;
+  justify-content: center;
+  gap: clamp(48px, calc(45vw - 360px), 480px);
+  padding: 32px;
   position: relative;
   overflow: hidden;
 }
@@ -302,10 +305,11 @@ async function handleLogin() {
 .stage-panel {
   position: relative;
   z-index: 1;
-  flex: 0 0 52%;
+  flex: 0 1 580px;
+  min-width: 0;
   display: flex;
   align-items: center;
-  padding: var(--space-10);
+  justify-content: center;
 }
 
 .stage-content {
@@ -533,11 +537,11 @@ async function handleLogin() {
 .form-panel {
   position: relative;
   z-index: 1;
-  flex: 1;
+  flex: 0 1 420px;
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-6);
 }
 
 .form-card {
@@ -884,6 +888,8 @@ async function handleLogin() {
   .login-page {
     min-height: 100dvh;
     flex-direction: column;
+    gap: 0;
+    padding: 0;
   }
   /* 手机端先给登录表单：舞台只保留品牌标志，插画会占掉首屏。 */
   .stage-panel {
@@ -895,7 +901,7 @@ async function handleLogin() {
   .stage-content :deep(.showcase) { display: none; }
   .scene { height: 200px; }
   .q-bubble { font-size: 11px; padding: 4px 10px; }
-  .form-panel { padding: 8px 20px 14px; }
+  .form-panel { flex: 0 0 auto; padding: 8px 20px 14px; }
   .server-setting { margin-top: var(--space-3); }
   .form-card {
     padding: 20px;

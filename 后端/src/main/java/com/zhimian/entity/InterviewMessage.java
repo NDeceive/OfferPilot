@@ -33,4 +33,6 @@ public class InterviewMessage {
     /** 参考答案（体验式题目由 DeepSeek 生成时附带，供追问引擎使用） */
     private String referenceAnswer;
     private LocalDateTime createTime;
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private LocalDateTime minutesCapturedAt;
 }

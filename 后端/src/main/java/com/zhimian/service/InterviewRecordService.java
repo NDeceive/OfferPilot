@@ -29,9 +29,11 @@ public class InterviewRecordService {
     private final InterviewReportMapper reportMapper;
     private final JobPositionMapper jobMapper;
     private final TeachingService teaching;
+    private final InterviewMinutesService minutes;
 
     public List<InterviewRecord> myRecords() {
         Long userId = UserContext.getUserId();
+        var minutesBadges=minutes.badges();
 
         List<InterviewSession> sessions = sessionMapper.selectList(
                 new LambdaQueryWrapper<InterviewSession>()
@@ -60,6 +62,7 @@ public class InterviewRecordService {
             rec.setJobId(s.getJobId());
             rec.setDifficulty(s.getDifficulty());
             rec.setStatus(s.getStatus());
+            rec.setMinutesState(minutesBadges.get(s.getId()));
             rec.setStartTime(s.getStartTime());
             rec.setEndTime(s.getEndTime());
             rec.setDurationSeconds(s.getDurationSeconds());

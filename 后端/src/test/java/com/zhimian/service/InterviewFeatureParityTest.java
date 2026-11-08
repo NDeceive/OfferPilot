@@ -28,6 +28,7 @@ class InterviewFeatureParityTest {
     @Mock ExperienceQuestionService experiences;
     @Mock InterviewMessageMapper messages;
     @Mock com.zhimian.mapper.JobPositionMapper jobs;
+    @Mock InterviewMinutesService minutes;
     @InjectMocks InterviewFlowService flow;
 
     private InterviewSession session() {

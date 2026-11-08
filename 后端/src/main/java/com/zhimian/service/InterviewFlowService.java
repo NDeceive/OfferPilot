@@ -86,6 +86,7 @@ public class InterviewFlowService {
     private final InterviewSnapshotService snapshots;
     private final InterviewStageService stages;
     private final InterviewPlanService plans;
+    private final InterviewMinutesService minutes;
     private final org.springframework.jdbc.core.JdbcTemplate jdbc;
 
     // 新标签化题库
@@ -128,7 +129,7 @@ public class InterviewFlowService {
 
     @Transactional
     public InterviewStartResponse start(StartInterviewRequest req) {
-        if (req.getAssignmentId() != null) return startTeaching(req.getAssignmentId());
+        if (req.getAssignmentId() != null) return startTeaching(req.getAssignmentId(), Boolean.TRUE.equals(req.getMinutesEnabled()));
         Long userId = UserContext.getUserId();
         Long existing=snapshots.existing(userId,req);
         if(existing!=null) {
@@ -208,6 +209,7 @@ public class InterviewFlowService {
             log.warn("未收到模块偏好或为空！req.getModulePreferences()={}", req.getModulePreferences());
         }
         sessionMapper.insert(session);
+        minutes.initialize(session.getId(), Boolean.TRUE.equals(req.getMinutesEnabled()));
         voiceAnalysisService.markEnabled(session.getId(), req.getVoiceEnabled() == null || req.getVoiceEnabled());
         voiceRetentionService.ensureDefault(session.getId());
         snapshots.capture(session.getId(),userId,req,job,resume);
@@ -232,7 +234,7 @@ public class InterviewFlowService {
     }
 
     private QuestionView teachingQuestion(long id,String text,int round){var q=new QuestionView();q.setId(id);q.setContent(text);q.setRoundNo(round);q.setAbilityTag("综合能力");q.setQuestionType("SKILL");return q;}
-    private InterviewStartResponse startTeaching(long assignmentId){
+    private InterviewStartResponse startTeaching(long assignmentId,boolean minutesEnabled){
         var task=teachingService.prepareStart(assignmentId);var questions=teachingService.questions(task);
         var response=new InterviewStartResponse();response.setJobName(String.valueOf(task.get("jobName")));response.setDurationSeconds(((Number)task.get("durationSeconds")).intValue());
         if(task.get("resumeSessionId")!=null){
@@ -247,6 +249,7 @@ public class InterviewFlowService {
         }
         var session=new InterviewSession();session.setUserId(UserContext.getUserId());session.setJobId(TeachingService.id(task,"jobId"));session.setDifficulty(((Number)task.get("difficulty")).intValue());session.setDurationSeconds(response.getDurationSeconds());session.setStartTime(LocalDateTime.now());session.setStatus(STATUS_ONGOING);session.setIsRetrain(0);session.setHasModulePreference(1);sessionMapper.insert(session);
         var capturedRequest=new StartInterviewRequest();capturedRequest.setJobId(session.getJobId());capturedRequest.setDifficulty(session.getDifficulty());capturedRequest.setDurationSeconds(session.getDurationSeconds());snapshots.capture(session.getId(),UserContext.getUserId(),capturedRequest,jobMapper.selectById(session.getJobId()),null);
+        minutes.initialize(session.getId(),minutesEnabled);
         teachingService.snapshotTeaching(session.getId(),task);teachingService.attach(assignmentId,session.getId(),task);saveInterviewerMessage(session.getId(),-1L,MSG_MAIN,1,questions.get(0),"综合能力");response.setSessionId(session.getId());response.setQuestion(teachingQuestion(-1,questions.get(0),1));return response;
     }
     @Transactional
@@ -553,6 +556,7 @@ public class InterviewFlowService {
             stages.set(sessionId,"COMPLETED");
             session.setStatus(STATUS_FINISHED);session.setEndTime(LocalDateTime.now());sessionMapper.updateById(session);
             reportJobs.enqueue(sessionId);
+            minutes.finish(sessionId);
         }
         return sessionId;
     }
@@ -578,6 +582,7 @@ public class InterviewFlowService {
         result.put("currentQuestion",messages.stream().filter(m->ROLE_INTERVIEWER.equals(m.getRole())).reduce((a,b)->b).orElse(null));
         result.put("answered",!messages.isEmpty() && ROLE_CANDIDATE.equals(messages.get(messages.size()-1).getRole()));
         result.put("reportState",reportState(sessionId));
+        result.put("minutes",minutes.state(sessionId));
         return result;
     }
 
@@ -592,6 +597,7 @@ public class InterviewFlowService {
             jdbc.update("INSERT INTO interview_pause_state(session_id,paused_at) VALUES (?,NOW()) ON DUPLICATE KEY UPDATE paused_at=NOW()",sessionId);
         } else if (!paused) settlePause(sessionId);
         var response=new java.util.LinkedHashMap<String,Object>();
+        minutes.paused(sessionId,isPaused(sessionId));
         response.put("paused",isPaused(sessionId));response.put("remainingSeconds",remainingSeconds(session));
         response.put("serverTime",System.currentTimeMillis());response.put("interviewPlan",planView(session));
         return response;
@@ -654,6 +660,7 @@ public class InterviewFlowService {
     public void delete(Long sessionId) {
         lockOwnSession(sessionId);
         reportJobs.delete(sessionId);
+        minutes.purge(sessionId);
         if(teachingService.teachingSession(sessionId))throw new BizException("教学任务记录需保留，不能删除；个人自主训练可正常删除");
         InterviewSession session = sessionMapper.selectById(sessionId);
         if (session == null) {
@@ -974,6 +981,7 @@ public class InterviewFlowService {
         msg.setAbilityTag(abilityTag);
         String stage=stages.stage(sessionId);
         if(stage!=null)msg.setQuestionType(stage);
+        minutes.stamp(msg);
         messageMapper.insert(msg);
         return msg;
     }
@@ -1249,6 +1257,7 @@ public class InterviewFlowService {
             msg.setAbilityTag(result.getAbilityTag() != null ? result.getAbilityTag() : "综合能力");
             msg.setQuestionType(QUESTION_TYPE_EXPERIENCE);
             msg.setReferenceAnswer(result.getReferenceAnswer());
+            minutes.stamp(msg);
             messageMapper.insert(msg);
 
             QuestionView view = promptView(msg);

@@ -41,6 +41,8 @@ public class StartInterviewRequest {
 
     /** 本场是否开启语音分析；不传按开启处理 */
     private Boolean voiceEnabled;
+    /** Explicit per-session opt-in; absent means disabled. */
+    private Boolean minutesEnabled;
 
     /** 模块偏好（可选）：[{code, rank, level}]，缺省使用默认5模块均衡模式 */
     @jakarta.validation.Valid

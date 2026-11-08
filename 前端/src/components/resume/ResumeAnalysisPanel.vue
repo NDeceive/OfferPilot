@@ -23,7 +23,7 @@
     <p v-else-if="busy" role="status" class="analysis__notice">
       {{
         analyzing
-          ? "正在检查简历与岗位资料，AI 正在对照原文和岗位要求，必要时会复核一次，请耐心等待。你可以离开此页，报告完成后会保存。"
+          ? "正在对照简历与岗位要求，并根据技能标签从题库智能选题，请耐心等待。你可以离开此页，报告完成后会保存。"
           : "正在读取对应简历的报告…"
       }}
     </p>
@@ -66,54 +66,16 @@
         本次报告未完成，简历未被修改。请使用上方“重新分析”重试。
       </p>
       <template v-else>
-        <div class="analysis__summary">
-          <span class="analysis__source">{{ report.source === "AI" ? "基于原文与岗位的 AI 分析" : "基础检查 · 尚未获得完整 AI 分析" }}</span>
-          <h3>本次结论</h3>
-          <p>{{ report.summary }}</p>
-          <p v-if="report.stillOpen?.length" class="analysis__muted">
-            与上一份报告有同名待核查项：{{
-              report.stillOpen.join("、")
-            }}。此处只比较问题标题，不推断已解决的事项。
-          </p>
-        </div>
-
-        <div class="analysis__columns">
-          <article v-for="group in groups" :key="group.key" class="analysis__card">
-            <header class="analysis__category-head"><h3>{{ group.title }}</h3><span class="analysis__count">{{ group.items.length }} 项</span></header>
-            <p class="analysis__category-description">{{ group.description }}</p>
-            <div v-if="!group.items.length" class="analysis__category-empty"><p>暂无明确建议</p><small>{{ group.empty }}</small></div>
-            <ol v-else class="analysis__list analysis__page-content" tabindex="0" :aria-label="`${group.title}建议内容，可滚动查看`">
-              <li v-for="(item, i) in group.items.slice(groupPages[group.key] || 0, (groupPages[group.key] || 0) + 1)" :key="`${groupPages[group.key] || 0}-${i}`" class="analysis__item">
-                <div class="analysis__row">
-                  <span>{{ item.title }}<small v-if="item.priority === 'HIGH' && group.key !== 'strengths'" class="analysis__priority">优先核对</small></span>
-                  <button type="button" class="analysis__detail-button" :aria-label="`${item.title}：详情`" @click="openDetail(item)">详情</button>
-                </div>
-                <p class="analysis__reason">{{ item.reason }}</p>
-                <blockquote v-if="item.quote"><span>原文依据</span>{{ item.quote }}</blockquote>
-                <p v-if="item.action" class="analysis__action"><strong>{{ group.key === 'strengths' ? '面试中如何展开' : '建议行动' }}</strong>{{ item.action }}</p>
-                <p v-if="item.jobEvidence" class="analysis__job-evidence"><strong>岗位要求</strong>{{ item.jobEvidence }}</p>
-              </li>
-            </ol>
-            <nav v-if="group.items.length > 1" class="analysis__pager" :aria-label="`${group.title}翻页`">
-              <button type="button" :disabled="!(groupPages[group.key] || 0)" :aria-label="`${group.title}：上一条`" @click="changeGroupPage(group.key, -1, $event)">← 上一条</button>
-              <span aria-live="polite">{{ (groupPages[group.key] || 0) + 1 }} / {{ group.items.length }}</span>
-              <button type="button" :disabled="(groupPages[group.key] || 0) >= group.items.length - 1" :aria-label="`${group.title}：下一条`" @click="changeGroupPage(group.key, 1, $event)">下一条 →</button>
-            </nav>
-          </article>
-        </div>
-        <section v-if="interviews.length" class="analysis__interviews" aria-label="面试推测">
-          <header class="analysis__category-head"><h3>面试推测</h3><span class="analysis__count">{{ interviews.length }} 类题型</span></header>
-          <p class="analysis__category-description">结合简历经历与目标岗位，推测可能会出的题型及示例提问。</p>
-          <ul class="analysis__interview-list">
-            <li v-for="(item, i) in interviews" :key="i" class="analysis__interview-item">
-              <div class="analysis__row"><h4>{{ item.title }}</h4><button type="button" class="analysis__detail-button" :aria-label="`${item.title}：详情`" @click="openDetail(item)">完整依据</button></div>
-              <p v-if="item.question" class="analysis__action"><strong>示例提问</strong>{{ item.question }}</p>
-              <p class="analysis__reason"><strong>推测依据：</strong>{{ item.reason }}</p>
-              <p v-if="item.action" class="analysis__action"><strong>考察重点</strong>{{ item.action }}</p>
-              <blockquote v-if="item.quote"><span>来自简历</span>{{ item.quote }}</blockquote>
-              <p v-if="item.moduleCode" class="analysis__muted">可练习：{{ moduleName(item.moduleCode) }}</p>
+        <InterviewPredictions v-if="interviews.length" :items="interviews" :applicable="report.applicable" :job-name="report.snapshot.jobName" @practice="$emit('practice', report)" />
+        <section class="analysis__results" aria-labelledby="analysis-results-title">
+          <h3 id="analysis-results-title">本次结论</h3>
+          <ol v-if="conclusions.length" class="analysis__results-list">
+            <li v-for="(entry, index) in conclusions" :key="index">
+              <div class="analysis__result-title"><span>{{ entry.category }}</span><strong>{{ entry.item.title }}</strong></div>
+              <p v-if="entry.item.action">{{ entry.item.action }}</p>
             </li>
-          </ul>
+          </ol>
+          <p v-else class="analysis__muted">{{ report.summary || '暂无明确结论，请重新分析。' }}</p>
         </section>
 
       </template>
@@ -149,40 +111,16 @@
           >
           <button v-if="preparationFlow" type="button" class="btn btn--primary analysis__primary" @click="$emit('next')">下一步：训练目标 →</button>
         </footer>
-    <Teleport to="body">
-      <dialog ref="detailDialog" class="analysis-detail" aria-labelledby="analysis-detail-title" @close="selectedDetail = null" @click="closeOnBackdrop">
-        <template v-if="selectedDetail">
-          <header class="analysis-detail__header">
-            <h2 id="analysis-detail-title">{{ selectedDetail.title }}</h2>
-            <button type="button" aria-label="关闭详情" @click="closeDetail">×</button>
-          </header>
-          <div class="analysis-detail__body">
-            <p class="analysis-detail__meta">{{ field(selectedDetail.field) }} · {{ priority(selectedDetail.priority) }}优先级</p>
-            <section><h3>{{ selectedDetail.kind === 'INTERVIEW' ? '推测依据' : '问题说明' }}</h3><p>{{ selectedDetail.reason }}</p></section>
-            <section v-if="selectedDetail.action"><h3>{{ selectedDetail.kind === 'INTERVIEW' ? '考察重点' : '具体建议' }}</h3><p>{{ selectedDetail.action }}</p></section>
-            <section><h3>简历原文</h3><blockquote v-if="selectedDetail.quote">{{ selectedDetail.quote }}</blockquote><p v-else>该分区未提供内容，没有可引用的原文。</p></section>
-            <section v-if="selectedDetail.jobEvidence"><h3>岗位依据</h3><blockquote>{{ selectedDetail.jobEvidence }}</blockquote></section>
-            <section v-if="selectedDetail.suggestion"><h3>建议修改后的内容</h3><blockquote>{{ selectedDetail.suggestion }}</blockquote><p>需审核后采用，不会自动修改简历。</p></section>
-            <section v-if="selectedDetail.question"><h3>{{ selectedDetail.kind === 'INTERVIEW' ? '示例提问' : '可能追问' }}</h3><p>{{ selectedDetail.question }}</p></section>
-            <p v-if="selectedDetail.moduleCode">关联训练：{{ moduleName(selectedDetail.moduleCode) }}</p>
-            <p v-if="selectedDetail.requiresFacts" class="analysis-detail__note">请按真实经历补充或核实；简历未体现不代表没有相关能力。</p>
-            <p v-if="!report?.applicable" class="analysis-detail__note">报告输入已变化，请重新分析后再修改。</p>
-          </div>
-          <footer class="analysis-detail__footer">
-            <button type="button" @click="closeDetail">关闭</button>
-            <button v-if="selectedDetail.kind !== 'STRENGTH'" type="button" class="analysis-detail__primary" :disabled="!report?.applicable" @click="editDetail">{{ selectedDetail.kind === 'SUGGESTION' ? '审核建议并修改草稿' : '去核对并修改' }}</button>
-          </footer>
-        </template>
-      </dialog>
-    </Teleport>
+
   </section>
 </template>
 
 <script setup>
-import { ref, watch, onBeforeUnmount, nextTick } from "vue";
+import { ref, watch, onBeforeUnmount } from "vue";
 import { computed } from "vue";
-import { getResumeAnalysis, createResumeAnalysis, getModules } from "../../api";
-import { analysisFields, groupAnalysisItems } from "../../utils/resumeAnalysis";
+import InterviewPredictions from "./InterviewPredictions.vue";
+import { getResumeAnalysis, createResumeAnalysis } from "../../api";
+import { groupAnalysisItems } from "../../utils/resumeAnalysis";
 const props = defineProps({
   jobId: Number,
   versionId: Number,
@@ -190,60 +128,25 @@ const props = defineProps({
   sourceKey: { type: [String, Number], default: "" },
   preparationFlow: Boolean,
 });
-const emit = defineEmits(["report", "edit", "recommend", "previous", "next"]);
+const emit = defineEmits(["report", "edit", "recommend", "previous", "next", "practice"]);
 const report = ref(null),
   busy = ref(false),
   analyzing = ref(false),
   error = ref(""),
-  notice = ref(""),
-  modules = ref([]);
+  notice = ref("");
 let sequence = 0;
-const detailDialog = ref(null);
-const selectedDetail = ref(null);
-async function openDetail(item) {
-  selectedDetail.value = item;
-  await nextTick();
-  if (selectedDetail.value === item && !detailDialog.value?.open) detailDialog.value?.showModal();
-}
-function closeDetail() {
-  detailDialog.value?.close();
-  selectedDetail.value = null;
-}
-function closeOnBackdrop(event) {
-  if (event.target === detailDialog.value) {
-    const box = detailDialog.value.getBoundingClientRect();
-    if (event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom) closeDetail();
-  }
-}
-function editDetail() {
-  const item = selectedDetail.value;
-  closeDetail();
-  edit(item);
-}
-const groupPages = ref({});
-function changeGroupPage(key, direction, event) {
-  const group = groups.value.find((entry) => entry.key === key);
-  if (!group) return;
-  groupPages.value[key] = Math.max(0, Math.min(group.items.length - 1, (groupPages.value[key] || 0) + direction));
-  const content = event.currentTarget.closest('.analysis__card')?.querySelector('.analysis__page-content');
-  if (content) content.scrollTop = 0;
-}
-watch(report, () => { closeDetail(); groupPages.value = {}; });
-const groups = computed(() => {
-  const items = groupAnalysisItems(report.value?.items || []);
+const conclusions = computed(() => {
+  const groups = groupAnalysisItems(report.value?.items || []);
   return [
-    { key: "strengths", title: "优势方面", description: "原文中已体现、与岗位相关的优势。", empty: "当前证据不足以形成明确优势，补充真实案例后可重新分析。", items: items.strengths },
-    { key: "improvements", title: "待提升", description: "简历内容、表达及事实依据需要完善的事项。", empty: "暂未识别到明确改进项，仍需人工核查。", items: items.improvements },
-    { key: "jobGaps", title: "对应岗位仍需补充", description: "对照目标岗位，简历尚未体现或需要核实的信息。未体现不代表没有能力。", empty: "暂未识别到有明确岗位依据的补充项，不代表已满足全部岗位要求。", items: items.jobGaps },
-  ];
+    ["优势方面", groups.strengths],
+    ["待提升", groups.improvements],
+    ["岗位待补充", groups.jobGaps],
+  ].flatMap(([category, items]) => items.map(item => ({ category, item })));
 });
 const interviews = computed(
   () => report.value?.items.filter((i) => i.kind === "INTERVIEW") || []
 );
-const field = (k) => analysisFields[k] || k;
-const priority = (k) => ({ HIGH: "高", MEDIUM: "中", LOW: "低" }[k]);
 const date = (v) => (v ? new Date(v).toLocaleString("zh-CN") : "");
-const moduleName = (k) => modules.value.find((m) => m.code === k)?.name || k;
 function edit(item) {
   if (!report.value?.applicable) {
     notice.value = "此报告输入已变化，请重新分析";
@@ -282,13 +185,9 @@ watch(
   },
   { immediate: true }
 );
-getModules()
-  .then((v) => (modules.value = v || []))
-  .catch(() => {});
 async function run(force) {
   if (busy.value || !props.jobId || !props.available) return;
   const request = ++sequence;
-  closeDetail();
   busy.value = true;
   analyzing.value = true;
   error.value = "";
@@ -316,7 +215,7 @@ async function run(force) {
     }
   }
 }
-onBeforeUnmount(() => { ++sequence; closeDetail(); });
+onBeforeUnmount(() => { ++sequence; });
 </script>
 
 <style scoped>
@@ -636,4 +535,15 @@ onBeforeUnmount(() => { ++sequence; closeDetail(); });
 :root:not([data-theme="dark"]) .analysis__interviews {
     background: #f3f8f5
 }
+.analysis__results { margin: 8px 0 24px; padding: 24px 28px 0; border-top: 1px solid #e3ebe6; }
+.analysis .analysis__results h3 { margin: 0 0 18px; font-size: 18px; font-weight: 600; }
+.analysis .analysis__results-list { margin: 0; padding-left: 24px; }
+.analysis__results-list > li { padding-left: 4px; margin-bottom: 18px; }
+.analysis__results-list > li::marker { font-weight: 600; color: #20332c; }
+.analysis__result-title { display: flex; align-items: baseline; gap: 12px; font-size: 15px; line-height: 1.7; }
+.analysis__result-title > span { flex-shrink: 0; color: #167953; font-size: 14px; font-weight: 600; }
+.analysis .analysis__results-list p { margin: 6px 0 0; font-size: 14px; color: #66776f; line-height: 1.8; }
+:root[data-theme='dark'] .analysis__results-list > li::marker { color: #e4e4e7; }
+:root[data-theme='dark'] .analysis__result-title > span { color: #6ee7b7; }
+@media(max-width: 767px) { .analysis__results { padding: 20px 0 0; } .analysis__result-title { display: block; } .analysis__result-title > span { margin-right: 10px; } }
 </style>

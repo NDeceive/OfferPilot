@@ -180,6 +180,7 @@
         </div>
       </aside>
     </div>
+    <InterviewMinutes v-if="sessionId" :session-id="sessionId" />
   </div>
 </template>
 
@@ -193,6 +194,7 @@ import CameraPreview from '../components/interview/CameraPreview.vue'
 import DigitalHumanStage from '../components/interview/DigitalHumanStage.vue'
 import MicrophoneControl from '../components/interview/MicrophoneControl.vue'
 import { useIsMobile } from '../mobile/composables/useIsMobile'
+import InterviewMinutes from '../components/minutes/InterviewMinutes.vue'
 import { useAnswerAudio } from '../composables/useAnswerAudio'
 
 const router = useRouter()
@@ -412,7 +414,7 @@ onMounted(async () => {
       return
     }
 
-    const res = await startInterview({ jobId, durationSeconds, assignmentId:route.query.assignmentId?Number(route.query.assignmentId):undefined })
+    const res = await startInterview({ jobId, durationSeconds, minutesEnabled: route.query.minutes === '1', assignmentId:route.query.assignmentId?Number(route.query.assignmentId):undefined })
     sessionId.value = res.sessionId
     if(res.finishable){autoFinished=true;await finishInterview(sessionId.value);releaseMediaDevices();await waitForReport(sessionId.value);return}
     if(res.durationSeconds){totalDuration.value=res.durationSeconds;timeLeft.value=res.remainingSeconds??res.durationSeconds}

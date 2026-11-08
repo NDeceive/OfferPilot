@@ -34,6 +34,9 @@ import java.util.function.Consumer;
 public class DeepSeekClient {
     public enum JsonFailure { NONE, NOT_CONFIGURED, RATE_LIMITED, AUTH_FAILED, PROVIDER_ERROR, NETWORK_ERROR, INVALID_RESPONSE }
     public record JsonCallResult(JsonNode value, JsonFailure failure) {}
+    public record TextCallResult(String value, JsonFailure failure) {}
+    @org.springframework.beans.factory.annotation.Value("${minutes.deepseek.model:deepseek-flash}")
+    private String summaryModel = "deepseek-flash";
     public String modelName(){return props.getModel();}
 
     private final AiProperties props;
@@ -229,52 +232,50 @@ public class DeepSeekClient {
         }
     }
 
-    /** Detailed result for interactive AI tools that must explain provider failures to the user. */
+    /** Structured callers retain their existing provider/model configuration. */
     public JsonCallResult chatJsonDetailed(String systemPrompt, String userPrompt) {
-        if (!props.isUsable()) return new JsonCallResult(null, JsonFailure.NOT_CONFIGURED);
+        var result=callDetailed(systemPrompt,userPrompt,false);
+        if(result.value()==null)return new JsonCallResult(null,result.failure());
         try {
-            Map<String, Object> body = Map.of(
-                    "model", props.getModel(),
-                    "messages", List.of(Map.of("role", "system", "content", systemPrompt),
-                            Map.of("role", "user", "content", userPrompt)),
-                    "temperature", 0.4,
-                    "stream", false);
-            String raw = restClient().post().uri("/chat/completions")
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + props.getApiKey())
-                    .contentType(MediaType.APPLICATION_JSON).body(body).retrieve().body(String.class);
-            String content = extractContent(raw);
-            if (content == null) return new JsonCallResult(null, JsonFailure.INVALID_RESPONSE);
-            String value = content.trim();
-            if (value.startsWith("```")) {
-                int start = value.indexOf('\n');
-                int end = value.lastIndexOf("```");
-                if (start >= 0 && end > start) value = value.substring(start, end).trim();
+            String value=result.value().trim();
+            if(value.startsWith("```")) {
+                int start=value.indexOf('\n'),end=value.lastIndexOf("```");
+                if(start>=0&&end>start)value=value.substring(start,end).trim();
             }
-            JsonNode parsed = objectMapper.readTree(value);
-            return parsed.isObject() ? new JsonCallResult(parsed, JsonFailure.NONE)
-                    : new JsonCallResult(null, JsonFailure.INVALID_RESPONSE);
-        } catch (RestClientResponseException e) {
-            int status = e.getStatusCode().value();
-            ProviderDiagnostic diagnostic = providerDiagnostic(e.getResponseBodyAsString());
-            String retryAfter = e.getResponseHeaders() == null ? null
-                    : e.getResponseHeaders().getFirst(HttpHeaders.RETRY_AFTER);
-            if (retryAfter == null || !retryAfter.matches("[0-9]{1,6}")) retryAfter = "未提供";
-            log.warn("AI JSON 调用返回 HTTP {}, providerCode={}, reasonClass={}, retryAfterSeconds={}",
-                    status, diagnostic.code(), diagnostic.reasonClass(), retryAfter);
-            JsonFailure failure = status == 429 ? JsonFailure.RATE_LIMITED
-                    : status == 401 || status == 403 ? JsonFailure.AUTH_FAILED : JsonFailure.PROVIDER_ERROR;
-            return new JsonCallResult(null, failure);
-        } catch (ResourceAccessException e) {
-            log.warn("AI JSON 调用网络不可达或超时：{}", e.getClass().getSimpleName());
-            return new JsonCallResult(null, JsonFailure.NETWORK_ERROR);
-        } catch (RestClientException e) {
-            Throwable cause = e.getCause();
-            log.warn("AI JSON 调用客户端错误：type={}, causeType={}",
-                    e.getClass().getSimpleName(), cause == null ? "未提供" : cause.getClass().getSimpleName());
-            return new JsonCallResult(null, JsonFailure.INVALID_RESPONSE);
-        } catch (Exception e) {
-            log.warn("AI JSON 调用未得到有效结果：{}", e.getClass().getSimpleName());
-            return new JsonCallResult(null, JsonFailure.INVALID_RESPONSE);
+            JsonNode parsed=objectMapper.readTree(value);
+            return parsed.isObject()?new JsonCallResult(parsed,JsonFailure.NONE):new JsonCallResult(null,JsonFailure.INVALID_RESPONSE);
+        } catch(Exception ignored) {return new JsonCallResult(null,JsonFailure.INVALID_RESPONSE);}
+    }
+
+    /** Interview summaries call DeepSeek directly, without JSON formatting or a rule fallback. */
+    public TextCallResult chatTextDetailed(String systemPrompt,String userPrompt) {
+        return callDetailed(systemPrompt,userPrompt,true);
+    }
+
+    private TextCallResult callDetailed(String systemPrompt,String userPrompt,boolean summary) {
+        if(!props.isUsable())return new TextCallResult(null,JsonFailure.NOT_CONFIGURED);
+        try {
+            Map<String,Object> body=new java.util.LinkedHashMap<>();
+            body.put("model",summary?summaryModel:props.getModel());
+            body.put("messages",List.of(Map.of("role","system","content",systemPrompt),Map.of("role","user","content",userPrompt)));
+            body.put("temperature",0.4);body.put("stream",false);
+            if(summary)body.put("thinking",Map.of("type","disabled"));
+            RestClient client=summary?restClient(props.getTimeoutMs(),"https://api.deepseek.com"):restClient();
+            byte[] bytes=client.post().uri("/chat/completions")
+                    .header(HttpHeaders.AUTHORIZATION,"Bearer "+props.getApiKey())
+                    .contentType(MediaType.APPLICATION_JSON).body(body).retrieve().body(byte[].class);
+            String content=extractContent(bytes==null?null:new String(bytes,StandardCharsets.UTF_8));
+            return content==null?new TextCallResult(null,JsonFailure.INVALID_RESPONSE):new TextCallResult(content,JsonFailure.NONE);
+        } catch(RestClientResponseException e) {
+            int status=e.getStatusCode().value();var diagnostic=providerDiagnostic(e.getResponseBodyAsString());
+            log.warn("AI 调用返回 HTTP {}, providerCode={}, reasonClass={}",status,diagnostic.code(),diagnostic.reasonClass());
+            return new TextCallResult(null,status==429?JsonFailure.RATE_LIMITED:status==401||status==403?JsonFailure.AUTH_FAILED:JsonFailure.PROVIDER_ERROR);
+        } catch(ResourceAccessException e) {
+            log.warn("AI 调用网络不可达或超时：{}",e.getClass().getSimpleName());
+            return new TextCallResult(null,JsonFailure.NETWORK_ERROR);
+        } catch(Exception e) {
+            log.warn("AI 调用未得到有效结果：{}",e.getClass().getSimpleName());
+            return new TextCallResult(null,JsonFailure.INVALID_RESPONSE);
         }
     }
 
@@ -316,7 +317,7 @@ public class DeepSeekClient {
             String text = content.asText().trim();
             return text.isEmpty() ? null : text;
         } catch (Exception e) {
-            log.warn("DeepSeek 响应解析失败：{}", e.getMessage());
+            log.warn("DeepSeek 响应解析失败：{}", e.getClass().getSimpleName());
             return null;
         }
     }
@@ -336,11 +337,15 @@ public class DeepSeekClient {
     }
 
     private RestClient restClient(int readTimeoutMs) {
+        return restClient(readTimeoutMs,props.getBaseUrl());
+    }
+
+    private RestClient restClient(int readTimeoutMs,String baseUrl) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(props.getTimeoutMs());
         factory.setReadTimeout(readTimeoutMs);
         return RestClient.builder()
-                .baseUrl(props.getBaseUrl())
+                .baseUrl(baseUrl)
                 .requestFactory(factory)
                 .build();
     }

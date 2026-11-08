@@ -19,6 +19,10 @@ public class StudentBackendSchema {
     @PostConstruct
     void initialize() {
         separateLegacyAudioTable();
+        new ResourceDatabasePopulator(new ClassPathResource("db/migration_minutes.sql"))
+                .execute(jdbc.getDataSource());
+        if (jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='interview_message' AND column_name='minutes_captured_at'", Integer.class) == 0)
+            jdbc.execute("ALTER TABLE interview_message ADD COLUMN minutes_captured_at DATETIME(6) NULL");
         new ResourceDatabasePopulator(new ClassPathResource("db/migration_interview_stages.sql"))
                 .execute(jdbc.getDataSource());
         new ResourceDatabasePopulator(new ClassPathResource("db/migration_interview_plan.sql"))

@@ -6,15 +6,16 @@
         {{route.query.assignmentId?'返回教学任务':'返回面试记录'}}
       </router-link>
 
-      <div v-if="loading" class="state-panel" role="status">面试已结束，正在整理本次面试报告，请稍候…</div>
-      <div v-else-if="loadError" class="state-panel error-state">
+      <InterviewMinutes v-if="minutesSessionId" :session-id="minutesSessionId" detail />
+      <div v-if="showCapabilityReport && loading" class="state-panel" role="status">面试已结束，正在整理本次面试报告，请稍候…</div>
+      <div v-else-if="showCapabilityReport && loadError" class="state-panel error-state">
         <strong>报告暂时无法加载</strong>
         <span>{{ loadError }}</span>
         <button type="button" @click="loadReport">重新加载</button>
         <button v-if="reportFailed" type="button" @click="retryReport">重新生成报告</button>
       </div>
 
-      <template v-else>
+      <template v-else-if="showCapabilityReport">
         <section v-if="trainingContext" class="report-source-context" v-reveal><strong>{{trainingContext.source==='TEACHING'?'教学任务':'自主训练'}}{{trainingContext.taskTitle?' · '+trainingContext.taskTitle:''}}</strong><p>{{trainingContext.className||''}} · {{trainingContext.scorePlan?.source==='TEACHER_TASK'?'教师统一评分方案':trainingContext.scorePlan?.source==='STUDENT_SELECTED'?'学生自选评分方案':'旧版默认方案'}} · {{trainingContext.provenance?.ruleVersion||'历史未记录评分版本'}}</p><p v-if="trainingContext.source==='TEACHING'">{{trainingContext.state==='READY'?'本报告已计入任务有效次数。':trainingContext.failureReason||'请在教学任务中查看结果是否计入次数。'}}次数完成与能力目标达成分别判断。</p></section>
         <TeachingFeedback :report-id="reportId" :show-empty="!!route.query.assignmentId"/>
         <header class="report-hero">
@@ -230,6 +231,8 @@
 </template>
 
 <script setup>
+import { useReportMinutesSession } from '../composables/useInterviewMinutes'
+import InterviewMinutes from '../components/minutes/InterviewMinutes.vue'
 import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { exportReport, getImprovementPath, getJobList, getReportDetail, getSessionMessages, getReportStatus, retryInterviewReport } from '../api'
@@ -245,6 +248,7 @@ import ExpressionUploadStatus from '../components/interview/ExpressionUploadStat
 import { getJobPresentation } from '../utils/jobPresentation'
 
 const route = useRoute()
+const showCapabilityReport = computed(() => !['minutes', 'summary'].includes(route.query.tab))
 let reportId = route.params.id
 const reportFailed = ref(false)
 let loadStarted = false
@@ -304,6 +308,7 @@ const moduleScores = ref([])
 const trainingContext=ref(null)
 const expressions=ref(null)
 const expressionSessionId=ref(null)
+const minutesSessionId = useReportMinutesSession(expressionSessionId)
 async function refreshExpressions() { try { const data=await getReportDetail(reportId); expressions.value=data.expressions||null } catch {} }
 
 const radarLabels = computed(() => dimensions.value.map(item => item.dimension))

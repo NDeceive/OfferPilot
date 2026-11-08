@@ -4,6 +4,8 @@ import {
   applyAnalysisSuggestion,
   recommendedTargets,
   groupAnalysisItems,
+  groupInterviewQuestions,
+  interviewQuestionText,
 } from "../src/utils/resumeAnalysis.js";
 const item = {
   kind: "SUGGESTION",
@@ -24,6 +26,20 @@ test("analysis changes one exact draft range and keeps other fields and original
     original.projects,
     "验收材料\n参与接口测试。参与接口测试。\n提交记录"
   );
+});
+
+test("question sheets group old and new reports by question type and export only available answers", () => {
+  const skill = {kind: "INTERVIEW", title: "技术原理题 · Java", field: "projects", question: "如何理解线程？", action: "解释线程与进程。"};
+  const project = {kind: "INTERVIEW", title: "项目深挖题 · 接口", field: "raw", question: "如何验证结果？", action: "结合真实交付物说明。"};
+  const legacy = {kind: "INTERVIEW", title: "准备经历追问", field: "raw", moduleCode: "project_expression", question: "本人贡献？"};
+  const groups = groupInterviewQuestions([skill, project, legacy, {kind: "STRENGTH"}]);
+  assert.deepEqual(groups[0].items, [skill]);
+  assert.deepEqual(groups[1].items, [project, legacy]);
+  const text = interviewQuestionText(groups, "Java 后端");
+  assert.match(text, /技能题\n1、如何理解线程？\n回答思路：解释线程与进程。/);
+  assert.match(text, /项目题\n1、如何验证结果？/);
+  assert.match(text, /2、本人贡献？\n回答思路：暂无回答思路/);
+  assert.match(interviewQuestionText(groupInterviewQuestions([])), /暂无相关题目/);
 });
 test("changed, ambiguous or unstructured original cannot be silently overwritten", () => {
   assert.throws(() => applyAnalysisSuggestion({ projects: "新内容" }, item));

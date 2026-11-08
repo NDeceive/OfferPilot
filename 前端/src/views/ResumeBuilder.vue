@@ -836,7 +836,7 @@
       </section>
       <dialog ref="analysisDialog" class="analysis-dialog">
         <button type="button" class="quiet analysis-close" @click="analysisDialog.close()">关闭分析</button>
-        <ResumeAnalysisPanel v-if="analysisOpen" :job-id="analysisJobId" :version-id="analysisVersionId" :available="Boolean(analysisVersionId)" @edit="editFromAnalysis" @recommend="goAnalysisTargets" />
+        <ResumeAnalysisPanel v-if="analysisOpen" :job-id="analysisJobId" :version-id="analysisVersionId" :available="Boolean(analysisVersionId)" @edit="editFromAnalysis" @recommend="goAnalysisTargets" @practice="goAnalysisTargets" />
       </dialog>
       <dialog ref="analysisReviewDialog" class="review-dialog">
         <template v-if="analysisEdit">
